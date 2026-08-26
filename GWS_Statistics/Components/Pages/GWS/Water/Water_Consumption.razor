@@ -450,7 +450,7 @@
     /// <exception cref="Exception"></exception>
     protected override async Task OnInitializedAsync()
     {
-        int lastSupplierId;
+        int lastSupplierId = 0;
         int enumValue;
         bool success;
 
@@ -482,7 +482,10 @@
                 // gespeicherten letzten Anbieter auslesen
                 lastSupplierId = String.IsNullOrEmpty(settings.Supplier_Id!.Water) || settings.Supplier_Id.Water == "0" ? lastSupplierId = supplierList.Max(x => x.Id) : lastSupplierId = Int32.Parse(settings.Supplier_Id.Water);
 
-                //lastSupplierId = CheckStoredSupplier(settings.Supplier_Id.Water, supplierList);
+                if (!supplierList.Any(s => s.Id == lastSupplierId)) // prüfen ob der gespeicherte Anbieter noch existiert
+                {
+                    lastSupplierId = supplierList.Max(x => x.Id); // wenn nicht, dann den letzten Anbieter auslesen
+                }
 
                 supplierData = supplierList
                                 .Where(s => s.Id == lastSupplierId)
