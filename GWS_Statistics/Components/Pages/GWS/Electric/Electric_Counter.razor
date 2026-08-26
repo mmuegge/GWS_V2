@@ -1,0 +1,1032 @@
+﻿@page "/electric_counter"
+@* @rendermode InteractiveServer *@
+@* @attribute [StreamRendering] *@
+
+@using GWS_Statistics.Components.Services
+@using GWS_Statistics.Helper
+@using System.Globalization
+@using System.Net
+
+@inject MyAppConfigModel myAppSettings
+@inject HttpClient myHttpClient
+@inject ILogger<Electric_Supplier> Logger
+@inject ToastService ToastService
+@inject SfDialogService DialogService
+
+<PageTitle>Strom- Zählerstände</PageTitle>
+
+<div class="container">
+    <div class="row">
+        @*  <div class="col col-md-12">
+            <p class="text-center fs-2 fw-bold">Strom- Zählerstände</p>
+        </div> *@
+        <div class="text-center fs-3 fw-bold">
+            <span class="fa-solid fa-plug fa-3xs" aria-hidden="true"> </span>
+            <label>Strom- Zählerstände</label>
+        </div>
+        @* <span class="border-bottom border-dark mb-1"></span> *@
+    </div>
+</div>
+
+@* Auswahl Anbieter und Anzeigen Start-Datum/Ende-Datum*@
+<div class="card shadow-lg mb-1">
+    <div class="container bg-color-grey mb-3 mt-2 pb-4 border">
+        <div class="row justify-content-center">
+            <div class="col-12 col-lg-4">
+                <div class="control-wrapper">
+                    <label class="control-label fw-bold mb-sm-1 me-1">Anbieter</label>
+                    <SfDropDownList DataSource="@supplierDataList" TItem="Electric_SupplierDataModel" TValue="int" Placeholder="Anbieter auswählen" @bind-Value="@supplierData!.Id">
+                        <DropDownListFieldSettings Text="Anbieter" Value="Id"></DropDownListFieldSettings>
+                        <DropDownListEvents TItem="Electric_SupplierDataModel" TValue="int" OnValueSelect="@ValueSelectHandler"></DropDownListEvents>
+                    </SfDropDownList>
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-4">
+                <div class="control-wrapper">
+                    <label class="control-label fw-bold mb-sm-1 me-1">Start-Datum</label>
+                    <SfDatePicker TValue="DateTime?" Value="@StartDate" Min="@MinDate" Format="dd.MM.yyyy" AllowEdit="false" Readonly="true"></SfDatePicker>
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-4">
+                <div class="control-wrapper">
+                    <label class="control-label fw-bold mb-sm-1 me-1">Ende-Datum</label>
+                    <SfDatePicker TValue="DateTime?" Value="@EndDate" Min="@MinDate" Format="dd.MM.yyyy" AllowEdit="false" Readonly="true"></SfDatePicker>
+                </div>
+            </div>
+        </div>
+    </div>
+ </div>
+
+@* Grid *@
+<div class="control-section" id="target" align="left">
+    <SfGrid ID="Grid" @ref="SfDataGrid" DataSource="@counterList"
+    AllowPaging="true"
+    AllowFiltering="true"
+    AllowReordering="true"
+    AllowResizing="true"
+    AllowExcelExport="true"
+    AllowPdfExport="true"
+    EnableHover="true"
+    AllowTextWrap="true"
+    AllowSelection="true"
+    AllowSorting="true"
+    Height="100%" Width="100%"
+    Toolbar=@toolbar
+    EnableStickyHeader="true">
+
+        <GridEditSettings AllowAdding="true"
+        AllowEditing="true"
+        AllowDeleting="true"
+        ShowDeleteConfirmDialog="true"
+        Mode="EditMode.Dialog"
+        Dialog="DialogParams">
+
+            <HeaderTemplate>
+                @{
+                    var DialogHeader = GetDialogHeader((context as Electric_CounterModel));
+                    <span>@DialogHeader</span>
+                }
+            </HeaderTemplate>
+        </GridEditSettings>
+
+        <GridEvents OnToolbarClick="ToolbarBtnClickHandler"
+                    RowCreating="RowCreatingHandler"
+                    RowEditing="RowEditingHandler"
+                    OnActionComplete="ActionCompleteHandler"
+                    TValue="Electric_CounterModel">
+        </GridEvents>
+
+        <GridPageSettings PageSize="20" PageSizes="true"></GridPageSettings>
+        <GridFilterSettings Type="Syncfusion.Blazor.Grids.FilterType.CheckBox"></GridFilterSettings>
+
+        <GridSortSettings>
+            <GridSortColumns>
+                <GridSortColumn 
+                    Field="Ablesetag" 
+                    Direction="SortDirection.Descending">
+                </GridSortColumn>
+            </GridSortColumns>
+        </GridSortSettings>
+
+        <GridColumns>
+            <GridColumn IsPrimaryKey="true" Field="@nameof(Electric_CounterModel.ID_Tag)" Visible="false"
+                AllowAdding="false"
+                AllowEditing="false"
+                AllowSorting="false"
+                AllowFiltering="false"
+                Width="35">
+            </GridColumn>
+
+            <GridColumn Field=@nameof(Electric_CounterModel.Anbieter)
+                Width="200"
+                EditType="EditType.DropDownEdit"
+                HeaderText="Anbieter">
+
+                <EditTemplate>
+                    <SfDropDownList Placeholder="Anbieter"
+                        FloatLabelType="FloatLabelType.Always"
+                        TValue="int?"
+                        TItem="Electric_SupplierDataModel"
+                        DataSource="@supplierDataList"
+                        @bind-Value="@DropDownValueSupplier">
+
+                        <DropDownListFieldSettings Value="Id" Text="Anbieter"></DropDownListFieldSettings>
+                    </SfDropDownList>
+                </EditTemplate>
+
+                <HeaderTemplate>
+                    <SfTooltip Content="@GetTooltipContent("Anbieter")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                        <span><b>Anbieter</b></span>
+                    </SfTooltip>
+                </HeaderTemplate>
+            </GridColumn>
+
+            <GridColumn Field=@nameof(Electric_CounterModel.Ablesetag)
+                        EditType="EditType.DatePickerEdit"
+                        Type="ColumnType.Date"
+                        Width="110"
+                        DefaultValue="DateTime.Now"
+                        HeaderText="Datum"
+                        Format="d">
+
+                        <EditTemplate>
+                            <SfDatePicker
+                                Placeholder="Ablesetag"
+                                FloatLabelType="FloatLabelType.Always"
+                                TValue="DateTime"
+                                @bind-Value="@((context as Electric_CounterModel)!.Ablesetag)">
+
+                                <DatePickerEvents TValue="DateTime" ValueChange="DayChangedHandler"></DatePickerEvents>
+                            </SfDatePicker>
+                        </EditTemplate>
+
+                        <HeaderTemplate>
+                            <SfTooltip Content="@GetTooltipContent("Datum")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                                <span><b>Datum</b></span>
+                            </SfTooltip>
+                        </HeaderTemplate>
+            </GridColumn>
+
+            <GridColumn Field=@nameof(Electric_CounterModel.Uhrzeit)
+            Format="HH:mm"
+            Type="Syncfusion.Blazor.Grids.ColumnType.DateTime"
+            Width="110"
+            DefaultValue="DateTime.Now"
+            HeaderText="Uhrzeit">
+
+                <EditTemplate>
+                    <SfTimePicker 
+                        Placeholder="Uhrzeit"
+                        FloatLabelType="FloatLabelType.Always"
+                        TValue="DateTime?"
+                        @bind-Value="@((context as Electric_CounterModel)!.Uhrzeit)"
+                        Format="HH:mm"
+                        CssClass="customdatecss"
+                        ShowClearButton="true">
+                    </SfTimePicker>
+                </EditTemplate>
+
+                <HeaderTemplate>
+                    <SfTooltip Content="@GetTooltipContent("Uhrzeit")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                        <span><b>Uhrzeit</b></span>
+                    </SfTooltip>
+                </HeaderTemplate>
+            </GridColumn>
+
+            <GridColumn Field=@nameof(Electric_CounterModel.Zaehlerstand)
+            Format="####0 kWh"
+            Width="110"
+            HeaderText="Strom Bezugszähler">
+
+                <EditTemplate>
+                    <SfNumericTextBox Placeholder="Strom Bezugszähler"
+                    FloatLabelType="FloatLabelType.Always"
+                    TValue="Double?"
+                    @bind-Value="@((context as Electric_CounterModel)!.Zaehlerstand)"
+                    Format="####0 kWh">
+                    </SfNumericTextBox>
+                </EditTemplate>
+
+                <HeaderTemplate>
+                    <SfTooltip Content="@GetTooltipContent("ZS-180")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                        <span><b>ZS-180</b></span>
+                    </SfTooltip>
+                </HeaderTemplate>
+            </GridColumn>
+
+            <GridColumn Field=@nameof(Electric_CounterModel.Zaehlerstand_280)
+            Format="####0 kWh"
+            Width="110"
+            HeaderText="Strom Einspeisezähler">
+
+                <EditTemplate>
+                    <SfNumericTextBox Placeholder="Strom Einspeisezähler"
+                    FloatLabelType="FloatLabelType.Always"
+                    TValue="Double?"
+                    @bind-Value="@((context as Electric_CounterModel)!.Zaehlerstand_280)"
+                    Format="####0 kWh">
+                    </SfNumericTextBox>
+                </EditTemplate>
+
+                <HeaderTemplate>
+                    <SfTooltip Content="@GetTooltipContent("ZS-280")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                        <span><b>ZS-280</b></span>
+                    </SfTooltip>
+                </HeaderTemplate>
+            </GridColumn>
+
+            <GridColumn Field=@nameof(Electric_CounterModel.Zaehlerstand_Enfluri)
+            Format="####0.00 kWh"
+            Width="110"
+            HeaderText="Enfluri">
+
+                <EditTemplate>
+                    <SfNumericTextBox Placeholder="Enfluri"
+                    FloatLabelType="FloatLabelType.Always"
+                    TValue="Double?"
+                    @bind-Value="@((context as Electric_CounterModel)!.Zaehlerstand_Enfluri)"
+                    Format="####0.00 kWh">
+                    </SfNumericTextBox>
+                </EditTemplate>
+
+                <HeaderTemplate>
+                    <SfTooltip Content="@GetTooltipContent("ZS-Enfl")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                        <span><b>ZS-Enfl</b></span>
+                    </SfTooltip>
+                </HeaderTemplate>
+            </GridColumn>
+
+            <GridColumn Field=@nameof(Electric_CounterModel.Temperatur_aussen)
+            Format="0 °C"
+            Width="110"
+            HeaderText="Temperatur aussen">
+
+                <EditTemplate>
+                    <SfNumericTextBox Placeholder="Temperatur aussen"
+                    FloatLabelType="FloatLabelType.Always"
+                    TValue="double?"
+                    @bind-Value="@temperatureOutside"
+                    Format="0 °C">
+                    </SfNumericTextBox>
+                </EditTemplate>
+
+                <HeaderTemplate>
+                    <SfTooltip Content="@GetTooltipContent("T-a")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                        <span><b>T-a</b></span>
+                    </SfTooltip>
+                </HeaderTemplate>
+            </GridColumn>
+
+            <GridColumn Field=@nameof(Electric_CounterModel.Temperatur_innen)
+            Format="0 °C"
+            Width="110"
+            HeaderText="Temperatur innen">
+
+                <EditTemplate>
+                    <SfNumericTextBox Placeholder="Temperatur innen"
+                    FloatLabelType="FloatLabelType.Always"
+                    TValue="double?"
+                    @bind-Value="@temperatureInside"
+                    Format="0 °C">
+                    </SfNumericTextBox>
+                </EditTemplate>
+
+                <HeaderTemplate>
+                    <SfTooltip Content="@GetTooltipContent("T-i")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                        <span><b>T-i</b></span>
+                    </SfTooltip>
+                </HeaderTemplate>
+            </GridColumn>
+
+            <GridColumn Field=@nameof(Electric_CounterModel.Bemerkungen)
+            Width="300" 
+            HeaderText="Bemerkung">
+
+                <HeaderTemplate>
+                    <SfTooltip Content="@GetTooltipContent("Bemerkung")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                        <span><b>Bemerkung</b></span>
+                    </SfTooltip>
+                </HeaderTemplate>
+            </GridColumn>
+
+            <GridColumn HeaderText="Funktion" Width="20%" MinWidth="110">
+                <GridCommandColumns>
+                    <GridCommandColumn Type="CommandButtonType.Edit"
+                    ButtonOption="@(new CommandButtonOptions(){
+                                                    IconCss="e-icons e-edit",
+                                                    CssClass="e-flat"
+                                               })">
+                    </GridCommandColumn>
+                    <GridCommandColumn Type="CommandButtonType.Delete"
+                    ButtonOption="@(new CommandButtonOptions(){
+                                                    IconCss ="e-icons e-delete",
+                                                    CssClass="e-flat"
+                                               })">
+                    </GridCommandColumn>
+                    <GridCommandColumn Type="CommandButtonType.Save"
+                    ButtonOption="@(new CommandButtonOptions(){
+                                                    IconCss="e-icons e-update",
+                                                    CssClass="e-flat"
+                                               })">
+                    </GridCommandColumn>
+                    <GridCommandColumn Type="CommandButtonType.Cancel"
+                    ButtonOption="@(new CommandButtonOptions(){
+                                                    IconCss="e-icons e-cancel-icon",
+                                                    CssClass="e-flat"
+                                               })">
+                    </GridCommandColumn>
+                </GridCommandColumns>
+            </GridColumn>
+        </GridColumns>
+    </SfGrid>
+</div>
+
+<SfSpinner @bind-Visible="@spinnerVisibleProperty" Type="SpinnerType.Tailwind" Size="40" CssClass="e-custom-color"></SfSpinner>
+
+@* Dialog*@
+<div>
+    <SfDialog Target="#target"
+                      Width="@dialogWidth"
+                      Height="@dialogHeight"
+                      AllowDragging="true"
+                      ShowCloseIcon=" true"
+                      AllowPrerender="true"
+                      IsModal="true"
+                      CssClass="MyCss"
+                      @bind-Visible="@DialogVisible">
+
+        <DialogTemplates>
+            <Header>@Header</Header>
+        </DialogTemplates>
+
+        <DialogPositionData X="@dialogXValue" Y="@dialogYValue"></DialogPositionData>
+
+        <DialogAnimationSettings Effect="@animationEffect"></DialogAnimationSettings>
+
+        @if (showDialogButtons)
+        {
+            <DialogButtons>
+                <DialogButton Content="Ja" IsPrimary="true" OnClick="@YesClick" />
+                <DialogButton Content="Abbrechen" OnClick="@CancelClick" />
+            </DialogButtons>
+        }
+    </SfDialog>
+</div>
+
+<style>
+    .e-dlg-overlay {
+    background-color: slategray;
+    opacity: 0.6;
+    }
+
+    /* Dialog Editing*/
+    .e-dialog .e-dlg-header-content {
+    background-color: grey;
+    font-size: 24px;
+    }
+
+    .e-dialog .e-dlg-header {
+    color: white;
+    }
+
+    .e-dialog .e-dlg-content {
+    color: white;
+    background-color: lightgray;
+    font-size: 16px;
+    }
+
+    .bg-color-grey {
+    background: #deded9;
+    }
+
+    #toast_default .e-circle-check::before {
+    content: "\e72b";
+    font-size: 17px;
+    }
+
+    #toast_default .e-circle-close::before {
+    content: "\e878";
+    font-size: 17px;
+    }
+
+    .control-wrapper {
+    max-width: 250px;
+    min-width: 120px;
+    margin: auto;
+    }
+
+    .control-label {
+    font-size: 14px;
+    margin: 2px 0px;
+    }
+
+    /* Dialog: Datensatz ändern */
+    .MyCss .e-dlg-header-content {
+    background-color: red;
+    }
+
+    .dialog-label {
+    color: black;
+    font-size: 14px;
+    margin-bottom: 2px;
+    }
+</style>
+
+@code
+{
+    #region Variablendeklaration
+    private string? ToastContent { get; set; }
+
+    private bool spinnerVisibleProperty { get; set; } = false;
+
+    private DialogSettings DialogParams = new DialogSettings { MinHeight = "400px", Width = "400px" };
+    public DialogEffect animationEffect = DialogEffect.Zoom;
+    public bool DialogVisible { get; set; } = false;
+    private bool showDialogButtons = false;
+    private string DialogText { get; set; } = string.Empty;
+    private string dialogXValue = "center";
+    private string dialogYValue = "center";
+    private string dialogHeight = "130px";
+    private string dialogWidth = "380px";
+
+    public int? DropDownValueSupplier { get; set; } = 0;
+    private bool save = false;
+    private bool update = false;
+    private bool success = false;
+
+    private bool dayChanged = false; 
+
+    readonly string urlSupplier = "strom/anbieter/";
+    readonly string urlMeter = "strom/zaehlerstaende/anbieter/";
+    readonly string urlMeterDay = "strom/zaehlerstand/";
+
+    string? Header { get; set; }
+    string? Content { get; set; }
+
+    GWSProcessor? gwsP;
+    ApiResponse? apiResponse;
+
+    LoxoneTemperatures? loxoneTemp = new();
+
+    private SfGrid<Electric_CounterModel> SfDataGrid = new();
+
+    private List<Electric_CounterModel>? counterList = new();
+    private Electric_CounterModel? counterData = new();
+
+    private Electric_SupplierModel? supplier = new();
+
+    private List<Electric_SupplierDataModel>? supplierDataList = new();
+    private Electric_SupplierDataModel? supplierData = new();
+
+
+    private List<object> toolbar = new List<object>() { "Add", "Cancel", "Search", "ExcelExport", "PdfExport" };
+
+    private int supplierId { get; set; } = 0;
+    private int counterId { get; set; } = 0;
+
+    public DateTime MinDate { get; set; } = new DateTime(1990, 1, 1);
+    public DateTime MaxDate { get; set; } = DateTime.Now;
+    public DateTime? StartDate { get; set; } = new DateTime(2000, 1, 1);
+    public DateTime? EndDate { get; set; } = new DateTime(2000, 1, 1);
+
+    private double? temperatureInside { get; set; }
+    public double? temperatureOutside { get; set; }
+
+    MyAppConfigModel? settings;
+
+    // Dictionary for column descriptions
+    public Dictionary<string, string> ColumnDescriptions = new()
+    {
+        { "Anbieter", "Anbieter" },
+        { "Datum", "Ablese-Datum" },
+        { "Uhrzeit", "Ablese-Uhrzeit" },
+        { "ZS-180", "Strom-Bezugszähler" },
+        { "ZS-280", "Strom-Einspeisezähler" },
+        { "ZS-Enfl", "Enfluri" },
+        { "T-a", "Temperatur-Aussen" },
+        { "T-i", "Temperatur-Innen" },
+        { "Bemerkung", "Bemerkung" }
+    };
+
+    // PDF-Export Properties
+    public List<PdfHeaderFooterContent> HeaderContent = new List<PdfHeaderFooterContent>
+    {
+        new PdfHeaderFooterContent() { Type = ContentType.Line, Points= new PdfPoints { X1 = 0, Y1 = 4, X2 = 720, Y2 = 4}, Style = new PdfContentStyle() { PenColor = "#000080", DashStyle=PdfDashStyle.Solid } },
+        new PdfHeaderFooterContent() { Type = ContentType.Text, Value = "Gas-Zählerstände", Position = new PdfPosition() { X = 350, Y = 20 }, Style = new PdfContentStyle() { TextBrushColor = "#000000", FontSize = 10 } },
+        new PdfHeaderFooterContent() { Type = ContentType.Line, Points= new PdfPoints { X1 = 0, Y1 = 40, X2 = 720, Y2 = 40}, Style = new PdfContentStyle() { PenColor = "#000080", DashStyle=PdfDashStyle.Solid } },
+
+        new PdfHeaderFooterContent() { Type = ContentType.PageNumber,  PageNumberType = PdfPageNumberType.Numeric, Position = new PdfPosition() { X = 470, Y = 650 }, Style = new PdfContentStyle() { TextBrushColor = "red", FontSize = 8, HAlign = PdfHorizontalAlign.Right } }
+    };
+
+    public List<PdfHeaderFooterContent> FooterContent = new List<PdfHeaderFooterContent>
+    {
+        // new PdfHeaderFooterContent() { Type = ContentType.Text, Value = "Seite: ", Position = new PdfPosition() { X = 400, Y = 600 }, Style = new PdfContentStyle() { TextBrushColor = "#000000", FontSize = 10 } },
+        // new PdfHeaderFooterContent() { Type = ContentType.PageNumber,  PageNumberType = PdfPageNumberType.Numeric, Position = new PdfPosition() { X = 470, Y = 650 }, Style = new PdfContentStyle() { TextBrushColor = "red", FontSize = 10, HAlign = PdfHorizontalAlign.Right } }
+    };
+    #endregion
+
+    #region OnInitializedAsync
+    protected override async Task OnInitializedAsync()
+    {
+        int lastSupplierId;
+
+        // Spinner anzeigen bis Daten ausgelesen wurden
+        this.spinnerVisibleProperty = true;
+
+        // MyAppSettings.json auslesen und letzten gespeicherten Anbieter auslesen
+        settings = GetSetMyAppConfig.GetMyAppSettings.ReadSettings(myAppSettings);
+
+        gwsP = new GWSProcessor(myHttpClient, settings!.GWSUri);
+        try
+        {
+            // Anbieterdaten auslesen (nur Anbieter und Id => durch GasSupplierDataModel)
+            supplierDataList = await gwsP.LoadDataAsync<Electric_SupplierDataModel>(urlSupplier);
+
+            if (supplierDataList != null && supplierDataList.Any()) // prüfen ob es Anbieterdaten gibt
+            {
+                // gespeicherten letzten Anbieter auslesen
+                lastSupplierId = String.IsNullOrEmpty(settings.Supplier_Id!.Electric) ? lastSupplierId = supplierDataList.Max(x => x.Id) : lastSupplierId = Int32.Parse(settings.Supplier_Id.Electric);
+
+                supplierData = supplierDataList
+                                .Where(s => s.Id == lastSupplierId)
+                                .Select(s => s).FirstOrDefault();
+
+                if (supplierData != null)
+                {
+                    // Start-Datum auslesen
+                    StartDate = supplierData.Zeitraum_Start;
+                    EndDate = supplierData.Zeitraum_Ende;
+                }
+            }
+            else
+            {
+                // es gibt keine gültigen Daten der Anbieter
+                if (supplierData != null)
+                {
+                    supplierData.Id = 0;
+                }
+            }
+
+            if (supplierData != null && supplierData.Id > 0)
+            {
+                // Zählerstände anbieterabhängig auslesen
+                counterList = await gwsP.LoadDataAsync<Electric_CounterModel>(urlMeter + Convert.ToString(supplierData.Id));
+                if (counterList == null || !counterList.Any())
+                {
+                    OpenDialog("Keine Strom-Zählerstände vorhanden!", "60px", "380px", false);
+                }
+            }
+        }
+        catch (Exception)
+        {
+            throw new Exception("Es konnten keine Strom-Zählerstände geladen werden");
+        }
+
+        // Auslesen der akt. Temperaturen von Loxone
+        await ReadLoxoneTemperatures(settings.Loxone!.User, settings.Loxone.Password);
+        temperatureInside = loxoneTemp?.Innentemperatur;
+        temperatureOutside = loxoneTemp?.Aussentemperatur;
+
+        #region Spinner
+        await Task.Delay(800);
+        this.spinnerVisibleProperty = false;
+        #endregion
+    }
+    #endregion
+
+    #region ToolbarBtnClickHandler
+    /// <summary>
+    /// ToolbarBtnClickHandler
+    ///
+    /// </summary>
+    /// <param name="args"></param>
+    public async Task ToolbarBtnClickHandler(Syncfusion.Blazor.Navigations.ClickEventArgs args)
+    {
+        if (args.Item.Id.Contains("_excelexport"))
+        {
+            ExcelExportProperties excelExportProperties = new();
+            excelExportProperties.FileName = $"Stromzaehler_{DateTime.Now.ToString("ddMMyyyy")}.xlsx";
+
+            ExcelTheme Theme = new ExcelTheme();
+            // Header
+            ExcelStyle ThemeStyleHeader = new ExcelStyle()
+                {
+                    FontName = "Calibri",
+                    FontSize = 12,
+                    Bold = true,
+                };
+            Theme.Header = ThemeStyleHeader;
+            // Data
+            ExcelStyle ThemeStyleRecord = new ExcelStyle()
+                {
+                    FontName = "Calibri",
+                    FontSize = 10,
+                    Bold = false,
+                };
+            Theme.Record = ThemeStyleRecord;
+
+            excelExportProperties.Theme = Theme;
+
+            await SfDataGrid.ExportToExcelAsync(excelExportProperties);
+        }
+        else if (args.Item.Id.Contains("_pdfexport"))
+        {
+            PdfExportProperties pdfExportProperties = new();
+            pdfExportProperties.IsRepeatHeader = true;
+            pdfExportProperties.FileName = $"Stromanbieter_{DateTime.Now.ToString("ddMMyyyy")}.pdf";
+            pdfExportProperties.PageOrientation = Syncfusion.Blazor.Grids.PageOrientation.Landscape;
+
+            PdfHeader pdfHeader = new()
+                {
+                    FromTop = 0,
+                    Height = 80,
+                    Contents = HeaderContent
+                };
+
+            PdfFooter pdfFooter = new()
+                {
+                    FromBottom = 0,
+                    Height = 80,
+                    Contents = FooterContent
+                };
+
+            PdfTheme Theme = new PdfTheme();
+
+            PdfThemeStyle HeaderThemeStyle = new PdfThemeStyle()
+                {
+                    FontColor = "Blue",
+                    FontName = "Calibri",
+                    FontSize = 8,
+                    Bold = true,
+                };
+            Theme.Header = HeaderThemeStyle;
+
+            pdfExportProperties.Theme = Theme;
+
+            pdfExportProperties.Header = pdfHeader;
+            pdfExportProperties.Footer = pdfFooter;
+
+            await SfDataGrid.ExportToPdfAsync(pdfExportProperties);
+        }
+        else if (args.Item.Id.Contains("XmlExport"))
+        {
+            Console.Write("Export to Xml function");        // wird nicht genutzt
+        }
+    }
+    #endregion
+
+    // #region ActionBeginHandler
+    // /// <summary>
+    // /// ActionBeginHandler
+    // /// </summary>
+    // /// <param name="args"></param>
+    // public void ActionBeginHandler(ActionEventArgs<Electric_CounterModel> args)
+    // {
+    //     // not save
+    //     if (!args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Save))
+    //     {
+    //         // Add
+    //         if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Add))
+    //         {
+    //             if (DropDownValueSupplier == 0)
+    //             {
+    //                 if (supplierDataList != null && supplierDataList.Any())
+    //                 {
+    //                     DropDownValueSupplier = supplierData.Id; // ausgewählter Anbieter über Auswahlbox einlesen
+    //                 }
+    //             }
+    //         }
+    //         // Edit
+    //         else if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.BeginEdit))
+    //         {
+    //             DropDownValueSupplier = args.Data.ID_Anbieter;
+    //             temperatureOutside = args.Data.Temperatur_aussen;
+    //             temperatureInside = args.Data.Temperatur_innen;
+    //         }
+    //     }
+    // }
+    // #endregion
+
+    #region ActionCompleteHandler
+    /// <summary>
+    /// ActionCompleteHandler
+    /// </summary>
+    /// <param name="args"></param>
+    public async Task ActionCompleteHandler(ActionEventArgs<Electric_CounterModel> args)
+    {
+        if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Save))
+        {
+            if (args.Action == "Add")
+            {
+                save = true;
+
+                counterData = args.Data;
+                // Ablesedatum Uhrzeit korrigieren
+                var corDate = new DateTime(counterData.Ablesetag.Year, counterData.Ablesetag.Month, counterData.Ablesetag.Day, 0, 0, 0);
+                counterData.Ablesetag = corDate;
+                // Ableseuhrzeit korrigieren
+                var corTime = new DateTime(corDate.Year, corDate.Month, corDate.Day, counterData.Uhrzeit.GetValueOrDefault().Hour, counterData.Uhrzeit.GetValueOrDefault().Minute, counterData.Uhrzeit.GetValueOrDefault().Second);
+                counterData.Uhrzeit = corTime;
+                // Loxone-Temperaturen schreiben
+                counterData.Temperatur_aussen = temperatureOutside; // Loxone Temperatur Aussen aus SfNumericTextbox auslesen
+                counterData.Temperatur_innen = temperatureInside; // Temperatur Innen aus SfNumericTextbox auslesen
+
+                // Anbieterdaten schreiben
+                if (DropDownValueSupplier != null)
+                {
+                    counterData.ID_Anbieter = Convert.ToInt32(DropDownValueSupplier);
+
+                    if (counterData.ID_Anbieter != 0)
+                    {
+                        string? supplierName = supplierDataList?.Where(x => x.Id == counterData.ID_Anbieter)
+                                                                .Select(a => a.Anbieter)
+                                                                .FirstOrDefault();
+                        counterData.Anbieter = (supplierName != null) ? supplierName : "unbekannt";    // Anbietername auslesen oder auf "unbekannt" setzen
+                    }
+                }
+
+                OpenDialog("Datensatz speichern ?", "130px", "220px", true);
+            }
+            else if (args.Action == "Edit")
+            {
+                if (DropDownValueSupplier != null && DropDownValueSupplier!= args.Data.ID_Anbieter)
+                {
+                    args.Data.ID_Anbieter = DropDownValueSupplier.GetValueOrDefault();
+                    string? supplierName = supplierDataList?.Where(x => x.Id == DropDownValueSupplier)
+                                                                .Select(a => a.Anbieter)
+                                                                .FirstOrDefault();
+                    args.Data.Anbieter = supplierName;
+                }
+
+                update = true;
+                counterData = args.Data;
+                OpenDialog("Datensatz ändern ?", "130px", "220px", true);
+            }
+        }
+        else if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Delete))
+        {
+            if (args.Data.ID_Tag == 0)
+            {
+                counterList = await gwsP!.LoadDataAsync<Electric_CounterModel>(urlMeter + Convert.ToString(supplierData!.Id));
+                ShowToastMessage(false, "Datensatz nicht gelöscht!");
+            }
+            else
+            {
+                // Datensatz löschen
+                // Ablesetag für DELETE formatieren URL : 2021.10.24
+                string readingDay = $"{args.Data.Ablesetag.Year}.{args.Data.Ablesetag.Month}.{args.Data.Ablesetag.Day}";
+                counterData = await gwsP!.DeleteDataAsync<Electric_CounterModel>(urlMeterDay, readingDay);
+                ShowToastMessage(true, "Datensatz gelöscht!");
+            }
+            SfDataGrid?.Refresh();
+        }
+    }
+    #endregion
+
+    #region CancelClick
+    /// <summary>
+    /// CancelClick
+    /// </summary>
+    private async Task CancelClick()
+    {
+        DialogVisible = false;
+        dayChanged = false;
+        counterList = await gwsP!.LoadDataAsync<Electric_CounterModel>(urlMeter + Convert.ToString(supplierData!.Id));  // Daten neu laden
+        SfDataGrid?.Refresh();
+    }
+    #endregion
+
+    #region YesClick
+    /// <summary>
+    /// YesClick
+    /// </summary>
+    private async Task YesClick()
+    {
+        DialogVisible = false;
+
+        if (save) // Datensatz speichern
+        {
+            save = false;
+            if (counterData != null)
+            {
+                apiResponse = await gwsP!.PostDataAsync<Electric_CounterModel>(urlMeterDay, counterData);  // POST
+
+                if (apiResponse.MyHttpStatusCode == HttpStatusCode.Created)
+                {
+                    ShowToastMessage(true, "Datensatz gespeichert (created)!");
+                    counterList = await gwsP.LoadDataAsync<Electric_CounterModel>(urlMeter + Convert.ToString(supplierData!.Id));
+                }
+                else
+                {
+                    ShowToastMessage(false, "Datensatz nicht gespeichert!");
+                }
+            }
+        }
+        else if (update) // Datensatz updaten
+        {
+            update = false;
+
+            if (counterData != null)
+            {
+                if (dayChanged)
+                {
+                    counterData.Uhrzeit = new DateTime(counterData.Ablesetag.Year, counterData.Ablesetag.Month, counterData.Ablesetag.Day, counterData.Uhrzeit!.Value.Hour, counterData.Uhrzeit!.Value.Minute,0);
+                    dayChanged = false;
+                }
+
+                // Format Ablesetag : 2021.10.24
+                //string readingDay = $"{counterData.Ablesetag.Year}.{counterData.Ablesetag.Month}.{counterData.Ablesetag.Day}";
+                string readingDayId = $"{counterData.ID_Tag}";
+                string url = urlMeterDay + "id/" + readingDayId;
+
+                apiResponse = await gwsP!.UpdateDataAsync<Electric_CounterModel>(url, counterData);  // Put
+                if (apiResponse.MyHttpStatusCode == HttpStatusCode.NoContent)
+                {
+                    ShowToastMessage(true, "Datensatz aktualisiert!");
+                }
+                else if (apiResponse.MyHttpStatusCode == HttpStatusCode.NotFound)
+                {
+                    ShowToastMessage(false, $"Datensatz nicht vorhanden! ({readingDayId})");
+                    counterList = await gwsP.LoadDataAsync<Electric_CounterModel>(urlMeter + Convert.ToString(supplierData!.Id));
+                }
+            }
+        }
+        dayChanged = false;
+        SfDataGrid?.Refresh();
+    }
+    #endregion
+
+    #region Ablesetage neuen Anbieter auslesen
+    /// <summary>
+    /// Auslesen Ablesetage des neuen ausgewählten Anbieters
+    /// </summary>
+    /// <param name="args"></param>
+    private async Task ValueSelectHandler(SelectEventArgs<Electric_SupplierDataModel> args)
+    {
+        supplierData = args.ItemData;
+
+        if (supplierData.Id > 0)
+        {
+            // Spinner
+            this.spinnerVisibleProperty = true;
+
+            success = GetSetMyAppConfig.SetMyAppSettings.WriteSettings(myAppSettings, "Supplier_Id.Electric", supplierData.Id.ToString());
+
+            StartDate = args.ItemData.Zeitraum_Start ?? DateTime.Now;
+            EndDate = args.ItemData.Zeitraum_Ende ?? DateTime.Now;
+
+            counterList = await gwsP!.LoadDataAsync<Electric_CounterModel>(urlMeter + Convert.ToString(supplierData.Id)); // Daten des neu ausgewählten Anbieter laden
+            if (counterList == null || !counterList.Any())
+            {
+                OpenDialog("Keine Strom-Zählerstände vorhanden!", "60px", "380px", false);
+            }
+
+            SfDataGrid?.Refresh();
+
+            // Spinner
+            await Task.Delay(200);
+            this.spinnerVisibleProperty = false;
+        }
+    }
+    #endregion
+
+    #region ShowToastMessage
+    /// <summary>
+    /// ShowToastMessage
+    /// </summary>
+    /// <param name="success"></param>
+    /// <param name="message"></param>
+    /// <returns></returns>
+    private void ShowToastMessage(bool success, string message)
+    {
+        if (success)
+        {
+            ShowToast("Erfolg!", message, "e-toast-success", "e-circle-check");
+        }
+        else
+        {
+            ShowToast("Fehler!", message, "e-toast-danger", "e-circle-close");
+        }
+    }
+    #endregion
+
+    #region ShowToast
+    /// <summary>
+    /// ShowToast
+    /// </summary>
+    /// <param name="title"></param>
+    /// <param name="content"></param>
+    /// <param name="cssClass"></param>
+    /// <param name="icon"></param>
+    private void ShowToast(string title, string content, string cssClass, string icon)
+    {
+        this.ToastService.Open(new ToastOption()
+            {
+                Title = title,
+                Content = content,
+                CssClass = cssClass,
+                Icon = icon,
+            });
+    }
+    #endregion
+
+    #region ReadLoxoneTemperatures
+    /// <summary>
+    /// Auslesen der akt. Temperaturen von Loxone
+    /// </summary>
+    /// <param name="user"></param>
+    /// <param name="password"></param>
+    /// <returns></returns>
+    private async Task ReadLoxoneTemperatures(string user, string password)
+    {
+        this.spinnerVisibleProperty = true;
+        loxoneTemp = await LoxoneProcessor.LoadLoxoneTemp(user, password);    // Loxone-Api auf Temperaturen abfragen
+        this.spinnerVisibleProperty = false;
+    }
+    #endregion
+
+    #region GetTooltipContent
+    /// <summary>
+    /// GetTooltipContent
+    /// </summary>
+    /// <param name="headerText"></param>
+    /// <returns></returns>
+    public string GetTooltipContent(string headerText)
+    {
+        return ColumnDescriptions.ContainsKey(headerText) ? ColumnDescriptions[headerText] : "No description available.";
+    }
+    #endregion
+
+    #region OpenDialog
+    /// <summary>
+    /// CloseDialog
+    /// </summary>
+    private void OpenDialog(string header, string height, string width, bool showButtons)
+    {
+        Header = header;
+        dialogHeight = height;
+        dialogWidth = width;
+        showDialogButtons = showButtons;
+        this.DialogVisible = true;
+    }
+    #endregion
+
+    #region GetDialogHeader
+    /// <summary>
+    /// GetDialogHeader
+    /// </summary>
+    /// <param name="counter"></param>
+    /// <returns></returns>
+    public string GetDialogHeader(Electric_CounterModel? counter)
+    {
+        if (counter != null)
+        {
+            return counter.ID_Tag == 0
+                ? "Ablesetag: neuer Tag"
+                : "Ablesetag: " + counter.Ablesetag.ToString("dd.MM.yyyy");
+        }
+        else
+        {
+            return "Keine Ablesedaten vorhanden!";
+        }
+    }
+    #endregion
+
+    #region RowCreatingHandler
+    /// <summary>
+    /// ein neuer Datebsatz wird angelegt
+    /// </summary>
+    /// <param name="args"></param>
+    public void RowCreatingHandler(RowCreatingEventArgs<Electric_CounterModel> args)
+    {
+        if(supplierData != null)
+        {
+            // copy data
+            DropDownValueSupplier = supplierData.Id;
+        }
+    }
+    #endregion
+
+    #region RowEditingHandler
+    /// <summary>
+    /// Datenzeile wird editiert
+    /// </summary>
+    /// <param name="args"></param>
+    public void RowEditingHandler(RowEditingEventArgs<Electric_CounterModel> args)
+    {
+        // copy data
+        DropDownValueSupplier = args.Data.ID_Anbieter;
+        temperatureOutside = args.Data.Temperatur_aussen;
+        temperatureInside = args.Data.Temperatur_innen;
+    }
+    #endregion
+
+    #region DayChangedHandler
+    public void DayChangedHandler(ChangedEventArgs<DateTime> args)
+    {
+        dayChanged = true;
+    }
+    #endregion
+}

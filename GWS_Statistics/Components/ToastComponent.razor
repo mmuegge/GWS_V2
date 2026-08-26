@@ -1,0 +1,45 @@
+﻿@using GWS_Statistics.Components.Services
+@using Syncfusion.Blazor.Notifications
+@using Syncfusion.Blazor.Popups;
+
+<SfToast @ref="Toast" Timeout=2000 CssClass="@Options.CssClass" Icon="@Options.Icon">
+    <ToastTemplates>
+        <Title>
+            @Options.Title
+        </Title>
+        <Content>
+            @Options.Content
+        </Content>
+    </ToastTemplates>
+    <ToastPosition X="Right"></ToastPosition>
+</SfToast>
+
+@code {
+    [Inject]
+    public ToastService? ToastService { get; set; }
+    SfToast? Toast;
+
+    private bool IsToastVisible { get; set; } = false;
+
+    // Parameter
+    private ToastOption Options = new ToastOption();
+
+    protected override void OnInitialized()
+    {
+        // Update the parameter in local variable and render the toast
+        ToastService!.ToastInstance += (ToastOption options) =>
+        {
+            InvokeAsync(() =>
+            {
+                this.Options.Title = options.Title;
+                this.Options.Content = options.Content;
+                this.Options.CssClass = options.CssClass;
+                this.Options.Icon = options.Icon;
+                this.IsToastVisible = true;
+                this.StateHasChanged();
+                //await Task.Delay(300);  // Achtung: Zeit erhöhen, wenn Toast nicht angezeigt wird
+                this.Toast!.ShowAsync();
+            });
+        };
+    }
+} 

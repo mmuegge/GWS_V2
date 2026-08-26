@@ -1,0 +1,920 @@
+﻿@page "/water_price"
+
+@using GWS_Statistics.Components.Services
+@using GWS_Statistics.Helper
+@using System.Globalization
+@using System.Net
+
+@inject MyAppConfigModel myAppSettings
+@inject HttpClient myHttpClient
+@inject ILogger<Water_Price> Logger
+@inject ToastService ToastService
+@* @inject NavigationManager NavigationManager *@
+@inject SfDialogService DialogService
+
+<PageTitle>Wasser- Preise</PageTitle>
+
+<div class="container">
+    <div class="row">
+        <div class="col col-md-12">
+            <div class="text-center fs-3 fw-bold">
+                <span class="fa-solid fa-faucet-drip fa-3xs" aria-hidden="true"> </span>
+                <label>Wasser- Preise</label>
+            </div>
+        </div>
+        @* <span class="border-bottom border-dark mb-1"></span> *@
+    </div>
+</div>
+
+@* Auswahl Anbieter*@
+<div class="card shadow-lg mb-1">
+    <div class="container bg-color-grey mb-3 mt-2 pb-4 border">
+        <div class="row justify-content-center">
+            <div class="col-12 col-lg-4">
+                <div class="control-wrapper">
+                    <label class="control-label fw-bold mb-sm-1 me-1">Anbieter</label>
+                    <SfDropDownList DataSource="@supplierDataList" TItem="Water_SupplierDataModel" TValue="int" Placeholder="Anbieter auswählen" @bind-Value="@supplierData!.Id">
+                        <DropDownListFieldSettings Text="Anbieter" Value="Id"></DropDownListFieldSettings>
+                        <DropDownListEvents TItem="Water_SupplierDataModel" TValue="int" OnValueSelect="@ValueSelectHandler"></DropDownListEvents>
+                    </SfDropDownList>
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-4">
+                <div class="control-wrapper">
+                    <label class="control-label fw-bold mb-sm-1 me-1">Start-Datum</label>
+                    <SfDatePicker TValue="DateTime?" Value="@startDate" Min="@MinDate" Format="dd.MM.yyyy" AllowEdit="false" Readonly="true"></SfDatePicker>
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-4">
+                <div class="control-wrapper">
+                    <label class="control-label fw-bold mb-sm-1 me-1">Ende-Datum</label>
+                    <SfDatePicker TValue="DateTime?" Value="@endDate" Min="@MinDate" Format="dd.MM.yyyy" AllowEdit="false" Readonly="true"></SfDatePicker>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="control-section" id="target" align="center">
+    <SfGrid ID="Grid" @ref="SfDataGrid" DataSource="@costsList"
+            AllowPaging="true"
+            AllowFiltering="true"
+            AllowReordering="true"
+            AllowResizing="true"
+            AllowExcelExport="true"
+            AllowPdfExport="true"
+            EnableHover="true"
+            AllowTextWrap="true"
+            AllowSelection="true"
+            AllowSorting="true"
+            Height="100%" Width="100%"
+            Toolbar=@toolbar
+            EnableStickyHeader="true">
+
+        <GridEditSettings AllowAdding="true"
+                          AllowEditing="true"
+                          AllowDeleting="true"
+                          ShowDeleteConfirmDialog="true"
+                          Mode="Syncfusion.Blazor.Grids.EditMode.Dialog"
+                          Dialog="DialogParams">
+
+            <HeaderTemplate>
+                @{
+                    var DialogHeader = GetDialogHeader((context as Water_CostModel)!);
+                    <span>@DialogHeader</span>
+                }
+            </HeaderTemplate>
+
+        </GridEditSettings>
+        <GridEvents OnToolbarClick="ToolbarBtnClickHandler"
+                    RowCreating="RowCreatingHandler"
+                    RowEditing="RowEditingHandler"
+                    OnActionComplete="ActionCompleteHandler"
+                    TValue="Water_CostModel">
+        </GridEvents>
+
+        <GridPageSettings PageSize="20" PageSizes="true"></GridPageSettings>
+
+        <GridFilterSettings Type="Syncfusion.Blazor.Grids.FilterType.CheckBox"></GridFilterSettings>
+
+        <GridSortSettings>
+            <GridSortColumns>
+                <GridSortColumn 
+                    Field="Gueltig_Ab" 
+                    Direction="SortDirection.Descending">
+                </GridSortColumn>
+            </GridSortColumns>
+        </GridSortSettings>
+
+        <GridColumns>
+            <GridColumn IsPrimaryKey="true" Field="@nameof(Water_CostModel.Id)" Visible="false"
+                        AllowAdding="false"
+                        AllowEditing="false"
+                        AllowSorting="false"
+                        AllowFiltering="false"
+                        Width="35">
+            </GridColumn>
+
+            <GridColumn Field=@nameof(Water_CostModel.Anbieter)
+                        Width="200"
+                        EditType="EditType.DropDownEdit">
+
+                <EditTemplate>
+                    <SfDropDownList Placeholder="Anbieter"
+                                    FloatLabelType="FloatLabelType.Always"
+                                    ID="Anbieter"
+                                    TItem="Water_SupplierDataModel"
+                                    TValue="string"
+                                    @bind-Value="@((context as Water_CostModel)!.Anbieter)"
+                                    DataSource="@supplierDataList">
+
+                        <DropDownListFieldSettings Value="Anbieter" Text="Anbieter"></DropDownListFieldSettings>
+                    </SfDropDownList>
+                </EditTemplate>
+
+                <HeaderTemplate>
+                    <SfTooltip Content="@GetTooltipContent("Anbieter")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                        <span><b>Anbieter</b></span>
+                    </SfTooltip>
+                </HeaderTemplate>
+            </GridColumn>
+
+            <GridColumn Field=@nameof(Water_CostModel.Gueltig_Ab)
+                        Format="d"
+                        EditType="EditType.DatePickerEdit"
+                        Width="110"
+                        HeaderText="Gültig ab">
+
+                <HeaderTemplate>
+                    <SfTooltip Content="@GetTooltipContent("G-ab")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                        <span><b>Datum</b></span>
+                    </SfTooltip>
+                </HeaderTemplate>
+            </GridColumn>
+
+            <GridColumn Field=@nameof(Water_CostModel.Grundpreis)
+                        Format="0.0000 €/Monat"
+                        Width="100"
+                        HeaderText="Grundpreis">
+
+                <EditTemplate>
+                    <SfNumericTextBox Placeholder="Grundpreis"
+                                      FloatLabelType="FloatLabelType.Always"
+                                      TValue="double?"
+                                      @bind-Value="@((context as Water_CostModel)!.Grundpreis)"
+                                      Format="0.0000 €/Monat">
+                    </SfNumericTextBox>
+                </EditTemplate>
+
+                <HeaderTemplate>
+                    <SfTooltip Content="@GetTooltipContent("GP")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                        <span><b>GP</b></span>
+                    </SfTooltip>
+                </HeaderTemplate>
+            </GridColumn>
+
+            @* Trinkwasserpreis *@
+            <GridColumn Field=@nameof(Water_CostModel.Trinkwasserpreis)
+                        Format="0.0000 €/m³"
+                        Width="100"
+                        HeaderText="Trinkwasserpreis">
+
+                <EditTemplate>
+                    <SfNumericTextBox Placeholder="Trinkwasserpreis"
+                                      FloatLabelType="FloatLabelType.Always"
+                                      TValue="double?"
+                                      @bind-Value="@((context as Water_CostModel)!.Trinkwasserpreis)"
+                                      Format="0.0000 €/m³">
+                    </SfNumericTextBox>
+                </EditTemplate>
+
+                <HeaderTemplate>
+                    <SfTooltip Content="@GetTooltipContent("TP")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                        <span><b>TP</b></span>
+                    </SfTooltip>
+                </HeaderTemplate>
+            </GridColumn>
+
+            <GridColumn Field=@nameof(Water_CostModel.Abwasserpreis)
+                        Format="0.0000 €/m³"
+                        Width="100"
+                        HeaderText="Abwasserpreis">
+
+                <EditTemplate>
+                    <SfNumericTextBox Placeholder="Abwasserpreis"
+                                      FloatLabelType="FloatLabelType.Always"
+                                      TValue="double?"
+                                      @bind-Value="@((context as Water_CostModel)!.Abwasserpreis)"
+                                      Format="0.0000 €/m³">
+                    </SfNumericTextBox>
+                </EditTemplate>
+
+                <HeaderTemplate>
+                    <SfTooltip Content="@GetTooltipContent("AbP")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                        <span><b>AbP</b></span>
+                    </SfTooltip>
+                </HeaderTemplate>
+            </GridColumn>
+
+            <GridColumn Field=@nameof(Water_CostModel.Zaehlermiete)
+                        Format="#0.0000 €/Monat"
+                        Width="110">
+
+                <EditTemplate>
+                    <SfNumericTextBox Placeholder="Zählermiete"
+                                      FloatLabelType="FloatLabelType.Always"
+                                      TValue="double?"
+                                      @bind-Value="@((context as Water_CostModel)!.Zaehlermiete)"
+                                      Format="#0.0000 €/Monat">
+                    </SfNumericTextBox>
+                </EditTemplate>
+
+                <HeaderTemplate>
+                    <SfTooltip Content="@GetTooltipContent("ZM")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                        <span><b>ZM</b></span>
+                    </SfTooltip>
+                </HeaderTemplate>
+            </GridColumn>
+
+            <GridColumn Field=@nameof(Water_CostModel.Bemerkung)
+                        Width="300"
+                        HeaderText="Bemerkung">
+
+                <HeaderTemplate>
+                    <SfTooltip Content="@GetTooltipContent("Bemerkung")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                        <span><b>Bemerkung</b></span>
+                    </SfTooltip>
+                </HeaderTemplate>
+            </GridColumn>
+
+            <GridColumn HeaderText="Funktion" Width="20%" MinWidth="110">
+                <GridCommandColumns>
+                    <GridCommandColumn Type="CommandButtonType.Edit"
+                                       ButtonOption="@(new CommandButtonOptions(){
+                                                    IconCss="e-icons e-edit",
+                                                    CssClass="e-flat"
+                                               })">
+                    </GridCommandColumn>
+                    <GridCommandColumn Type="CommandButtonType.Delete"
+                                       ButtonOption="@(new CommandButtonOptions(){
+                                                    IconCss ="e-icons e-delete",
+                                                    CssClass="e-flat"
+                                               })">
+                    </GridCommandColumn>
+                    <GridCommandColumn Type="CommandButtonType.Save"
+                                       ButtonOption="@(new CommandButtonOptions(){
+                                                    IconCss="e-icons e-update",
+                                                    CssClass="e-flat"
+                                               })">
+                    </GridCommandColumn>
+                    <GridCommandColumn Type="CommandButtonType.Cancel"
+                                       ButtonOption="@(new CommandButtonOptions(){
+                                                    IconCss="e-icons e-cancel-icon",
+                                                    CssClass="e-flat"
+                                               })">
+                    </GridCommandColumn>
+                </GridCommandColumns>
+            </GridColumn>
+        </GridColumns>
+    </SfGrid>
+</div>
+
+<SfSpinner @bind-Visible="@spinnerVisibleProperty" Type="SpinnerType.Tailwind" Size="40" CssClass="e-custom-color"></SfSpinner>
+
+@* Dialog*@
+<div>
+    <SfDialog Target="#target"
+                Width="@dialogWidth"
+                Height=@dialogHeight
+                AllowDragging="true"
+                ShowCloseIcon=" true"
+                @bind-Visible="DialogVisible"
+                AllowPrerender="true"
+                IsModal="true"
+                CssClass="MyCss">
+
+        <DialogTemplates>
+            <Header>@Header</Header>
+        </DialogTemplates>
+
+        <DialogPositionData X="@dialogXValue" Y="@dialogYValue"></DialogPositionData>
+
+        <DialogAnimationSettings Effect="@animationEffect"></DialogAnimationSettings>
+
+        @if (showDialogButtons)
+        {
+            <DialogButtons>
+                <DialogButton Content="Ja" IsPrimary="true" OnClick="@YesClick" />
+                <DialogButton Content="Abbrechen" OnClick="@CancelClick" />
+            </DialogButtons>
+        }
+    </SfDialog>
+</div>
+
+<style>
+    .e-dlg-overlay {
+        background-color: slategray;
+        opacity: 0.6;
+    }
+
+    /* Dialog Editing*/
+    .e-dialog .e-dlg-header-content {
+        background-color: grey;
+        font-size: 24px;
+    }
+
+    .e-dialog .e-dlg-header {
+        color: white;
+    }
+
+    .e-dialog .e-dlg-content {
+        color: white;
+        background-color: lightgray;
+        font-size: 16px;
+    }
+
+    .bg-color-grey {
+        background: #deded9;
+    }
+
+    #toast_default .e-circle-check::before {
+        content: "\e72b";
+        font-size: 17px;
+    }
+
+    #toast_default .e-circle-close::before {
+        content: "\e878";
+        font-size: 17px;
+    }
+
+    .control-wrapper {
+        max-width: 250px;
+        min-width: 80px;
+        margin: 0 auto;
+    }
+
+    .control-label {
+        font-size: 14px;
+        margin: 6px 0px;
+    }
+
+    /* Dialog: Datensatz ändern */
+    .MyCss .e-dlg-header-content {
+        background-color: red;
+    }
+
+    .dialog-label {
+        color: black;
+        font-size: 14px;
+        margin-bottom: 2px;
+    }
+</style>
+
+@code
+{
+    #region Variablendeklaration
+    private bool save = false;
+    private bool update = false;
+    private bool success = false;
+
+    bool spinnerVisibleProperty { get; set; } = false;
+
+    private DialogSettings DialogParams = new DialogSettings { MinHeight = "400px", Width = "400px" };
+    public DialogEffect animationEffect = DialogEffect.Zoom;
+    public bool DialogVisible { get; set; } = false;
+    private bool showDialogButtons = false;
+    private string DialogText { get; set; } = string.Empty;
+    private string dialogXValue = "center";
+    private string dialogYValue = "center";
+    private string dialogHeight = "130px";
+    private string dialogWidth = "380px";
+
+    public int? DropDownValueSupplier { get; set; } = 0;
+
+    readonly string urlSupplier = "wasser/anbieter/";
+    readonly string urlCost = "wasser/kosten/";
+    readonly string urlCostSupplier = "wasser/kosten/anbieter/";
+
+    string? Header { get; set; }
+    string? Content { get; set; }
+
+    GWSProcessor? gwsP;
+    ApiResponse? apiResponse;
+
+    private SfGrid<Water_CostModel> SfDataGrid = new();
+    private List<Water_SupplierDataModel>? supplierDataList = new();
+
+    private Water_SupplierDataModel? supplierData = new();
+    private List<Water_CostModel>? costsList = new();
+    private Water_CostModel? costData = new();
+
+    private List<object> toolbar = new List<object>() { "Add", "Cancel", "Search", "ExcelExport", "PdfExport" };
+
+    public DateTime MinDate { get; set; } = new DateTime(1990, 1, 1);
+    public DateTime MaxDate { get; set; } = DateTime.Now;
+    public DateTime? startDate { get; set; } = new DateTime(2000, 1, 1);
+    public DateTime? endDate { get; set; } = new DateTime(2000, 1, 1);
+
+
+    MyAppConfigModel? settings;
+
+    // Dictionary for column descriptions
+    public Dictionary<string, string> ColumnDescriptions = new()
+    {
+        { "Anbieter", "Anbieter" },
+        { "G-ab", "Gültig ab" },
+        { "GP", "Grundpreis" },
+        { "AP", "Arbeitspreis" },
+        { "TP", "Trinkpreis" },
+        { "AbP", "Abwasserpreis" },
+        { "ZM", "Zählermiete" },
+        { "Bemerkung", "Bemerkung" }
+    };
+
+    // PDF-Export Properties
+    public List<PdfHeaderFooterContent> HeaderContent = new List<PdfHeaderFooterContent>
+    {
+    new PdfHeaderFooterContent() { Type = ContentType.Line, Points= new PdfPoints { X1 = 0, Y1 = 4, X2 = 720, Y2 = 4}, Style = new PdfContentStyle() { PenColor = "#000080", DashStyle=PdfDashStyle.Solid } },
+    new PdfHeaderFooterContent() { Type = ContentType.Text, Value = "Wasser-Preise", Position = new PdfPosition() { X = 350, Y = 20 }, Style = new PdfContentStyle() { TextBrushColor = "#000000", FontSize = 10 } },
+    new PdfHeaderFooterContent() { Type = ContentType.Line, Points= new PdfPoints { X1 = 0, Y1 = 40, X2 = 720, Y2 = 40}, Style = new PdfContentStyle() { PenColor = "#000080", DashStyle=PdfDashStyle.Solid } },
+
+    new PdfHeaderFooterContent() { Type = ContentType.PageNumber,  PageNumberType = PdfPageNumberType.Numeric, Position = new PdfPosition() { X = 470, Y = 650 }, Style = new PdfContentStyle() { TextBrushColor = "red", FontSize = 8, HAlign = PdfHorizontalAlign.Right } }
+    };
+
+    public List<PdfHeaderFooterContent> FooterContent = new List<PdfHeaderFooterContent>
+    {
+        // new PdfHeaderFooterContent() { Type = ContentType.Text, Value = "Seite: ", Position = new PdfPosition() { X = 400, Y = 600 }, Style = new PdfContentStyle() { TextBrushColor = "#000000", FontSize = 10 } },
+        // new PdfHeaderFooterContent() { Type = ContentType.PageNumber,  PageNumberType = PdfPageNumberType.Numeric, Position = new PdfPosition() { X = 470, Y = 650 }, Style = new PdfContentStyle() { TextBrushColor = "red", FontSize = 10, HAlign = PdfHorizontalAlign.Right } }
+    };
+    #endregion
+
+    #region OnInitializedAsync
+    /// <summary>
+    /// OnInitializedAsync
+    /// </summary>
+    /// <returns></returns>
+    protected override async Task OnInitializedAsync()
+    {
+        // Spinner
+        this.spinnerVisibleProperty = true;
+
+        // MyAppSettings.json auslesen und letzten gespeicherten Anbieter auslesen
+        settings = GetSetMyAppConfig.GetMyAppSettings.ReadSettings(myAppSettings);
+
+        gwsP = new GWSProcessor(myHttpClient, settings!.GWSUri);
+        try
+        {
+            // Anbieterdaten auslesen (nur Anbieter und Id => durch Water_SupplierDataModel)
+            supplierDataList = await gwsP.LoadDataAsync<Water_SupplierDataModel>(urlSupplier);
+
+            if (supplierDataList != null && supplierDataList.Any()) // prüfen ob es Anbieterdaten gibt
+            {
+                // gespeicherten letzten Anbieter auslesen
+                supplierData!.Id = String.IsNullOrEmpty(settings.Supplier_Id!.Water) ? supplierData.Id = supplierDataList.Max(x => x.Id) : supplierData.Id = Int32.Parse(settings.Supplier_Id.Water);
+
+                // Anbieter Start-Datum auslesen
+                startDate = supplierDataList
+                .Where(c => c.Id == supplierData.Id)
+                .Select(c => c.Zeitraum_Start).FirstOrDefault();
+
+                // Anbieter Ende-Datum auslesen
+                endDate = supplierDataList
+               .Where(c => c.Id == supplierData.Id)
+               .Select(c => c.Zeitraum_Ende).FirstOrDefault();
+            }
+            else
+            {
+                // es gibt keine gültigen Daten der Anbieter
+                supplierData!.Id = 0;
+            }
+
+            if (supplierData.Id > 0)
+            {
+                // Kosten anbieterabhängig auslesen
+                costsList = await gwsP.LoadDataAsync<Water_CostModel>(urlCostSupplier + Convert.ToString(supplierData.Id));
+
+                if (costsList == null || !costsList.Any())
+                {
+                    OpenDialog("Keine Wasser-Preise vorhanden!", "60px", false);
+                }
+            }
+        }
+        catch (Exception)
+        {
+            throw new Exception("Es konnten keine Wasser-Preise geladen werden");
+        }
+
+        // Spinner
+        await Task.Delay(200);
+        this.spinnerVisibleProperty = false;
+    }
+    #endregion
+
+    #region ValueSelectHandler
+    /// <summary>
+    /// Auslesen Ablesetage des neuen ausgewählten Anbieters
+    /// </summary>
+    /// <param name="args"></param>
+    private async Task ValueSelectHandler(SelectEventArgs<Water_SupplierDataModel> args)
+    {
+        supplierData = args.ItemData;
+
+        if (supplierData.Id > 0)
+        {
+            // Spinner
+            this.spinnerVisibleProperty = true;
+            success = GetSetMyAppConfig.SetMyAppSettings.WriteSettings(myAppSettings, "Supplier_Id.Water", supplierData.Id.ToString());
+
+            // Start-Zeitpunkt/Ende-Zeitpunkt auslesen
+            startDate = args.ItemData.Zeitraum_Start;
+            endDate = args.ItemData.Zeitraum_Ende;
+
+            costsList = await gwsP!.LoadDataAsync<Water_CostModel>(urlCostSupplier + Convert.ToString(supplierData.Id)); // Daten des neu ausgewählten Anbieter laden
+            if (costsList == null || !costsList.Any())
+            {
+                OpenDialog("Keine Wasser-Preise vorhanden!", "60px", false);
+            }
+            SfDataGrid?.Refresh();
+
+            // Spinner
+            await Task.Delay(200);
+            this.spinnerVisibleProperty = false;
+        }
+    }
+    #endregion
+
+    #region ToolbarBtnClickHandler
+    /// <summary>
+    /// ToolbarBtnClickHandler
+    ///
+    /// </summary>
+    /// <param name="args"></param>
+    public async Task ToolbarBtnClickHandler(Syncfusion.Blazor.Navigations.ClickEventArgs args)
+    {
+        if (args.Item.Id.Contains("_excelexport"))
+        {
+            ExcelExportProperties excelExportProperties = new();
+            excelExportProperties.FileName = $"Wasserkosten_{DateTime.Now.ToString("ddMMyyyy")}.xlsx";
+
+            ExcelTheme Theme = new ExcelTheme();
+            // Header
+            ExcelStyle ThemeStyleHeader = new ExcelStyle()
+                {
+                    FontName = "Calibri",
+                    FontSize = 12,
+                    Bold = true,
+                };
+            Theme.Header = ThemeStyleHeader;
+            // Data
+            ExcelStyle ThemeStyleRecord = new ExcelStyle()
+                {
+                    FontName = "Calibri",
+                    FontSize = 10,
+                    Bold = false,
+                };
+            Theme.Record = ThemeStyleRecord;
+
+            excelExportProperties.Theme = Theme;
+
+            await SfDataGrid.ExportToExcelAsync(excelExportProperties);
+        }
+        else if (args.Item.Id.Contains("_pdfexport"))
+        {
+            PdfExportProperties pdfExportProperties = new();
+            pdfExportProperties.IsRepeatHeader = true;
+            pdfExportProperties.FileName = $"Wasseranbieter_{DateTime.Now.ToString("ddMMyyyy")}.pdf";
+            pdfExportProperties.PageOrientation = Syncfusion.Blazor.Grids.PageOrientation.Landscape;
+
+            PdfHeader pdfHeader = new()
+                {
+                    FromTop = 0,
+                    Height = 80,
+                    Contents = HeaderContent
+                };
+
+            PdfFooter pdfFooter = new()
+                {
+                    FromBottom = 0,
+                    Height = 80,
+                    Contents = FooterContent
+                };
+
+            PdfTheme Theme = new PdfTheme();
+
+            PdfThemeStyle HeaderThemeStyle = new PdfThemeStyle()
+                {
+                    FontColor = "Blue",
+                    FontName = "Calibri",
+                    FontSize = 8,
+                    Bold = true,
+                };
+            Theme.Header = HeaderThemeStyle;
+
+            pdfExportProperties.Theme = Theme;
+
+            pdfExportProperties.Header = pdfHeader;
+            pdfExportProperties.Footer = pdfFooter;
+
+            await SfDataGrid.ExportToPdfAsync(pdfExportProperties);
+        }
+        else if (args.Item.Id.Contains("XmlExport"))
+        {
+            Console.Write("Export to Xml function");        // wird nicht genutzt
+        }
+    }
+    #endregion
+
+    // #region ActionBeginHandler
+    // /// <summary>
+    // /// ActionBeginHandler
+    // /// </summary>
+    // /// <param name="args"></param>
+    // public void ActionBeginHandler(ActionEventArgs<Water_CostModel> args)
+    // {
+    //     if (args.Data != null)
+    //     {
+    //         if (!args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Save))
+    //         {
+    //             // Add
+    //             if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Add))
+    //             {
+    //                 // Daten aus Dropdown "Anbieter" auslesen und Anbieter-Feld in Grid vorbesetzen
+    //                 args.Data.Id_Anbieter = supplierData!.Id;
+    //                 args.Data.Anbieter = supplierDataList?
+    //                                           .Where(x => x.Id == supplierData.Id)
+    //                                           .Select(a => a.Anbieter)
+    //                                           .FirstOrDefault();
+
+    //                 args.Data.Gueltig_Ab = DateTime.Now;  // das Datum auf Heute setzen
+
+    //                 // letzte Einträge holen und Variable vorbesetzen
+    //                 if (costsList != null && costsList.Any())
+    //                 {
+    //                     var lastCost = costsList?.LastOrDefault();
+    //                     if (lastCost != null)
+    //                     {
+    //                         args.Data.Grundpreis = lastCost.Grundpreis;
+    //                         args.Data.Arbeitspreis = lastCost.Arbeitspreis;  // Trinkwasserpreis
+    //                         args.Data.Abwasserpreis = lastCost.Abwasserpreis;
+    //                         args.Data.Zaehlermiete = lastCost.Zaehlermiete;
+    //                         args.Data.Bemerkung = lastCost.Bemerkung;
+    //                     }
+    //                 }
+    //             }
+    //             else if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.BeginEdit))
+    //             {
+    //                 DropDownValueSupplier = args.Data.Id_Anbieter;
+    //             }
+    //         }
+    //     }
+    // }
+    // #endregion
+
+    #region ActionCompleteHandler
+    /// <summary>
+    /// ActionCompleteHandler
+    /// </summary>
+    /// <param name="args"></param>
+    public async Task ActionCompleteHandler(ActionEventArgs<Water_CostModel> args)
+    {
+        if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Save))
+        {
+            if (args.Action == "Add")
+            {
+                save = true;
+                costData = args.Data;
+
+                OpenDialog("Datensatz speichern ?", "130px", true);
+            }
+            else if (args.Action == "Edit")
+            {
+                update = true;
+                costData = args.Data;
+
+                OpenDialog("Datensatz ändern ?", "130px", true);
+            }
+        }
+        else if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Delete))
+        {
+            if (args.Data.Id == 0)
+            {
+                costsList = await gwsP!.LoadDataAsync<Water_CostModel>(urlCostSupplier + Convert.ToString(supplierData!.Id));
+                if (costsList == null || !costsList.Any())
+                {
+                    OpenDialog("Keine Wasser-Preise vorhanden!", "60px", false);
+                }
+            }
+            else
+            {
+                costData = await gwsP!.DeleteDataAsync<Water_CostModel>(urlCost, Convert.ToString(args.Data.Id));
+                ShowToastMessage(true, "Datensatz gelöscht!");
+            }
+            SfDataGrid?.Refresh();
+        }
+    }
+    #endregion
+
+    #region CancelClick
+    /// <summary>
+    /// CancelClick
+    /// </summary>
+    private async void CancelClick()
+    {
+        DialogVisible = false;
+        costsList = await gwsP!.LoadDataAsync<Water_CostModel>(urlCostSupplier + Convert.ToString(supplierData!.Id));  // Daten neu laden
+        SfDataGrid?.Refresh();
+    }
+    #endregion
+
+    #region YesClick
+    /// <summary>
+    /// YesClick
+    /// </summary>
+    private async void YesClick()
+    {
+        DialogVisible = false;
+
+        if (save) // Datensatz speichern
+        {
+            if (costData != null)
+            {
+                save = false;
+
+                apiResponse = await gwsP!.PostDataAsync<Water_CostModel>(urlCost, costData);  // POST
+
+                if (apiResponse.MyHttpStatusCode == HttpStatusCode.Created)
+                {
+                    ShowToastMessage(true, "Datensatz gespeichert (created)!");
+                    costsList = await gwsP!.LoadDataAsync<Water_CostModel>(urlCostSupplier + Convert.ToString(supplierData!.Id));  // Daten neu laden
+                }
+                else
+                {
+                    ShowToastMessage(false, "Datensatz nicht gespeichert!");
+                }
+            }
+        }
+        else if (update) // Datensatz updaten
+        {
+            update = false;
+
+            if (costData != null)
+            {
+                string url = urlCost + Convert.ToString(costData.Id);
+
+                apiResponse = await gwsP!.UpdateDataAsync<Water_CostModel>(url, costData);  // Put
+                ShowToastMessage(true, "Datensatz aktualisiert!");
+                costsList = await gwsP!.LoadDataAsync<Water_CostModel>(urlCostSupplier + Convert.ToString(supplierData!.Id));  // Daten neu laden
+            }
+        }
+        SfDataGrid?.Refresh();
+    }
+    #endregion
+
+    #region ShowSpinner
+    /// <summary>
+    /// Anzeigen des Spinners
+    /// </summary>
+    /// <returns></returns>
+    private async Task ShowSpinner()
+    {
+        await Task.Delay(500);
+        this.spinnerVisibleProperty = false;
+    }
+    #endregion
+
+    #region ShowToastMessage
+    /// <summary>
+    /// ShowToastMessage
+    /// </summary>
+    /// <param name="success"></param>
+    /// <param name="message"></param>
+    /// <returns></returns>
+    private void ShowToastMessage(bool success, string message)
+    {
+        if (success)
+        {
+            ShowToast("Erfolg", message, "e-toast-success", "e-circle-check");
+        }
+        else
+        {
+            ShowToast("Fehler", message, "e-toast-danger", "e-circle-close");
+        }
+    }
+    #endregion
+
+    #region ShowToast
+    /// <summary>
+    /// ShowToast
+    /// </summary>
+    /// <param name="title"></param>
+    /// <param name="content"></param>
+    /// <param name="cssClass"></param>
+    /// <param name="icon"></param>
+    private void ShowToast(string title, string content, string cssClass, string icon)
+    {
+        this.ToastService.Open(new ToastOption()
+            {
+                Title = title,
+                Content = content,
+                CssClass = cssClass,
+                Icon = icon,
+            });
+    }
+    #endregion
+
+    #region GetTooltipContent
+    /// <summary>
+    /// GetTooltipContent(string headerText)
+    /// </summary>
+    /// <param name="headerText"></param>
+    /// <returns></returns>
+    // Method to get tooltip content dynamically based on HeaderText
+    public string GetTooltipContent(string headerText)
+    {
+        return ColumnDescriptions.ContainsKey(headerText) ? ColumnDescriptions[headerText] : "No description available.";
+    }
+    #endregion
+
+    #region CloseDialog
+    /// <summary>
+    /// CloseDialog
+    /// </summary>
+    private void CloseDialog()
+    {
+        this.DialogVisible = false;
+    }
+    #endregion
+
+    #region OpenDialog
+    /// <summary>
+    /// OpenDialog
+    /// </summary>
+    private void OpenDialog(string header, string height, bool showButtons)
+    {
+        Header = header;
+        dialogHeight = height;
+        showDialogButtons = showButtons;
+        this.DialogVisible = true;
+    }
+    #endregion
+
+    #region GetDialogHeader
+    /// <summary>
+    /// GetDialogHeader
+    /// </summary>
+    /// <param name="cost"></param>
+    /// <returns></returns>
+    public string GetDialogHeader(Water_CostModel cost)
+    {
+        return cost.Id == 0
+            ? "Kosten: neue Kosten"
+            : "Kosten: " + cost.Gueltig_Ab.ToString("dd.MM.yyyy");
+    }
+    #endregion
+
+    #region RowCreatingHandler
+    /// <summary>
+    /// ein neuer Datebsatz wird angelegt
+    /// </summary>
+    /// <param name="args"></param>
+    public void RowCreatingHandler(RowCreatingEventArgs<Water_CostModel> args)
+    {
+        // Daten aus Dropdown "Anbieter" auslesen und Anbieter-Feld in Grid vorbesetzen
+        args.Data.Id_Anbieter = supplierData!.Id;
+        args.Data.Anbieter = supplierDataList?
+                                    .Where(x => x.Id == supplierData.Id)
+                                    .Select(a => a.Anbieter)
+                                    .FirstOrDefault();
+
+        args.Data.Gueltig_Ab = DateTime.Now;  // das Datum auf Heute setzen
+
+        // letzte Einträge holen und Variable vorbesetzen
+        if (costsList != null && costsList.Any())
+        {
+            var lastCost = costsList?.LastOrDefault();
+            if (lastCost != null)
+            {
+                args.Data.Grundpreis = lastCost.Grundpreis;
+                args.Data.Arbeitspreis = lastCost.Arbeitspreis;  // Trinkwasserpreis
+                args.Data.Abwasserpreis = lastCost.Abwasserpreis;
+                args.Data.Zaehlermiete = lastCost.Zaehlermiete;
+                args.Data.Bemerkung = lastCost.Bemerkung;
+            }
+        }
+    }
+    #endregion
+
+    #region RowEditingHandler
+    /// <summary>
+    /// Datenzeile wird editiert
+    /// </summary>
+    /// <param name="args"></param>
+    public void RowEditingHandler(RowEditingEventArgs<Water_CostModel> args)
+    {
+        // copy data
+        DropDownValueSupplier = args.Data.Id_Anbieter;
+    }
+    #endregion
+}

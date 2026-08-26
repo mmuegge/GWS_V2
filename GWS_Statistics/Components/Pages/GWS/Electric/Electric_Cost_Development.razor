@@ -1,0 +1,629 @@
+﻿@page "/electric_cost_development"
+
+@using GWS_Statistics.Components.Services
+@using GWS_Statistics.Helper
+@using System.Globalization
+@using System.Net
+
+@inject MyAppConfigModel myAppSettings
+@inject HttpClient myHttpClient
+@inject ILogger<Electric_Supplier> Logger
+@inject ToastService ToastService
+
+<PageTitle>Strom- Kostenentwicklung</PageTitle>
+
+<div class="container">
+    <div class="row">
+        <div class="text-center fs-3 fw-bold">
+            <span class="fa-solid fa-plug fa-3xs" aria-hidden="true"> </span>
+            <label>Strom- Kosten-Entwicklung</label>
+        </div>
+    </div>
+</div>
+
+@* Anzeigen alle Anbieter Start-Datum/Ende-Datum*@
+<div class="card shadow-lg">
+    <div class="container chartHeader bg-color-grey mb-1 mt-1 pb-2 border">
+        <div class="row justify-content-center">
+            <div class="col-12 col-lg-4">
+                <div class="control-wrapper">
+                    <label class="control-label fw-bold mb-sm-1 me-1">Anbieter</label>
+                    <SfTextBox Placeholder="Alle Anbieter" Readonly="true"></SfTextBox>
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-4">
+                <div class="control-wrapper">
+                    <label class="control-label fw-bold mb-sm-1 me-1">Start-Datum</label>
+                    <SfDatePicker TValue="DateTime?" Value="@StartDate" Min="@MinDate" Format="dd.MM.yyyy" AllowEdit="false" Readonly="true"></SfDatePicker>
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-4">
+                <div class="control-wrapper">
+                    <label class="control-label fw-bold mb-sm-1 me-1">Ende-Datum</label>
+                    <SfDatePicker TValue="DateTime?" Value="@EndDate" Min="@MinDate" Format="dd.MM.yyyy" AllowEdit="false" Readonly="true"></SfDatePicker>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Chart *@
+<div class="control-section" id="target" align="center">
+    <div class="card shadow-lg">
+        <SfChart @ref="chart" Title="Übersicht" Width="@Width" Height="@Height" Palettes="@palettes">
+            <ChartEvents OnAxisLabelRender="LabelRender"
+                         SharedTooltipRender="ToolTipRenderEvent">
+            </ChartEvents>
+
+            <ChartTitleStyle Size="24px" Color="black" FontFamily=@fontFamily FontWeight="normal" FontStyle="normal">
+            </ChartTitleStyle>
+
+            <ChartArea Background="#8c8b87" Width="auto">
+                <ChartAreaBorder Color="black" Width="1"></ChartAreaBorder>
+            </ChartArea>
+
+            <ChartMargin Left="10" Right="10" Top="10" Bottom="10"></ChartMargin>
+
+            <ChartZoomSettings EnableMouseWheelZooming="true" EnablePinchZooming="true" EnableSelectionZooming="true"></ChartZoomSettings>
+
+            <ChartPrimaryXAxis RangePadding="ChartRangePadding.Additional"
+                               ValueType="Syncfusion.Blazor.Charts.ValueType.DateTimeCategory"
+                               EdgeLabelPlacement="EdgeLabelPlacement.None"
+                               Interval="@IntervalDuration"
+                               Format="@DateTimeFormat"
+                               IntervalType="@IntervalType">
+
+                <ChartAxisMajorGridLines Width="0"></ChartAxisMajorGridLines>
+                <ChartAxisLabelStyle FontFamily=@fontFamily></ChartAxisLabelStyle>
+                <ChartAxisTitleStyle FontFamily=@fontFamily></ChartAxisTitleStyle>
+                <ChartAxisCrosshairTooltip Fill="magenta" Enable="true"></ChartAxisCrosshairTooltip>
+            </ChartPrimaryXAxis>
+
+            <ChartPrimaryYAxis Title="Grundpreis"
+                               LabelFormat="{value} €"
+                               RangePadding="ChartRangePadding.Normal"
+                               Format="C2">
+
+                <ChartAxisLineStyle Width="0"></ChartAxisLineStyle>
+                <ChartAxisLabelStyle FontFamily=@fontFamily></ChartAxisLabelStyle>
+                <ChartAxisTitleStyle FontFamily=@fontFamily></ChartAxisTitleStyle>
+                <ChartAxisMajorGridLines Width="1"></ChartAxisMajorGridLines>
+                <ChartAxisCrosshairTooltip Fill="magenta" Enable="false"></ChartAxisCrosshairTooltip>
+            </ChartPrimaryYAxis>
+
+            <ChartAxes>
+                <ChartAxis Name="yAxisTariff"
+                           Title="Arbeitspreis"
+                           RangePadding="ChartRangePadding.Auto"
+                           OpposedPosition="false"
+                           Interval="@Interval_YAxis_Tariff"
+                           Minimum="0"
+                           Maximum="@MaxRangeTariff"
+                           LabelFormat="N0">
+                    <ChartAxisMajorGridLines Width="1"></ChartAxisMajorGridLines>
+                </ChartAxis>
+
+                <ChartAxis Name="yAxisBasic"
+                           Title="Grundpreis"
+                           RangePadding="ChartRangePadding.Auto"
+                           OpposedPosition="false"
+                           Interval="@Interval_YAxis_Basic"
+                           Minimum="0"
+                           Maximum="@MaxRangeBasic"
+                           LabelFormat="N0">
+                    <ChartAxisMajorGridLines Width="0"></ChartAxisMajorGridLines>
+                </ChartAxis>
+
+                <ChartAxis Name="yAxisMeterRental"
+                           Title="Zählermiete"
+                           RangePadding="ChartRangePadding.Auto"
+                           OpposedPosition="true"
+                           Interval="@Interval_YAxis_MeterRental"
+                           Minimum="0"
+                           Maximum="@MaxRangeMeterRental"
+                           LabelFormat="N0">
+                    <ChartAxisMajorGridLines Width="0"></ChartAxisMajorGridLines>
+                </ChartAxis>
+            </ChartAxes>
+
+            <ChartSeriesCollection>
+                <ChartSeries DataSource="@ChartPointList"
+                             YAxisName="yAxisTariff"
+                             XName="Date"
+                             YName="TariffPrice"
+                             Name="Arbeitspreis"
+                             Type="ChartSeriesType.Line"
+                             Width="2"
+                             TooltipFormat="${series.name} : ${point.y} ct/kWh">
+                </ChartSeries>
+
+                <ChartSeries DataSource="@ChartPointList"
+                             YAxisName="yAxisBasic"
+                             XName="Date"
+                             YName="BasicPrice"
+                             Name="Grundpreis"
+                             Type="ChartSeriesType.Line"
+                             Width="2"
+                             TooltipFormat="${series.name} : ${point.y} €/Monat">
+                </ChartSeries>
+
+                <ChartSeries DataSource="@ChartPointList"
+                             YAxisName="yAxisMeterRental"
+                             XName="Date"
+                             YName="MeterRentalPrice"
+                             Name="Zählermiete"
+                             Type="ChartSeriesType.Line"
+                             Width="2"
+                             TooltipFormat="${series.name} : ${point.y} €/Monat">
+                </ChartSeries>
+            </ChartSeriesCollection>
+
+            <ChartLegendSettings Visible="true" EnableHighlight="true"></ChartLegendSettings>
+            <ChartTooltipSettings Header="<b>${point.tooltip}</b>" Enable="true" Shared="true"></ChartTooltipSettings>
+
+            <ChartCrosshairSettings Enable="true" LineType="LineType.Both"></ChartCrosshairSettings>
+        </SfChart>
+
+        <SfSpinner @bind-Visible="@spinnerVisibleProperty" Type="SpinnerType.Tailwind" Size="40" CssClass="e-custom-color"></SfSpinner>
+
+        @* Dialog*@
+        <div>
+            <SfDialog Target="#target"
+                      Width="@dialogWidth"
+                      Height=@dialogHeight
+                      AllowDragging="true"
+                      ShowCloseIcon=" true"
+                      @bind-Visible="DialogVisible"
+                      AllowPrerender="true"
+                      IsModal="true">
+
+                <DialogTemplates>
+                    <Header>@Header</Header>
+                </DialogTemplates>
+                <DialogPositionData X="@dialogXValue" Y="@dialogYValue"></DialogPositionData>
+                <DialogAnimationSettings Effect="@animationEffect"></DialogAnimationSettings>
+            </SfDialog>
+        </div>
+    </div>
+</div>
+
+<style>
+    .e-dlg-overlay {
+        background-color: slategray;
+        opacity: 0.6;
+    }
+
+    .e-dialog .e-dlg-header-content {
+        color: white;
+        background-color: red;
+        font-size: 24px;
+    }
+
+    .e-dialog .e-dlg-header {
+        color: white;
+    }
+
+    .e-dialog .e-dlg-content {
+        color: white;
+        background-color: red;
+        font-size: 16px;
+    }
+
+    .bg-color-grey {
+        background: #deded9;
+    }
+
+    .control-wrapper {
+        max-width: 250px;
+        min-width: 80px;
+        margin: 0 auto;
+    }
+
+    .control-label {
+        font-size: 14px;
+        margin: 6px 0px;
+    }
+
+    .tooltipStyle {
+        border-radius: 25px;
+    }
+
+    .tooltipTextcolor {
+        color: white;
+        background-color: black;
+    }
+</style>
+
+@code {
+    // Variabledeklaration
+    #region Variablen
+    private bool success = false;
+    #region DialogBox
+    DialogEffect animationEffect { get; set; } = DialogEffect.Zoom;
+    bool DialogVisible { get; set; } = false;
+    private bool showDialogButtons = false;
+    private string DialogText { get; set; } = string.Empty;
+    private string dialogXValue = "center";
+    private string dialogYValue = "center";
+    private string dialogHeight = "130px";
+    private string dialogWidth = "380px";
+    #endregion
+
+    #region Spinner
+    bool spinnerVisibleProperty { get; set; } = false;
+    #endregion
+
+    #region Daten
+    private List<Electric_SupplierModel>? supplierList = new();
+    private Electric_SupplierModel? supplierData = new();
+    private List<Electric_CostModel>? costsList = new();
+    #endregion
+
+    #region DateTime
+    private DateTime MinDate { get; set; } = new DateTime(1990, 1, 1);
+    private DateTime MaxDate { get; set; } = DateTime.Now;
+    private DateTime? StartDate { get; set; } = new DateTime(2000, 1, 1);
+    private DateTime? EndDate { get; set; } = new DateTime(2000, 1, 1);
+    #endregion
+
+    #region App-Settings
+    MyAppConfigModel? settings;
+    #endregion
+
+    #region Url
+    private readonly string urlSupplier = "strom/anbieter/";
+    readonly string urlCostSupplier = "strom/kosten/anbieter/";
+    #endregion
+
+    string? Header { get; set; }
+    string? Content { get; set; }
+
+    #region Http
+    GWSProcessor? gwsP;
+    #endregion
+
+    #region PDF-Eigenschaften
+    public List<PdfHeaderFooterContent> HeaderContent = new List<PdfHeaderFooterContent>
+    {
+        new PdfHeaderFooterContent() { Type = ContentType.Line, Points= new PdfPoints { X1 = 0, Y1 = 4, X2 = 720, Y2 = 4}, Style = new PdfContentStyle() { PenColor = "#000080", DashStyle=PdfDashStyle.Solid } },
+        new PdfHeaderFooterContent() { Type = ContentType.Text, Value = "Strom-Zählerstände", Position = new PdfPosition() { X = 350, Y = 20 }, Style = new PdfContentStyle() { TextBrushColor = "#000000", FontSize = 10 } },
+        new PdfHeaderFooterContent() { Type = ContentType.Line, Points= new PdfPoints { X1 = 0, Y1 = 40, X2 = 720, Y2 = 40}, Style = new PdfContentStyle() { PenColor = "#000080", DashStyle=PdfDashStyle.Solid } },
+        new PdfHeaderFooterContent() { Type = ContentType.PageNumber,  PageNumberType = PdfPageNumberType.Numeric, Position = new PdfPosition() { X = 470, Y = 650 }, Style = new PdfContentStyle() { TextBrushColor = "red", FontSize = 8, HAlign = PdfHorizontalAlign.Right } }
+    };
+
+    public List<PdfHeaderFooterContent> FooterContent = new List<PdfHeaderFooterContent>
+    {
+        // new PdfHeaderFooterContent() { Type = ContentType.Text, Value = "Seite: ", Position = new PdfPosition() { X = 400, Y = 600 }, Style = new PdfContentStyle() { TextBrushColor = "#000000", FontSize = 10 } },
+        // new PdfHeaderFooterContent() { Type = ContentType.PageNumber,  PageNumberType = PdfPageNumberType.Numeric, Position = new PdfPosition() { X = 470, Y = 650 }, Style = new PdfContentStyle() { TextBrushColor = "red", FontSize = 10, HAlign = PdfHorizontalAlign.Right } }
+    };
+    #endregion
+
+    #region Chart
+    SfChart chart = new();
+
+    private string fontFamily { get; set; } = "Arial";
+    private IntervalType IntervalType { get; set; } = Syncfusion.Blazor.Charts.IntervalType.Months;
+    private int IntervalDuration { get; set; } = 1;
+    private double Interval_YAxis_Tariff { get; set; } = 2.0d;
+    private double Interval_YAxis_Basic { get; set; } = 5;
+    private double Interval_YAxis_MeterRental { get; set; } = 5;
+    private double MinRangeTariff { get; set; } = 0;
+    private double MinRangeBasic { get; set; } = 0;
+    private double MinRangeMeterRental { get; set; } = 0;
+    private double MaxRangeTariff { get; set; } = 20;
+    private double MaxRangeBasic { get; set; } = 50;
+    private double MaxRangeMeterRental { get; set; } = 50;
+
+    private string DateTimeFormat { get; set; } = "yyyy";  // nur Anzeige des Jahres (nicht Tag, Monat)
+
+    private Theme Theme { get; set; }
+    private string Width { get; set; } = "100%";
+    private string Height { get; set; } = "160%";
+    private double Rotation { get; set; } = 0;
+    private LabelIntersectAction Label { get; set; } = LabelIntersectAction.Trim;
+    private String[] palettes = new String[] { "yellow", "red", "orange" };  // Farben Serie: Arbeitspreis €, Grundpreis €, Zählermiete €
+    //private double Interval_YAxis { get; set; } = 50.0d;
+
+    private List<ColumnChartData> ChartPointList { get; set; } = new();
+
+    private class ColumnChartData
+    {
+        public DateTime Date { get; set; }
+        public double? TariffPrice { get; set; }
+        public double? BasicPrice { get; set; }
+        public double? MeterRentalPrice { get; set; }
+    }
+    #endregion
+    #endregion
+
+    #region OnInitializedAsync
+    /// <summary>
+    /// OnInitializedAsync
+    /// </summary>
+    /// <returns></returns>
+    /// <exception cref="Exception"></exception>
+    protected override async Task OnInitializedAsync()
+    {
+        //int lastSupplierId;
+
+        this.spinnerVisibleProperty = true;
+
+        // MyAppSettings.json auslesen und letzten gespeicherten Anbieter auslesen
+        settings = GetSetMyAppConfig.GetMyAppSettings.ReadSettings(myAppSettings);
+
+        gwsP = new GWSProcessor(myHttpClient, settings!.GWSUri);
+        try
+        {
+            // Anbieterdaten auslesen (nur Anbieter und Id => durch ElectricSupplierDataModel)
+            supplierList = await gwsP.LoadDataAsync<Electric_SupplierModel>(urlSupplier);
+
+            if (supplierList != null && supplierList.Any()) // prüfen ob es Anbieterdaten gibt
+            {
+                costsList = await gwsP.LoadDataAsync<Electric_CostModel>(urlCostSupplier + Convert.ToString(supplierData!.Id));  // Kosten anbieterabhängig auslesen
+                if (costsList != null && costsList.Any())
+                {
+                    costsList?.Sort((x, y) => x.Gueltig_Ab.CompareTo(y.Gueltig_Ab)); // nach "gueltig_ab" sortieren
+                }
+                CalcChartData(supplierList, costsList);
+            }
+            else
+            {
+                // es gibt keine gültigen Daten der Anbieter
+                supplierData!.Id = 0;
+            }
+
+
+
+        }
+        catch (Exception)
+        {
+            OpenDialog("Keine Strom-Kosten vorhanden!", "60px", "380px", false);
+        }
+
+        // Spinner
+        await Task.Delay(200); // muss sein sonst Runtime fault
+        this.spinnerVisibleProperty = false;
+    }
+    #endregion
+
+    #region ValueSelectHandler
+    /// <summary>
+    /// Ablesetage des ausgewählten Anbieters auslesen
+    /// </summary>
+    /// <param name="args"></param>
+    private async Task ValueSelectHandler(SelectEventArgs<Electric_SupplierModel> args)
+    {
+        this.spinnerVisibleProperty = true;
+        //Anbieterdaten laden abhängig vom Dropdown "Anbieter"
+        supplierData = supplierList!
+                           .Where(s => s.Id == args.ItemData.Id)
+                           .Select(s => s).FirstOrDefault();
+
+        if (supplierData != null && supplierData.Id > 0)
+        {
+            StartDate = supplierData.Zeitraum_Start ?? DateTime.Now;
+            EndDate = supplierData.Zeitraum_Ende ?? DateTime.Now;
+
+            success = GetSetMyAppConfig.SetMyAppSettings.WriteSettings(myAppSettings, "Supplier_Id.Electric", supplierData.Id.ToString()); // ausgewählten Anbieter in MyAppConfig speichern
+            if (!success)
+            {
+                OpenDialog("Strom-Anbieter nicht gespeichert!", "60px", "380px", false);
+            }
+        }
+        else
+        {
+            ChartPointList.Clear();
+            OpenDialog("Keine Daten vorhanden!", "60px", "380px", false);
+        }
+
+        // Spinner
+        await Task.Delay(200);
+        this.spinnerVisibleProperty = false;
+    }
+    #endregion
+
+    #region CalcChartData
+    /// <summary>
+    /// CalcChartData
+    /// </summary>
+    /// <param name="suppliers"></param>
+    /// <param name="costs"></param>
+    public void CalcChartData(List<Electric_SupplierModel>? suppliers, List<Electric_CostModel>? costs)
+    {
+        DateTime date;
+        double tariffPrice = 0.0d;
+        double basicPrice = 0.0d;
+        double meterRentalPrice = 0.0d;
+
+        ChartPointList = new List<ColumnChartData>();
+
+        GetStartDateEndDate(suppliers);
+        if (suppliers != null && suppliers.Any())
+        {
+            foreach (var supplier in suppliers)
+            {
+                date = new DateTime(supplier.Zeitraum_Start.GetValueOrDefault().Year, supplier.Zeitraum_Start.GetValueOrDefault().Month, 1);
+                if (costs != null && costs.Any())
+                {
+                    foreach (var cost in costs) // den höchsten Preis ermitteln
+                    {
+                        if (cost.Arbeitspreis > tariffPrice)
+                        {
+                            tariffPrice = cost.Arbeitspreis.GetValueOrDefault();
+                        }
+                        if (cost.Grundpreis > basicPrice)
+                        {
+                            basicPrice = cost.Grundpreis.GetValueOrDefault();
+                        }
+                        if (cost.Zaehlermiete > meterRentalPrice)
+                        {
+                            meterRentalPrice = cost.Zaehlermiete.GetValueOrDefault();
+                        }
+                    }
+                    ChartPointList.Add(new ColumnChartData { Date = date, TariffPrice = tariffPrice, BasicPrice = basicPrice, MeterRentalPrice = meterRentalPrice });
+                }
+                else
+                {
+                    ChartPointList.Add(new ColumnChartData { Date = date, TariffPrice = supplier.Arbeitspreis, BasicPrice = supplier.Grundpreis, MeterRentalPrice = supplier.Zaehlermiete });
+                }
+            }
+        }
+        else
+        {
+            OpenDialog("Keine Strom-Anbieter vorhanden!", "60px", "380px", false);
+            return;
+        }
+        GetChartMinMaxRange(ChartPointList);
+    }
+
+    #endregion
+
+    #region GetStartDateEndDate
+    /// <summary>
+    /// Auslesen Start/Ende-Datum
+    /// </summary>
+    /// <param name="suppliers"></param>
+    public void GetStartDateEndDate(List<Electric_SupplierModel>? suppliers)
+    {
+        DateTime? startDate = DateTime.MaxValue;
+        DateTime? endDate = DateTime.MinValue;
+
+        if (suppliers != null && suppliers.Any())
+        {
+            foreach (var supplier in suppliers)
+            {
+                if (supplier.Zeitraum_Start != null && supplier.Zeitraum_Ende != null)
+                {
+                    if (supplier.Zeitraum_Ende < DateTime.Now)
+                    {
+                        startDate = supplier.Zeitraum_Start < startDate ? supplier.Zeitraum_Start : startDate;
+                        endDate = supplier.Zeitraum_Ende > endDate ? supplier.Zeitraum_Ende : endDate;
+                    }
+                }
+            }
+        }
+        StartDate = startDate;
+        EndDate = endDate;
+    }
+    #endregion
+
+    #region GetChartMinMaxRange
+    /// <summary>
+    /// Berechnen Chart Min/Max-Range
+    /// </summary>
+    private void GetChartMinMaxRange(List<ColumnChartData> chartList)
+    {
+        if (chartList != null && chartList.Any())
+        {
+            // Y-Achse Arbeitspreis
+            MinRangeTariff = 0;
+            MaxRangeTariff = Math.Round(chartList.Max(v => v.TariffPrice).GetValueOrDefault(), 0) + 5; // gap: Y-Offset
+            Interval_YAxis_Tariff = Math.Round(MaxRangeTariff / 4);
+            // Y-Achse Grundpreis
+            MinRangeBasic = 0;
+            MaxRangeBasic = Math.Round(chartList.Max(v => v.BasicPrice).GetValueOrDefault(), 0) + 10; // gap: Y-Offset
+            Interval_YAxis_Basic = Math.Round(MaxRangeBasic / 4);
+            // Y-Achse Zählermiete
+            MinRangeMeterRental = 0;
+            MaxRangeMeterRental = Math.Round(chartList.Max(v => v.MeterRentalPrice).GetValueOrDefault(), 0) + 10; // gap: Y-Offset
+            Interval_YAxis_MeterRental = Math.Round(MaxRangeMeterRental / 4);
+            return;
+        }
+
+        Interval_YAxis_Tariff = 0.0d;
+        MaxRangeTariff = 0.0d;
+
+        Interval_YAxis_Basic = 0.0d;
+        MaxRangeBasic = 0.0d;
+
+        Interval_YAxis_MeterRental = 0.0d;
+        MaxRangeMeterRental = 0.0d;
+    }
+    #endregion
+
+    #region OpenDialog
+    /// <summary>
+    /// OpenDialog
+    /// </summary>
+    private void OpenDialog(string header, string height, string width, bool showButtons)
+    {
+        Header = header;
+        dialogHeight = height;
+        dialogWidth = width;
+        showDialogButtons = showButtons;
+        this.DialogVisible = true;
+    }
+    #endregion
+
+    #region LabelRender
+    /// <summary>
+    /// LabelRender
+    /// </summary>
+    /// <param name="args"></param>
+    public void LabelRender(AxisLabelRenderEventArgs args)
+    {
+        switch (args.Axis.Name)
+        {
+            case "yAxisTariff":
+                args.Text = args.Text + " ct/kWh";
+                break;
+
+            case "yAxisBasic":
+                args.Text = args.Text + " €/Monat";
+                break;
+
+            case "yAxisMeterRental":
+                args.Text = args.Text + " €/Monat";
+                break;
+        }
+
+    }
+    #endregion
+
+    #region ToolTipRenderEvent
+    /// <summary>
+    /// Anzeige von 2 Nachkommastellen im Tooltip, immer 2 Nachkommastellen!
+    /// </summary>
+    /// <param name="args"></param>
+    public void ToolTipRenderEvent(SharedTooltipRenderEventArgs args)
+    {
+        var displayCulture = new CultureInfo("de-DE");
+
+        for (int i = 0; i < args.Data.Count; i++)
+        {
+            var di = args.Data[i];
+
+            if (di?.PointY == null) continue;
+
+            double y;
+            // If it's already numeric, avoid string parsing
+            if (di.PointY is double dy) y = dy;
+            else if (di.PointY is float fy) y = fy;
+            else if (di.PointY is decimal dm) y = (double)dm;
+            else
+            {
+                // Fallback: try to parse string with Invariant first, then de-DE
+                var s = di.PointY.ToString();
+
+                if (!double.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out y))
+                    double.TryParse(s, NumberStyles.Any, displayCulture, out y);
+            }
+
+            switch (args.Data[i].SeriesName)
+            {
+                case "Arbeitspreis":
+                    args.Text[i] = $"{di.SeriesName}: {y.ToString("N2", displayCulture)} ct";
+                    break;
+
+                default:
+                    {
+                        args.Text[i] = $"{di.SeriesName}: {y.ToString("N2", displayCulture)} €";
+                        break;
+                    }
+            }
+        }
+    }
+    #endregion
+}

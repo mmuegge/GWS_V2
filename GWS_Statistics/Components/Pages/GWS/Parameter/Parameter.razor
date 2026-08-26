@@ -1,0 +1,658 @@
+﻿@page "/parameter"
+
+@using GWS_Statistics.Components.Services
+@using GWS_Statistics.Helper
+@using System.Globalization
+@using System.Net
+
+@inject MyAppConfigModel myAppSettings
+@inject HttpClient myHttpClient
+@inject ILogger<Parameter> Logger
+@inject ToastService ToastService
+@* @inject NavigationManager NavigationManager *@
+@inject SfDialogService DialogService
+
+<PageTitle>Parameter</PageTitle>
+
+<div class="container">
+    <div class="row">
+        <div class="col col-md-12">
+            <div class="text-center fs-3 fw-bold">
+                <span class="fa-solid fa-house-circle-check fa-3xs" aria-hidden="true"> </span>
+                @* <span><img src="energyEfficiency.png" width="50" height="50"></span> *@
+                <label>Parameter</label>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="control-section" id="target" align="center">
+    <SfGrid ID="Grid" @ref="SfDataGrid" DataSource="@parameterList"
+            AllowPaging="true"
+            AllowFiltering="true"
+            AllowReordering="true"
+            AllowResizing="true"
+            AllowExcelExport="true"
+            AllowPdfExport="true"
+            EnableHover="true"
+            AllowTextWrap="true"
+            AllowSelection="true"
+            AllowSorting="true"
+            Height="100%" Width="100%"
+            Toolbar=@toolbar
+            EnableStickyHeader="true">
+
+        <GridEditSettings AllowAdding="true"
+                          AllowEditing="true"
+                          AllowDeleting="true"
+                          ShowDeleteConfirmDialog="true"
+                          Mode="EditMode.Dialog"
+                          Dialog="DialogParams">
+
+            <HeaderTemplate>
+                @{
+                    var DialogHeader = GetDialogHeader((context as ParameterModel)!);
+                    <span>@DialogHeader</span>
+                }
+            </HeaderTemplate>
+        </GridEditSettings>
+
+        <GridEvents OnToolbarClick="ToolbarBtnClickHandler"
+                    RowCreating="RowCreatingHandler"
+                    OnActionComplete="ActionCompleteHandler"
+                    TValue="ParameterModel">
+        </GridEvents>
+
+        <GridPageSettings PageSize="20" PageSizes="true"></GridPageSettings>
+
+        <GridFilterSettings Type="Syncfusion.Blazor.Grids.FilterType.CheckBox"></GridFilterSettings>
+
+        <GridColumns>
+            <GridColumn IsPrimaryKey="true" Field="@nameof(ParameterModel.Id)" Visible="false"
+                        AllowAdding="false"
+                        AllowEditing="false"
+                        AllowSorting="false"
+                        AllowFiltering="false"
+                        Width="35">
+            </GridColumn>
+
+            <GridColumn Field=@nameof(ParameterModel.Baujahr)
+                        EditType="EditType.DatePickerEdit"
+                        Format="d"
+                        Type="Syncfusion.Blazor.Grids.ColumnType.DateTime"
+                        Width="110"
+                        DefaultValue="DateTime.Now"
+                        HeaderText="Baujahr Haus">
+
+                <HeaderTemplate>
+                    <SfTooltip Content="@GetTooltipContent("BJ")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                        <span><b>Baujahr Haus</b></span>
+                    </SfTooltip>
+                </HeaderTemplate>
+            </GridColumn>
+
+            <GridColumn Field=@nameof(ParameterModel.Wohnflaeche)
+                        Format="###.00 m2"
+                        Width="125"
+                        HeaderText="Wohnfläche">
+
+                <EditTemplate>
+                    <SfNumericTextBox Placeholder="Wohnfläche"
+                                      FloatLabelType="FloatLabelType.Always"
+                                      TValue="Double?"
+                                      @bind-Value="@((context as ParameterModel)!.Wohnflaeche)"
+                                      Format="###.## m2">
+                    </SfNumericTextBox>
+                </EditTemplate>
+
+                <HeaderTemplate>
+                    <SfTooltip Content="@GetTooltipContent("WF")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                        <span><b>Wohnfläche</b></span>
+                    </SfTooltip>
+                </HeaderTemplate>
+            </GridColumn>
+
+            <GridColumn Field=@nameof(ParameterModel.Bemerkung)
+                        Width="300"
+                        HeaderText="Bemerkung">
+
+                <HeaderTemplate>
+                    <SfTooltip Content="@GetTooltipContent("BM")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                        <span><b>Bemerkung</b></span>
+                    </SfTooltip>
+                </HeaderTemplate>
+            </GridColumn>
+
+            <GridColumn HeaderText="Funktion" Width="20%" MinWidth="110">
+                <GridCommandColumns>
+                    <GridCommandColumn Type="CommandButtonType.Edit"
+                                       ButtonOption="@(new CommandButtonOptions(){
+                                                    IconCss="e-icons e-edit",
+                                                    CssClass="e-flat"
+                                               })">
+                    </GridCommandColumn>
+                    <GridCommandColumn Type="CommandButtonType.Delete"
+                                       ButtonOption="@(new CommandButtonOptions(){
+                                                    IconCss ="e-icons e-delete",
+                                                    CssClass="e-flat"
+                                               })">
+                    </GridCommandColumn>
+                    <GridCommandColumn Type="CommandButtonType.Save"
+                                       ButtonOption="@(new CommandButtonOptions(){
+                                                    IconCss="e-icons e-update",
+                                                    CssClass="e-flat"
+                                               })">
+                    </GridCommandColumn>
+                    <GridCommandColumn Type="CommandButtonType.Cancel"
+                                       ButtonOption="@(new CommandButtonOptions(){
+                                                    IconCss="e-icons e-cancel-icon",
+                                                    CssClass="e-flat"
+                                               })">
+                    </GridCommandColumn>
+                </GridCommandColumns>
+            </GridColumn>
+        </GridColumns>
+    </SfGrid>
+</div>
+
+<SfSpinner @bind-Visible="@SpinnerVisibleProperty" Type="SpinnerType.Tailwind" Size="40" CssClass="e-custom-color"></SfSpinner>
+
+@* Dialog*@
+<div>
+    <SfDialog Target="#target"
+                Width=@dialogWidth
+                Height=@dialogHeight
+                AllowDragging="true"
+                ShowCloseIcon=" true"
+                @bind-Visible="DialogVisible"
+                AllowPrerender="true"
+                IsModal="true"
+                CssClass="MyCss">
+
+        <DialogTemplates>
+            <Header>@Header</Header>
+        </DialogTemplates>
+
+        <DialogPositionData X="@dialogXValue" Y="@dialogYValue"></DialogPositionData>
+        <DialogAnimationSettings Effect="@animationEffect"></DialogAnimationSettings>
+
+        @if (showDialogButtons)
+        {
+            <DialogButtons>
+                <DialogButton Content="Ja" IsPrimary="true" OnClick="@YesClick" />
+                <DialogButton Content="Abbrechen" OnClick="@CancelClick" />
+            </DialogButtons>
+        }
+    </SfDialog>
+</div>
+
+<style>
+    .e-dlg-overlay {
+        background-color: slategray;
+        opacity: 0.6;
+    }
+
+    /* Dialog Editing*/
+    .e-dialog .e-dlg-header-content {
+        background-color: grey;
+        font-size: 24px;
+    }
+
+    .e-dialog .e-dlg-header {
+        color: white;
+    }
+
+    .e-dialog .e-dlg-content {
+        color: black;
+        background-color: lightgray;
+        font-size: 16px;
+    }
+
+    .bg-color-grey {
+        background: #deded9;
+    }
+
+    #toast_default .e-circle-check::before {
+        content: "\e72b";
+        font-size: 17px;
+    }
+
+    #toast_default .e-circle-close::before {
+        content: "\e878";
+        font-size: 17px;
+    }
+
+    .control-wrapper {
+        max-width: 250px;
+        min-width: 80px;
+        margin: 0 auto;
+    }
+
+    .control-label {
+        font-size: 14px;
+        margin: 6px 0px;
+    }
+
+    /* Dialog: Datensatz ändern */
+    .MyCss .e-dlg-header-content {
+        background-color: red;
+        padding-top: 5px;
+        padding-bottom: 15px;
+    }
+
+    .e-grid .e-dlg-content,
+    .e-grid .e-footer-content {
+        padding-top: 10px;
+        padding-bottom: 10px;
+    }
+
+    .e-grid .e-dlg-header {
+        background-color: red;
+    }
+</style>
+
+@code
+{
+    #region Variablendeklaration
+    private bool save = false;
+    private bool update = false;
+
+    private bool SpinnerVisibleProperty { get; set; } = false;
+
+    private DialogSettings DialogParams = new DialogSettings { MinHeight = "400px", Width = "600px" };
+    public DialogEffect animationEffect = DialogEffect.Zoom;
+    public bool DialogVisible { get; set; } = false;
+    private bool showDialogButtons = false;
+    private string DialogText { get; set; } = string.Empty;
+    private string dialogXValue = "center";
+    private string dialogYValue = "center";
+    private string dialogHeight = "130px";
+    private string dialogWidth = "380px";
+
+    public int? DropDownValueSupplier { get; set; } = 0;
+
+    readonly string urlParameter = "parameter/";
+
+    string? Header { get; set; }
+    string? Content { get; set; }
+
+    GWSProcessor? gwsP;
+    ApiResponse? apiResponse;
+
+    private SfGrid<ParameterModel> SfDataGrid = new();
+
+    private ParameterModel? parameterData = new();
+    private List<ParameterModel>? parameterList = null;
+
+    private List<object> toolbar = new List<object>() { "Add", "Cancel", "Search", "ExcelExport", "PdfExport" };
+
+    MyAppConfigModel? settings;
+
+    // Dictionary for column descriptions
+    public Dictionary<string, string> ColumnDescriptions = new()
+    {
+        { "BJ", "Baujahr des Hauses" },
+        { "WF", "Wohnfläche (m2)" },
+        { "BM", "Bemerkung" }
+    };
+
+    // PDF-Export Properties
+    public List<PdfHeaderFooterContent> HeaderContent = new List<PdfHeaderFooterContent>
+    {
+    new PdfHeaderFooterContent() { Type = ContentType.Line, Points= new PdfPoints { X1 = 0, Y1 = 4, X2 = 720, Y2 = 4}, Style = new PdfContentStyle() { PenColor = "#000080", DashStyle=PdfDashStyle.Solid } },
+    new PdfHeaderFooterContent() { Type = ContentType.Text, Value = "Effizienzklassen", Position = new PdfPosition() { X = 350, Y = 20 }, Style = new PdfContentStyle() { TextBrushColor = "#000000", FontSize = 10 } },
+    new PdfHeaderFooterContent() { Type = ContentType.Line, Points= new PdfPoints { X1 = 0, Y1 = 40, X2 = 720, Y2 = 40}, Style = new PdfContentStyle() { PenColor = "#000080", DashStyle=PdfDashStyle.Solid } },
+
+    new PdfHeaderFooterContent() { Type = ContentType.PageNumber,  PageNumberType = PdfPageNumberType.Numeric, Position = new PdfPosition() { X = 470, Y = 650 }, Style = new PdfContentStyle() { TextBrushColor = "red", FontSize = 8, HAlign = PdfHorizontalAlign.Right } }
+    };
+
+    public List<PdfHeaderFooterContent> FooterContent = new List<PdfHeaderFooterContent>
+    {
+        // new PdfHeaderFooterContent() { Type = ContentType.Text, Value = "Seite: ", Position = new PdfPosition() { X = 400, Y = 600 }, Style = new PdfContentStyle() { TextBrushColor = "#000000", FontSize = 10 } },
+        // new PdfHeaderFooterContent() { Type = ContentType.PageNumber,  PageNumberType = PdfPageNumberType.Numeric, Position = new PdfPosition() { X = 470, Y = 650 }, Style = new PdfContentStyle() { TextBrushColor = "red", FontSize = 10, HAlign = PdfHorizontalAlign.Right } }
+    };
+    #endregion
+
+    #region OnInitializedAsync
+    /// <summary>
+    /// OnInitializedAsync
+    /// </summary>
+    /// <returns></returns>
+    protected override async Task OnInitializedAsync()
+    {
+        // Spinner
+        this.SpinnerVisibleProperty = true;
+
+        // MyAppSettings.json auslesen und letzten gespeicherten Anbieter auslesen
+        settings = GetSetMyAppConfig.GetMyAppSettings.ReadSettings(myAppSettings);
+        gwsP = new GWSProcessor(myHttpClient, settings!.GWSUri);
+
+        try
+        {
+            // Parameter auslesen
+            parameterList = await gwsP.LoadDataAsync<ParameterModel>(urlParameter);
+
+            if (parameterList == null || !parameterList.Any())
+            {
+                OpenDialog("Keine Parameter vorhanden!", "50px", false);
+            }
+        }
+        catch (Exception)
+        {
+            throw new Exception("Es konnten keine Parameter geladen werden");
+        }
+
+        // Spinner
+        await Task.Delay(200);
+        this.SpinnerVisibleProperty = false;
+    }
+    #endregion
+
+    #region ToolbarBtnClickHandler
+    /// <summary>
+    /// ToolbarBtnClickHandler
+    ///
+    /// </summary>
+    /// <param name="args"></param>
+    public async Task ToolbarBtnClickHandler(Syncfusion.Blazor.Navigations.ClickEventArgs args)
+    {
+        if (args.Item.Id.Contains("_excelexport"))
+        {
+            ExcelExportProperties excelExportProperties = new();
+            excelExportProperties.FileName = $"Parameter_{DateTime.Now.ToString("ddMMyyyy")}.xlsx";
+
+            ExcelTheme Theme = new ExcelTheme();
+            // Header
+            ExcelStyle ThemeStyleHeader = new ExcelStyle()
+                {
+                    FontName = "Calibri",
+                    FontSize = 12,
+                    Bold = true,
+                };
+            Theme.Header = ThemeStyleHeader;
+            // Data
+            ExcelStyle ThemeStyleRecord = new ExcelStyle()
+                {
+                    FontName = "Calibri",
+                    FontSize = 10,
+                    Bold = false,
+                };
+            Theme.Record = ThemeStyleRecord;
+
+            excelExportProperties.Theme = Theme;
+
+            await SfDataGrid.ExportToExcelAsync(excelExportProperties);
+        }
+        else if (args.Item.Id.Contains("_pdfexport"))
+        {
+            PdfExportProperties pdfExportProperties = new();
+            pdfExportProperties.IsRepeatHeader = true;
+            pdfExportProperties.FileName = $"Parameter_{DateTime.Now.ToString("ddMMyyyy")}.pdf";
+            pdfExportProperties.PageOrientation = Syncfusion.Blazor.Grids.PageOrientation.Landscape;
+
+            PdfHeader pdfHeader = new()
+                {
+                    FromTop = 0,
+                    Height = 80,
+                    Contents = HeaderContent
+                };
+
+            PdfFooter pdfFooter = new()
+                {
+                    FromBottom = 0,
+                    Height = 80,
+                    Contents = FooterContent
+                };
+
+            PdfTheme Theme = new PdfTheme();
+
+            PdfThemeStyle HeaderThemeStyle = new PdfThemeStyle()
+                {
+                    FontColor = "Blue",
+                    FontName = "Calibri",
+                    FontSize = 8,
+                    Bold = true,
+                };
+            Theme.Header = HeaderThemeStyle;
+
+            pdfExportProperties.Theme = Theme;
+
+            pdfExportProperties.Header = pdfHeader;
+            pdfExportProperties.Footer = pdfFooter;
+
+            await SfDataGrid.ExportToPdfAsync(pdfExportProperties);
+        }
+        else if (args.Item.Id.Contains("XmlExport"))
+        {
+            Console.Write("Export to Xml function");        // wird nicht genutzt
+        }
+    }
+    #endregion
+
+    // #region ActionBeginHandler
+    // /// <summary>
+    // /// ActionBeginHandler
+    // /// </summary>
+    // /// <param name="args"></param>
+    // public void ActionBeginHandler(ActionEventArgs<ParameterModel> args)
+    // {
+    //     if (args.Data != null)
+    //     {
+    //         if (!args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Save))
+    //         {
+    //             // Add
+    //             if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Add))
+    //             {
+    //                 // letzte Einträge holen und Variablen vorbesetzen
+    //                 if (parameterList != null && parameterList.Any())
+    //                 {
+    //                     var lastParameter = parameterList?.FirstOrDefault();
+    //                     if (lastParameter != null)
+    //                     {
+    //                         args.Data.Baujahr = lastParameter.Baujahr;
+    //                         args.Data.Wohnflaeche = lastParameter.Wohnflaeche;
+    //                         args.Data.Bemerkung = lastParameter.Bemerkung;
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
+    // #endregion
+
+    #region ActionCompleteHandler
+    /// <summary>
+    /// ActionCompleteHandler
+    /// </summary>
+    /// <param name="args"></param>
+    public async Task ActionCompleteHandler(ActionEventArgs<ParameterModel> args)
+    {
+        if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Save))
+        {
+            if (args.Action == "Add")
+            {
+                save = true;
+                parameterData = args.Data;
+
+                OpenDialog("Datensatz speichern ?", "130px", true);
+            }
+            else if (args.Action == "Edit")
+            {
+                update = true;
+                parameterData = args.Data;
+
+                OpenDialog("Datensatz ändern ?", "130px", true);
+            }
+        }
+        else if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Delete))
+        {
+            if (args.Data.Id == 0)
+            {
+                parameterList = await gwsP!.LoadDataAsync<ParameterModel>(urlParameter);
+            }
+            else
+            {
+                parameterData = await gwsP!.DeleteDataAsync<ParameterModel>(urlParameter, Convert.ToString(args.Data.Id));
+                ShowToastMessage(true, "Datensatz gelöscht!");
+            }
+            SfDataGrid?.Refresh();
+        }
+    }
+    #endregion
+
+    #region CancelClick
+    /// <summary>
+    /// CancelClick
+    /// </summary>
+    private async void CancelClick()
+    {
+        DialogVisible = false;
+        parameterList = await gwsP!.LoadDataAsync<ParameterModel>(urlParameter);  // Daten neu laden
+        SfDataGrid?.Refresh();
+    }
+    #endregion
+
+    #region YesClick
+    /// <summary>
+    /// YesClick
+    /// </summary>
+    private async void YesClick()
+    {
+        DialogVisible = false;
+
+        if (save) // Datensatz speichern
+        {
+            if (parameterData != null)
+            {
+                save = false;
+
+                apiResponse = await gwsP!.PostDataAsync<ParameterModel>(urlParameter, parameterData);  // POST
+
+                if (apiResponse.MyHttpStatusCode == HttpStatusCode.Created)
+                {
+                    ShowToastMessage(true, "Datensatz gespeichert (created)!");
+                    parameterList = await gwsP!.LoadDataAsync<ParameterModel>(urlParameter);  // Daten neu laden
+                }
+                else
+                {
+                    ShowToastMessage(false, "Datensatz nicht gespeichert!");
+                }
+            }
+        }
+        else if (update) // Datensatz updaten
+        {
+            update = false;
+
+            if (parameterData != null)
+            {
+                string url = urlParameter + Convert.ToString(parameterData.Id);
+
+                apiResponse = await gwsP!.UpdateDataAsync<ParameterModel>(url, parameterData);  // Put
+                ShowToastMessage(true, "Datensatz aktualisiert!");
+            }
+        }
+        SfDataGrid?.Refresh();
+    }
+    #endregion
+
+    #region ShowToastMessage
+    /// <summary>
+    /// ShowToastMessage
+    /// </summary>
+    /// <param name="success"></param>
+    /// <param name="message"></param>
+    /// <returns></returns>
+    private void ShowToastMessage(bool success, string message)
+    {
+        if (success)
+        {
+            ShowToast("Erfolg", message, "e-toast-success", "e-circle-check");
+        }
+        else
+        {
+            ShowToast("Fehler", message, "e-toast-danger", "e-circle-close");
+        }
+    }
+    #endregion
+
+    #region ShowToast
+    /// <summary>
+    /// ShowToast
+    /// </summary>
+    /// <param name="title"></param>
+    /// <param name="content"></param>
+    /// <param name="cssClass"></param>
+    /// <param name="icon"></param>
+    private void ShowToast(string title, string content, string cssClass, string icon)
+    {
+        this.ToastService.Open(new ToastOption()
+            {
+                Title = title,
+                Content = content,
+                CssClass = cssClass,
+                Icon = icon,
+            });
+    }
+    #endregion
+
+    #region GetTooltipContent
+    /// <summary>
+    /// GetTooltipContent(string headerText)
+    /// </summary>
+    /// <param name="headerText"></param>
+    /// <returns></returns>
+    // Method to get tooltip content dynamically based on HeaderText
+    public string GetTooltipContent(string headerText)
+    {
+        return ColumnDescriptions.ContainsKey(headerText) ? ColumnDescriptions[headerText] : "No description available.";
+    }
+    #endregion
+
+    #region OpenDialog
+    /// <summary>
+    /// CloseDialog
+    /// </summary>
+    private void OpenDialog(string header, string height, bool showButtons)
+    {
+        Header = header;
+        dialogHeight = height;
+        showDialogButtons = showButtons;
+        this.DialogVisible = true;
+    }
+    #endregion
+
+    #region GetDialogHeader
+    /// <summary>
+    /// GetDialogHeader
+    /// </summary>
+    /// <param name="GetDialogHeader"></param>
+    /// <returns></returns>
+    public string GetDialogHeader(ParameterModel para)
+    {
+        return para.Id == 0
+            ? "Parameter: neuer Parameter"
+            : "Parameter: " + para.Id;
+    }
+    #endregion
+
+ #region RowCreatingHandler
+    /// <summary>
+    /// ein neuer Datebsatz wird angelegt
+    /// </summary>
+    /// <param name="args"></param>
+    public void RowCreatingHandler(RowCreatingEventArgs<ParameterModel> args)
+    {
+        // letzte Einträge holen und Variablen vorbesetzen
+        if (parameterList != null && parameterList.Any())
+        {
+            var lastParameter = parameterList?.FirstOrDefault();
+            if (lastParameter != null)
+            {
+                args.Data.Baujahr = lastParameter.Baujahr;
+                args.Data.Wohnflaeche = lastParameter.Wohnflaeche;
+                args.Data.Bemerkung = lastParameter.Bemerkung;
+            }
+        }
+    }
+    #endregion
+}

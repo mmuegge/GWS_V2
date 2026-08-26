@@ -1,0 +1,740 @@
+﻿@page "/electric_cost_payments"
+
+@using GWS_Statistics.Helper
+@using GWS_Statistics.Calculation
+@using System.Globalization
+@using System.Net
+@using System.ComponentModel.DataAnnotations
+@using Syncfusion.Blazor
+@using Syncfusion.Blazor.Charts
+@using Syncfusion.Blazor.Data
+@using System.ComponentModel
+@using System.Reflection
+
+@inject MyAppConfigModel myAppSettings
+@inject HttpClient myHttpClient
+@inject ILogger<Gas_ConsumptionModel> Logger
+@inject NavigationManager NavigationManager
+@inject SfDialogService DialogService
+
+<PageTitle>Strom- Kostenübersicht</PageTitle>
+
+<div class="container">
+    <div class="row">
+        <div class="text-center fs-3 fw-bold">
+            <span class="fa-solid fa-plug fa-3xs" aria-hidden="true"> </span>
+            <label>Strom- Kostenübersicht</label>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-lg">
+    @* Auswahl Anbieter und Anzeigen Start-Datum/Ende-Datum*@
+    <div class="container chartHeader bg-color-grey mb-1 mt-1 pb-2 border">
+        <div class="row justify-content-center">
+            <div class="col-12 col-lg-4">
+                <div class="control-wrapper">
+                    <label class="control-label fw-bold mb-sm-1 me-1">Anbieter</label>
+                    <SfDropDownList DataSource="@supplierList" TItem="Electric_SupplierModel" TValue="int" Placeholder="Anbieter auswählen" @bind-Value="@supplierData!.Id">
+                        <DropDownListFieldSettings Text="Anbieter" Value="Id"></DropDownListFieldSettings>
+                        <DropDownListEvents TItem="Electric_SupplierModel" TValue="int" OnValueSelect="@ValueSelectHandler"></DropDownListEvents>
+                    </SfDropDownList>
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-4">
+                <div class="control-wrapper">
+                    <label class="control-label fw-bold mb-sm-1 me-1">Start-Datum</label>
+                    <SfDatePicker TValue="DateTime?" Value="@StartDate" Min="@MinDate" Format="dd.MM.yyyy" AllowEdit="false" Readonly="true"></SfDatePicker>
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-4">
+                <div class="control-wrapper">
+                    <label class="control-label fw-bold mb-sm-1 me-1">Ende-Datum</label>
+                    <SfDatePicker TValue="DateTime?" Value="@EndDate" Min="@MinDate" Format="dd.MM.yyyy" AllowEdit="false" Readonly="true"></SfDatePicker>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* Summen*@
+    <div class="container chartHeader bg-color-grey mt-2 mb-1 py-1 border">
+        <div class="row">
+            @* Summe Abschläge *@
+            <div class="col-6 col-lg-4">
+                <div class="control-wrapper">
+                    <label class="control-label fw-bold mb-sm-1 me-1">&#8721-Abschlag</label>
+                    <SfNumericTextBox TValue="double?" Value="@SumPayments" Enabled="false" Format="####0.00 €"></SfNumericTextBox>
+                    <div class="mt-1">
+                        <label class="control-label fw-bold mb-sm-1 me-1">&#8721-Bonus</label>
+                        <SfNumericTextBox TValue="double?" Value="@SumBonus" Enabled="false" Format="####0.00 €" Readonly="true"></SfNumericTextBox>
+                    </div>
+                </div>
+            </div>
+
+            @* Summe Kosten *@
+            <div class="col-6 col-lg-4">
+                <div class="control-wrapper">
+                    <label class="control-label fw-bold mb-sm-1 me-1">&#8721-Kosten</label>
+                    <SfNumericTextBox TValue="double?" Value="@SumCosts" Enabled="false" Format="####0.00 €"></SfNumericTextBox>
+                    <div class="mt-1">
+                        <label class="control-label fw-bold mb-sm-1 me-1">&#8721-Verbrauch</label>
+                        <SfNumericTextBox TValue="double?" Value="@SumConsumptions" Enabled="false" Format="##0.00 kWh" Readonly="true"></SfNumericTextBox>
+                    </div>
+                </div>
+            </div>
+
+            @* Guthaben *@
+            <div class="col-12 col-lg-4">
+                <div class="control-wrapper">
+                    <label class="control-label fw-bold mb-sm-1 me-1">Guthaben</label>
+                    <SfNumericTextBox TValue="double?" Value="@SumCredit" Enabled="false" Format="###0.00 €"></SfNumericTextBox>
+                    <div class="mt-1">
+                        <label class="control-label fw-bold mb-sm-1 me-1">&#8721-Endabrechnung</label>
+                        <SfNumericTextBox TValue="double?" Value="@SumFinalSettlement" Enabled="false" Format="####0.00 €" Readonly="true"></SfNumericTextBox>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Chart *@
+<div class="control-section" id="target" align="center">
+    <div class="card shadow-lg">
+        <SfChart @ref="chart" Title="Übersicht" Width="@Width" Height="@Height" Palettes="@palettes">
+
+            <ChartEvents OnPointRender="PointRender"
+                         SharedTooltipRender="ToolTipRenderEvent">
+            </ChartEvents>
+
+            <ChartTitleStyle Size="24px" Color="black" FontFamily=@fontFamily FontWeight="normal" FontStyle="normal">
+            </ChartTitleStyle>
+
+            <ChartArea Background="#8c8b87" Width="auto">
+                <ChartAreaBorder Color="black" Width="1"></ChartAreaBorder>
+            </ChartArea>
+
+            <ChartMargin Left="10" Right="10" Top="10" Bottom="10"></ChartMargin>
+
+            <ChartZoomSettings EnableMouseWheelZooming="true" EnablePinchZooming="true" EnableSelectionZooming="true"></ChartZoomSettings>
+
+            <ChartPrimaryXAxis RangePadding="ChartRangePadding.Additional"
+                               ValueType="Syncfusion.Blazor.Charts.ValueType.DateTimeCategory"
+                               EdgeLabelPlacement="EdgeLabelPlacement.None"
+                               Interval="@IntervalDuration"
+                               Format="@DateTimeFormat"
+                               IntervalType="@IntervalType">
+
+                <ChartAxisMajorGridLines Width="0"></ChartAxisMajorGridLines>
+                <ChartAxisLabelStyle FontFamily=@fontFamily></ChartAxisLabelStyle>
+                <ChartAxisTitleStyle FontFamily=@fontFamily></ChartAxisTitleStyle>
+                <ChartAxisCrosshairTooltip Fill="magenta" Enable="true"></ChartAxisCrosshairTooltip>
+            </ChartPrimaryXAxis>
+
+            <ChartPrimaryYAxis Title="Abschlag/Kosten"
+                               LabelFormat="{value} €"
+                               RangePadding="ChartRangePadding.Normal"
+                               Format="C2">
+
+                <ChartAxisLineStyle Width="0"></ChartAxisLineStyle>
+                <ChartAxisLabelStyle FontFamily=@fontFamily></ChartAxisLabelStyle>
+                <ChartAxisTitleStyle FontFamily=@fontFamily></ChartAxisTitleStyle>
+                <ChartAxisMajorGridLines Width="1"></ChartAxisMajorGridLines>
+                <ChartAxisCrosshairTooltip Fill="magenta" Enable="false"></ChartAxisCrosshairTooltip>
+            </ChartPrimaryYAxis>
+
+            <ChartSeriesCollection>
+                <ChartSeries DataSource="@ChartPointList"
+                             XName="Date"
+                             YName="Payment"
+                             Name="Abschlag"
+                             ColumnSpacing="0.1"
+                             Type="ChartSeriesType.Column">
+                </ChartSeries>
+
+                <ChartSeries DataSource="@ChartPointList"
+                             XName="Date"
+                             YName="Costs"
+                             Name="Kosten"
+                             ColumnSpacing="0.1"
+                             Type="ChartSeriesType.Column">
+                </ChartSeries>
+
+                <ChartSeries DataSource="@ChartPointList"
+                             XName="Date"
+                             YName="Credit"
+                             Name="Guthaben"
+                             ColumnSpacing="0.1"
+                             Type="ChartSeriesType.Column">
+                </ChartSeries>
+            </ChartSeriesCollection>
+
+            <ChartLegendSettings Visible="true" EnableHighlight="true"></ChartLegendSettings>
+            <ChartTooltipSettings Header="<b>${point.tooltip}</b>" Enable="true" Shared="true"></ChartTooltipSettings>
+            <ChartCrosshairSettings Enable="true" LineType="LineType.Both"></ChartCrosshairSettings>
+        </SfChart>
+
+        <SfSpinner @bind-Visible="@spinnerVisibleProperty" Type="SpinnerType.Tailwind" Size="40" CssClass="e-custom-color"></SfSpinner>
+
+        @* Dialog*@
+        <div>
+            <SfDialog Target="#target"
+                      Width="@dialogWidth"
+                      Height=@dialogHeight
+                      AllowDragging="true"
+                      ShowCloseIcon=" true"
+                      @bind-Visible="DialogVisible"
+                      AllowPrerender="true"
+                      IsModal="true">
+
+                <DialogTemplates>
+                    <Header>@Header</Header>
+                </DialogTemplates>
+                <DialogPositionData X="@dialogXValue" Y="@dialogYValue"></DialogPositionData>
+                <DialogAnimationSettings Effect="@animationEffect"></DialogAnimationSettings>
+            </SfDialog>
+        </div>
+    </div>
+</div>
+
+<style>
+    .e-dlg-overlay {
+        background-color: slategray;
+        opacity: 0.6;
+    }
+
+    .e-dialog .e-dlg-header-content {
+        color: white;
+        background-color: red;
+        font-size: 24px;
+    }
+
+    .e-dialog .e-dlg-header {
+        color: white;
+    }
+
+    .e-dialog .e-dlg-content {
+        color: white;
+        background-color: red;
+        font-size: 16px;
+    }
+
+    .bg-color-grey {
+        background: #deded9;
+    }
+
+    .control-wrapper {
+        max-width: 250px;
+        min-width: 80px;
+        margin: 0 auto;
+    }
+
+    .control-label {
+        font-size: 14px;
+        margin: 6px 0px;
+    }
+
+    .tooltipStyle {
+        border-radius: 25px;
+    }
+
+    .tooltipTextcolor {
+        color: white;
+        background-color: black;
+    }
+</style>
+
+@code {
+    // Variabledeklaration
+    #region Variablen
+    private bool success = false;
+
+    #region DialogBox
+    DialogEffect animationEffect { get; set; } = DialogEffect.Zoom;
+    bool DialogVisible { get; set; } = false;
+    private bool showDialogButtons = false;
+    private string DialogText { get; set; } = string.Empty;
+    private string dialogXValue = "center";
+    private string dialogYValue = "center";
+    private string dialogHeight = "130px";
+    private string dialogWidth = "380px";
+    #endregion
+
+    #region Spinner
+    bool spinnerVisibleProperty { get; set; } = false;
+    #endregion
+
+    #region Daten
+    private List<Electric_SupplierModel>? supplierList = new();
+    private Electric_SupplierModel? supplierData = new();
+    private List<Electric_CounterModel>? counterList = new();
+    private List<GWS_PaymentModel>? paymentList = new();
+    private GWS_PaymentModel? paymentData = new();
+    private GWS_PaymentsMethodModel paymentsMethod = new();
+    private List<Electric_CostModel>? costsList = new();
+    private LastCosts lastCost = new();
+    private List<Electric_CounterChangeModel>? counterChangeList = null;
+    #endregion
+
+    #region DateTime
+    private DateTime MinDate { get; set; } = new DateTime(1990, 1, 1);
+    private DateTime MaxDate { get; set; } = DateTime.Now;
+    private DateTime? StartDate { get; set; } = new DateTime(2000, 1, 1);
+    private DateTime? EndDate { get; set; } = new DateTime(2000, 1, 1);
+    #endregion
+
+    #region App-Settings
+    MyAppConfigModel? settings;
+    #endregion
+
+    #region Url
+    private readonly string urlSupplier = "strom/anbieter/";
+    private readonly string urlMeter = "strom/zaehlerstaende/anbieter/";
+    private readonly string urlPaymentsSupplier = "strom/zahlungen/anbieter/";
+    readonly string urlCostSupplier = "strom/kosten/anbieter/";
+    //readonly string urlCounterChange = "strom/zaehlerwechsel/anbieter/";
+    #endregion
+
+    string? Header { get; set; }
+    string? Content { get; set; }
+
+    #region Http
+    GWSProcessor? gwsP;
+    #endregion
+
+    #region PDF-Eigenschaften
+    public List<PdfHeaderFooterContent> HeaderContent = new List<PdfHeaderFooterContent>
+    {
+        new PdfHeaderFooterContent() { Type = ContentType.Line, Points= new PdfPoints { X1 = 0, Y1 = 4, X2 = 720, Y2 = 4}, Style = new PdfContentStyle() { PenColor = "#000080", DashStyle=PdfDashStyle.Solid } },
+        new PdfHeaderFooterContent() { Type = ContentType.Text, Value = "Strom-Zählerstände", Position = new PdfPosition() { X = 350, Y = 20 }, Style = new PdfContentStyle() { TextBrushColor = "#000000", FontSize = 10 } },
+        new PdfHeaderFooterContent() { Type = ContentType.Line, Points= new PdfPoints { X1 = 0, Y1 = 40, X2 = 720, Y2 = 40}, Style = new PdfContentStyle() { PenColor = "#000080", DashStyle=PdfDashStyle.Solid } },
+        new PdfHeaderFooterContent() { Type = ContentType.PageNumber,  PageNumberType = PdfPageNumberType.Numeric, Position = new PdfPosition() { X = 470, Y = 650 }, Style = new PdfContentStyle() { TextBrushColor = "red", FontSize = 8, HAlign = PdfHorizontalAlign.Right } }
+    };
+
+    public List<PdfHeaderFooterContent> FooterContent = new List<PdfHeaderFooterContent>
+    {
+        // new PdfHeaderFooterContent() { Type = ContentType.Text, Value = "Seite: ", Position = new PdfPosition() { X = 400, Y = 600 }, Style = new PdfContentStyle() { TextBrushColor = "#000000", FontSize = 10 } },
+        // new PdfHeaderFooterContent() { Type = ContentType.PageNumber,  PageNumberType = PdfPageNumberType.Numeric, Position = new PdfPosition() { X = 470, Y = 650 }, Style = new PdfContentStyle() { TextBrushColor = "red", FontSize = 10, HAlign = PdfHorizontalAlign.Right } }
+    };
+    #endregion
+
+    #region Chart
+    SfChart chart = new();
+
+    private string fontFamily { get; set; } = "Arial";
+    private Syncfusion.Blazor.Charts.IntervalType IntervalType { get; set; } = Syncfusion.Blazor.Charts.IntervalType.Months;
+    private int IntervalDuration { get; set; } = 1;
+
+    private string DateTimeFormat { get; set; } = "dd.MM.yyyy";
+
+    private Theme Theme { get; set; }
+    private string Width { get; set; } = "100%";
+    private string Height { get; set; } = "160%";
+    private double Rotation { get; set; } = 0;
+    private LabelIntersectAction Label { get; set; } = LabelIntersectAction.Trim;
+    private String[] palettes = new String[] { "blue", "yellow", "green" };  // Farben Serie: Abschlag €, Kosten €, Guthaben €
+    private double Interval_YAxis { get; set; } = 50.0d;
+
+    private double SumPayments { get; set; } = 0.0d;
+    private double SumBonus { get; set; } = 0.0d;
+    private double SumCosts { get; set; } = 0.0d;
+    private double SumCredit { get; set; } = 0.0d;
+    private double SumFinalSettlement { get; set; } = 0.0d;
+    private double SumConsumptions { get; set; } = 0.0d;
+    private double? Consumption { get; set; } = 0.0d;
+
+    private List<ColumnChartData> ChartPointList { get; set; } = new();
+
+    private class ColumnChartData
+    {
+        public DateTime Date { get; set; }
+        public double? Payment { get; set; }
+        public double? Costs { get; set; }
+        public double? Credit { get; set; }
+    }
+    #endregion
+
+    public class LastCosts
+    {
+        public double? Grundpreis { get; set; }
+        public double? Arbeitspreis { get; set; }
+        public double? Zaehlermiete { get; set; }
+    }
+    #endregion
+
+    #region OnInitializedAsync
+    /// <summary>
+    /// OnInitializedAsync
+    /// </summary>
+    /// <returns></returns>
+    /// <exception cref="Exception"></exception>
+    protected override async Task OnInitializedAsync()
+    {
+        int lastSupplierId;
+
+        this.spinnerVisibleProperty = true;
+
+        // MyAppSettings.json auslesen und letzten gespeicherten Anbieter auslesen
+        settings = GetSetMyAppConfig.GetMyAppSettings.ReadSettings(myAppSettings);
+
+        gwsP = new GWSProcessor(myHttpClient, settings!.GWSUri);
+        try
+        {
+            // Anbieterdaten auslesen (nur Anbieter und Id => durch ElectricSupplierDataModel)
+            supplierList = await gwsP.LoadDataAsync<Electric_SupplierModel>(urlSupplier);
+
+            if (supplierList != null && supplierList.Any()) // prüfen ob es Anbieterdaten gibt
+            {
+                // gespeicherten letzten Anbieter auslesen
+                lastSupplierId = String.IsNullOrEmpty(settings?.Supplier_Id?.Electric) ? lastSupplierId = supplierList.Max(x => x.Id) : lastSupplierId = Int32.Parse(settings.Supplier_Id.Electric);
+
+                supplierData = supplierList
+                                .Where(s => s.Id == lastSupplierId)
+                                .Select(s => s).FirstOrDefault();
+
+                if (supplierData != null)
+                {
+                    // Start-Datum auslesen
+                    StartDate = supplierData.Zeitraum_Start;
+                    EndDate = supplierData.Zeitraum_Ende;
+                }
+            }
+            else
+            {
+                // es gibt keine gültigen Daten der Anbieter
+                supplierData!.Id = 0;
+            }
+
+            if (supplierData != null && supplierData.Id > 0)
+            {
+                counterList = await gwsP.LoadDataAsync<Electric_CounterModel>(urlMeter + Convert.ToString(supplierData.Id)); // Daten des neu ausgewählten Anbieter laden
+
+                if (counterList != null && counterList.Any())
+                {
+                    counterList?.Sort((x, y) => x.Ablesetag.CompareTo(y.Ablesetag));
+                    paymentList = await gwsP.LoadDataAsync<GWS_PaymentModel>(urlPaymentsSupplier + Convert.ToString(supplierData.Id));
+                }
+                else
+                {
+                    ClearSumAverage();
+                    OpenDialog("Keine Strom-Verbräuche vorhanden!", "60px", "380px", false);
+                }
+
+                costsList = await gwsP.LoadDataAsync<Electric_CostModel>(urlCostSupplier + Convert.ToString(supplierData.Id));  // Kosten anbieterabhängig auslesen
+                if (costsList != null && costsList.Any())
+                {
+                    costsList?.Sort((x, y) => x.Gueltig_Ab.CompareTo(y.Gueltig_Ab)); // nach "gueltig_ab" sortieren
+                }
+            }
+
+            if (paymentList != null && paymentList.Any())
+            {
+                await Task.Run(() => GetPaymentsCosts(supplierData!, paymentList, costsList));
+            }
+            else
+            {
+                ClearSumAverage();
+                OpenDialog("Keine Strom-Kosten vorhanden!", "60px", "380px", false);
+            }
+
+        }
+        catch (Exception)
+        {
+            OpenDialog("Keine Strom-Verbräuche vorhanden!", "60px", "380px", false);
+        }
+
+        // Spinner
+        await Task.Delay(200); // muss sein sonst Runtime fault
+        this.spinnerVisibleProperty = false;
+    }
+    #endregion
+
+    #region ValueSelectHandler
+    /// <summary>
+    /// Ablesetage des ausgewählten Anbieters auslesen
+    /// </summary>
+    /// <param name="args"></param>
+    private async Task ValueSelectHandler(SelectEventArgs<Electric_SupplierModel> args)
+    {
+        this.spinnerVisibleProperty = true;
+        //Anbieterdaten laden abhängig vom Dropdown "Anbieter"
+        supplierData = supplierList!
+                           .Where(s => s.Id == args.ItemData.Id)
+                           .Select(s => s).FirstOrDefault();
+
+        if (supplierData != null && supplierData.Id > 0)
+        {
+            StartDate = supplierData.Zeitraum_Start ?? DateTime.Now;
+            EndDate = supplierData.Zeitraum_Ende ?? DateTime.Now;
+
+            counterList = await gwsP!.LoadDataAsync<Electric_CounterModel>(urlMeter + Convert.ToString(supplierData.Id)); // Daten des neu ausgewählten Anbieter laden
+
+            costsList = await gwsP!.LoadDataAsync<Electric_CostModel>(urlCostSupplier + Convert.ToString(supplierData.Id)); // Kosten anbieterabhängig auslesen
+            if (costsList != null && costsList.Any())
+            {
+                costsList.Sort((x, y) => x.Gueltig_Ab.CompareTo(y.Gueltig_Ab)); // nach "gueltig_ab" sortieren
+            }
+
+            if (counterList != null && counterList.Any())
+            {
+                counterList.Sort((x, y) => x.Ablesetag.CompareTo(y.Ablesetag));
+                paymentList = await gwsP.LoadDataAsync<GWS_PaymentModel>(urlPaymentsSupplier + Convert.ToString(supplierData.Id));
+
+                if (paymentList != null && paymentList.Any())
+                {
+                    await Task.Run(() => GetPaymentsCosts(supplierData, paymentList, costsList));
+                }
+                else
+                {
+                    ClearSumAverage();
+                    ChartPointList.Clear();
+                    OpenDialog("Keine Strom-Zahlungen vorhanden!", "60px", "380px", false);
+                }
+            }
+            else
+            {
+                ClearSumAverage();
+                ChartPointList?.Clear();
+                OpenDialog("Keine Strom-Verbräuche vorhanden!", "60px", "380px", false);
+            }
+
+            success = GetSetMyAppConfig.SetMyAppSettings.WriteSettings(myAppSettings, "Supplier_Id.Electric", supplierData.Id.ToString()); // ausgewählten Anbieter in MyAppConfig speichern
+            if (!success)
+            {
+                OpenDialog("Strom-Anbieter nicht gespeichert!", "60px", "380px", false);
+            }
+        }
+        else
+        {
+            ChartPointList.Clear();
+            OpenDialog("Keine Strom-Verbräuche vorhanden!", "60px", "380px", false);
+        }
+
+        // Spinner
+        await Task.Delay(200);
+        this.spinnerVisibleProperty = false;
+    }
+    #endregion
+
+    #region GetPaymentsCosts
+    /// <summary>
+    /// Berechnen der Abschläge/Verbrauch
+    /// </summary>
+    /// <param name="supplier"></param>
+    /// <param name="counters"></param>
+    public void GetPaymentsCosts(Electric_SupplierModel supplier, List<GWS_PaymentModel> payments, List<Electric_CostModel>? costs)
+    {
+        double monthlyCosts = 0.0d;
+        double monthlyPayment = 0.0d;
+        double totalCredit = 0.0d;
+        bool firstCost = false;
+
+        Consumption = 0.0d;
+        DateTimeFormat = "MMM yy";
+        ChartPointList = new List<ColumnChartData>();
+
+        List<IPaymentConsumption> payments_consumption = GWS_Calculation.CalcPaymentsConsumptions(supplier, counterChangeList, payments, counterList);
+
+        foreach (var item in payments_consumption)
+        {
+            monthlyPayment = Math.Round(item.Payment, 2);
+
+            if (!firstCost)
+            {
+                lastCost.Arbeitspreis = supplier.Arbeitspreis ?? 0.0d;
+                lastCost.Grundpreis = supplier.Grundpreis ?? 0.0d;
+                lastCost.Zaehlermiete = supplier.Zaehlermiete ?? 0.0d;
+                firstCost = true;
+            }
+
+            if (costs == null || costs.Any()) // es gibt keine anderen Preise ausser die in der Anbietertabelle
+            {
+                monthlyCosts = Math.Round(CalcMonthlyCosts(item.Consumption, lastCost), 2);
+            }
+            else
+            {
+                // es gibt weitere Kosten in der Kostentabelle
+                var price = costs
+                                .Where(p => p.Gueltig_Ab >= item.Date)
+                                .Select(p => p).FirstOrDefault();
+
+                if (price != null && item.Date >= price.Gueltig_Ab)
+                {
+                    lastCost.Arbeitspreis = price.Arbeitspreis ?? 0.0d;
+                    lastCost.Grundpreis = price.Grundpreis ?? 0.0d;
+                    lastCost.Zaehlermiete = price.Zaehlermiete ?? 0.0d;
+                }
+                monthlyCosts = Math.Round(CalcMonthlyCosts(item.Consumption, lastCost), 2);
+            }
+            totalCredit += (monthlyPayment - monthlyCosts);
+            Consumption += item.Consumption;
+            ChartPointList.Add(new ColumnChartData { Date = item.Date.GetValueOrDefault(), Payment = monthlyPayment, Costs = monthlyCosts, Credit = Math.Round(totalCredit, 2) });
+
+        }
+        CalcSum();
+    }
+    #endregion
+
+    #region CalcMonthlyCosts
+    /// <summary>
+    /// Berechnen der monatlichen Gesamtkosten
+    /// </summary>
+    /// <param name="consumption"></param>
+    /// <returns></returns>
+    public double CalcMonthlyCosts(double? consumption, LastCosts cost)
+    {
+        double costs = 0.0d;
+        double arbeitspreis = 0.0d;
+        double verbrauch = 0.0d;
+        double grundpreis = 0.0d;
+        double zaehlermiete;
+
+        if (consumption != null && consumption > 0.0d)
+        {
+            verbrauch = consumption ?? 0.0d;
+            arbeitspreis = cost.Arbeitspreis ?? 0.0d;
+            grundpreis = cost.Grundpreis ?? 0.0d;
+            zaehlermiete = cost.Zaehlermiete ?? 0.0d;
+
+            costs = verbrauch * arbeitspreis / 100.0d + grundpreis + zaehlermiete;
+        }
+
+        return costs;
+    }
+    #endregion
+
+    #region CalcSum
+    /// <summary>
+    /// Berechnen Durchschnitt/Summe/Min/Max
+    /// </summary>
+    public void CalcSum()
+    {
+        ClearSumAverage();
+        SumPayments = Math.Round(ChartPointList.Sum(x => x.Payment).GetValueOrDefault(), 2);
+        if (paymentList != null && paymentList.Any())
+        {
+            SumBonus = Math.Abs(paymentList.Where(x => x.Zahlungsart == "Bonus").Sum(p => p.Zahlungen.GetValueOrDefault()));
+            SumFinalSettlement = paymentList.Where(x => x.Zahlungsart == "Endabrechnung").Sum(p => p.Zahlungen.GetValueOrDefault());
+        }
+
+        SumCosts = Math.Round(ChartPointList.Sum(x => x.Costs).GetValueOrDefault(), 2);
+        SumCredit = Math.Round(SumPayments - SumCosts, 2);
+
+        SumConsumptions = Math.Round(Consumption.GetValueOrDefault(), 2);
+    }
+    #endregion
+
+    #region GetMockChartData
+    /// <summary>
+    /// Auslesen der Mock-Daten
+    /// </summary>
+    /// <param name="data"></param>
+    /// <param name="startPeriod"></param>
+    /// <param name="endPeriod"></param>
+    public void GetMockChartData(DateTime? startPeriod, DateTime? endPeriod)
+    {
+        int days = 200;
+        double? payments = 0.0d;
+        double? costs = 0.0d;
+
+        Random randomPayments = new Random();
+        Random randomCosts = new Random();
+        DateTime dayToday = DateTime.Now;
+        DateTime newDate = startPeriod.GetValueOrDefault();
+
+        ChartPointList = new List<ColumnChartData>();
+
+        for (int i = 0; i < days; i++)
+        {
+            payments = randomPayments.Next(100, 100);
+            costs = randomCosts.Next(50, 150);
+
+            ChartPointList.Add(new ColumnChartData { Date = newDate, Payment = payments, Costs = costs });
+
+            newDate = newDate.AddDays(1);
+            if (newDate > dayToday)
+            {
+                break;
+            }
+        }
+    }
+    #endregion
+
+    #region PointRender
+    /// <summary>
+    /// Verändert die Barfarbe in Abhängigkeit des Wertes (pos/negativ)
+    /// </summary>
+    /// <param name="args"></param>
+    public void PointRender(PointRenderEventArgs args)
+    {
+        if (args.Point.YValue < 0)
+        {
+            args.Fill = "red";
+        }
+    }
+    #endregion
+
+    #region ToolTipRenderEvent
+    /// <summary>
+    /// Anzeige von 2 Nachkommastellen im Tooltip, immer 2 Nachkommastellen!
+    /// </summary>
+    /// <param name="args"></param>
+    public void ToolTipRenderEvent(SharedTooltipRenderEventArgs args)
+    {
+        var displayCulture = new CultureInfo("de-DE");
+
+        for (int i = 0; i < args.Data.Count; i++)
+        {
+            var di = args.Data[i];
+
+            if (di?.PointY == null) continue;
+
+            double y;
+            // If it's already numeric, avoid string parsing
+            if (di.PointY is double dy) y = dy;
+            else if (di.PointY is float fy) y = fy;
+            else if (di.PointY is decimal dm) y = (double)dm;
+            else
+            {
+                // Fallback: try to parse string with Invariant first, then de-DE
+                var s = di.PointY.ToString();
+
+                if (!double.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out y))
+                    double.TryParse(s, NumberStyles.Any, displayCulture, out y);
+            }
+            args.Text[i] = $"{di.SeriesName}: {y.ToString("N2", displayCulture)} €";
+        }
+    }
+    #endregion
+
+    #region OpenDialog
+    /// <summary>
+    /// OpenDialog
+    /// </summary>
+    private void OpenDialog(string header, string height, string width, bool showButtons)
+    {
+        Header = header;
+        dialogHeight = height;
+        dialogWidth = width;
+        showDialogButtons = showButtons;
+        this.DialogVisible = true;
+    }
+    #endregion
+
+    #region ClearSumAverage
+    /// <summary>
+    /// ClearSumAverage
+    /// </summary>
+    private void ClearSumAverage()
+    {
+        SumPayments = 0;
+        SumCosts = 0;
+        SumBonus = 0;
+        SumCredit = 0;
+        SumConsumptions = 0;
+        SumFinalSettlement = 0;
+    }
+    #endregion
+}

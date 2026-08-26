@@ -1,0 +1,383 @@
+﻿@page "/electricinput"
+@rendermode InteractiveServer
+
+@using GWS_BlazorServer.Data
+@using System.Net
+@using System.Globalization
+@using GWS_BlazorServer.Components.Services
+@using Syncfusion.Blazor.DataForm
+@using Syncfusion.Blazor.Buttons
+
+@*@inject IConfiguration Configuration*@
+@inject MyAppConfig myAppSettings
+@inject HttpClient myHttpClient
+@inject ILogger<ElectricInput> Logger
+@inject ToastService ToastService
+
+<PageTitle>Strom-Zählerstand</PageTitle>
+@* <br />
+<header>
+    <div class="mb-1">
+        <span class="fa-solid fa-plug fs-5" aria-hidden="true"></span>
+        <h4 class="d-inline mb-1">Strom-Zählerstand</h4>
+    </div>
+</header> *@
+
+<div class="card shadow-lg col-xl-4 m-auto mt-3 px-3" style="background-color: lightgray">
+    <div class="col-md-12 control-section">
+        <div class="control-wrapper mt-1 mb-1">
+            <div class="text-center">
+                <span class="fa-solid fa-plug fs-5" aria-hidden="true"></span>
+                <h4 class="d-inline">Strom-Zählerstand</h4>
+            </div>
+
+            <SfDataForm ID="GWSInput"
+                ColumnCount=3
+                ButtonsAlignment="FormButtonsAlignment.Center"
+                Model="@countermodel"
+                OnValidSubmit="Submit">
+            
+                <FormValidator>
+                    <DataAnnotationsValidator></DataAnnotationsValidator>
+                    @* <ValidationSummary /> *@
+                </FormValidator>
+
+                 <FormItems>
+                    <FormItem Field="@nameof(countermodel.SupplierName)" ColumnSpan="4">
+                        <Template>
+                            <label class="e-form-label">Anbieter</label>
+                            <SfDropDownList DataSource="@suppliers" TItem="ElectricSupplier" TValue="int" Placeholder="Anbieter auswählen" @bind-Value="@countermodel.Id_Supplier" style="margin-bottom:2px">
+                                <DropDownListFieldSettings Text="Anbieter" Value="Id"></DropDownListFieldSettings>
+                                <DropDownListEvents TItem="ElectricSupplier" TValue="int" OnValueSelect="@ValueSelectHandler"></DropDownListEvents>
+                            </SfDropDownList>
+                            @* <ValidationMessage For="@(() => countermodel.SupplierName)"></ValidationMessage> *@
+                        </Template>
+
+                        @if (noSupplier)
+                        {
+                            <SfMessage Severity="MessageSeverity.Error">Anbieter auswählen!</SfMessage>
+                        }
+                    </FormItem>
+
+                    <FormItem Field="@nameof(countermodel.ReadingDate)" ColumnSpan="4">
+                        <Template>
+                            <label class="e-form-label">Ablesedatum</label>
+                            <SfDatePicker TValue="DateTime?" Value="countermodel.ReadingDate" Max="@MaxDate" Min="@MinDate" Format="dd.MM.yyyy" AllowEdit="false">
+                                <DatePickerEvents 
+                                    TValue="DateTime?" ValueChange="DateChangedHandler">
+                                </DatePickerEvents>
+                            </SfDatePicker>
+                            @* <ValidationMessage For="@(() => countermodel.ReadingTime)"></ValidationMessage> *@
+                        </Template>
+                    </FormItem>
+
+                    <FormItem Field="@nameof(countermodel.ReadingTime)" ColumnSpan="4">
+                        <Template>
+                            <label class="e-form-label">Ablesezeit</label>
+                            <SfTimePicker TValue="DateTime" @bind-Value="countermodel.ReadingTime" Format="HH:mm" AllowEdit="false"></SfTimePicker>
+                            @* <ValidationMessage For="@(() => countermodel.ReadingTime)"></ValidationMessage> *@
+                        </Template>
+                    </FormItem>
+
+                    <FormItem Field="@nameof(countermodel.MeterValue_In)" ColumnSpan="4">
+                        <Template>
+                            <label class="e-form-label">Netzstrom-Bezug (1.8.0)</label>
+                            <SfNumericTextBox id="counter1" Format="###.#### kWh" Placeholder="Zählerstand [kWh]" @bind-Value="countermodel.MeterValue_In" ShowSpinButton="false" />
+                            @* <ValidationMessage For="@(() => countermodel.MeterValue_In)"></ValidationMessage> *@
+                        </Template>
+                    </FormItem>
+
+                    <div>
+                        <SfSpinner @bind-Visible="@spinnerVisibleProperty" Type="SpinnerType.Tailwind" Size="40" CssClass="e-custom-color"></SfSpinner>
+                    </div>
+
+                    <FormItem Field="@nameof(countermodel.MeterValue_Out)" ColumnSpan="4">
+                        <Template>
+                            <label class="e-form-label">Netzstrom-Einspeisung (2.8.0)</label>
+                            <SfNumericTextBox id="counter2" Format="###.#### kWh" Placeholder="Zählerstand [kWh]" @bind-Value="countermodel.MeterValue_Out" ShowSpinButton="false" />
+                            @* <ValidationMessage For="@(() => countermodel.MeterValue_Out)"></ValidationMessage> *@
+                        </Template>
+                    </FormItem>
+
+                    <FormItem Field="@nameof(countermodel.MeterValue_Enfluri)" ColumnSpan="4">
+                        <Template>
+                            <label class="e-form-label">Enfluri</label>
+                            <SfNumericTextBox id="counter3" Format="###.#### kWh" Placeholder="Zählerstand [kWh]" @bind-Value="countermodel.MeterValue_Enfluri" ShowSpinButton="false" />
+                            @* <ValidationMessage For="@(() => countermodel.MeterValue_Enfluri)"></ValidationMessage> *@
+                        </Template>
+                    </FormItem>
+
+                    @*Format="##0 °C" --> ##0 sonst wird keine "0" angezeigt*@
+                    <FormItem Field="@nameof(countermodel.TemperatureInside)" ColumnSpan="4">
+                        <Template>
+                            <label class="e-form-label">Innentemperatur</label>
+                            <SfNumericTextBox TValue="double?" Format="##0 °C" Placeholder="Temperatur [°C]" @bind-Value="countermodel.TemperatureInside" Min="-50.0" Max="50.0"></SfNumericTextBox>
+                            @* <ValidationMessage For="@(() => countermodel.TemperatureInside)"></ValidationMessage> *@
+                        </Template>
+                    </FormItem>
+
+                    <FormItem Field="@nameof(countermodel.TemperatureOutside)" ColumnSpan="4">
+                        <Template>
+                            <label class="e-form-label">Aussentemperatur</label>
+                            <SfNumericTextBox TValue="double?" Format="##0 °C" Placeholder="Temperatur [°C]" @bind-Value="countermodel.TemperatureOutside" Min="-50.0" Max="50.0"></SfNumericTextBox>
+                            @* <ValidationMessage For="@(() => countermodel.TemperatureOutside)"></ValidationMessage> *@
+                        </Template>
+                    </FormItem>
+
+                    <FormItem Field="@nameof(countermodel.Remarks)" ColumnSpan="4">
+                        <Template>
+                            <label class="e-form-label">Bemerkung</label>
+                           <SfTextArea ResizeMode="Syncfusion.Blazor.Inputs.Resize.None" @bind-Value="countermodel.Remarks"></SfTextArea>
+                        </Template>
+                    </FormItem>
+                 </FormItems>
+
+                <FormButtons>
+                    <div class="mb-3">
+                        <SfButton typeof="submit" IsPrimary="true" CssClass="e-outline">Speichern</SfButton>
+                    </div>
+                </FormButtons>
+            </SfDataForm>
+        </div>
+    </div>
+</div>
+
+<style>
+    .mobile .control-wrapper
+    {
+        max-width: 100%;
+    }
+
+    .control-wrapper {
+        max-width: 400px;
+        margin: 0 auto;
+        padding: 0px 0px 0px;
+    }
+
+    .control-header{
+        text-align:center;
+    }
+
+    .e-form-label {
+        margin-top: -16px;
+    }
+
+    .msg-default-section .e-message {
+        margin: 10px 0;
+    }
+
+    #toast_default .e-circle-check::before {
+        content: "\e72b";
+        font-size: 17px;
+    }
+
+    #toast_default .e-circle-close::before {
+        content: "\e878";
+        font-size: 17px;
+    }
+</style>
+
+@code {
+
+    #region Variablendeklaration
+    bool spinnerVisibleProperty { get; set; } = false;
+
+    string urlSupplier = $"strom/anbieter";
+    string urlDataPost = $"strom/zaehlerstand";
+    LoxoneTemperatures? loxoneTemp;
+    GWSProcessor? wp;
+    ApiResponse? apiResponse;
+    bool noSupplier = false;
+
+    // Ablesedatum nicht in der Zukunft
+    private DateTime MaxDate { get; set; } = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day);
+    private DateTime MinDate { get; set; } = new DateTime(2000, 1, 1);
+    // Ablesezeit
+    //private DateTime? TimeValue { get; set; } = DateTime.Now;
+
+    ElectricMeter countermodel = new();
+    List<ElectricSupplier>? suppliers = new();
+
+    MyAppConfig? settings;
+    #endregion
+
+    #region OnInitializedAsync
+    /// <summary>
+    /// OnInitializedAsync
+    /// </summary>
+    /// <returns></returns>
+    protected override async Task OnInitializedAsync()
+    {
+        countermodel.ReadingDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day);         // Ablesedatum auf akt. Datum setzen Uhrzeit:00:00:00
+        countermodel.ReadingTime = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, DateTime.Now.Hour, DateTime.Now.Minute, DateTime.Now.Second);
+
+        // Spinner anzeigen bis Daten ausgelesen wurden
+        this.spinnerVisibleProperty = true;
+
+        settings = ReadWriteMyAppSettings.ReadMyAppSettings(myAppSettings);  // Auslesen der MyAppSettings
+
+        #region Loxone Temperaturen auslesen
+        await ReadLoxoneTemperatures(settings!);                                 // Loxone Temperaturen abfragen
+        countermodel.TemperatureInside = loxoneTemp!.Innentemperatur;
+        countermodel.TemperatureOutside = loxoneTemp!.Aussentemperatur;
+        #endregion
+
+        #region Anbieterdaten lesen
+        wp = new GWSProcessor(myHttpClient, settings!.GWSUri);
+        try
+        {
+            suppliers = await wp.LoadDataAsync<ElectricSupplier>(urlSupplier); // Anbieterdaten auslesen
+
+            if (suppliers != null && suppliers.Any()) // prüfen ob es Anbieterdaten gibt
+            {
+                countermodel.Id_Supplier = String.IsNullOrEmpty(settings?.SupplierId?.Electric) ? countermodel.Id_Supplier = suppliers.Max(x => x.Id) : countermodel.Id_Supplier = Int32.Parse(settings.SupplierId.Electric);
+            }
+            else
+            {
+                countermodel.Id_Supplier = 0;
+            }
+        }
+        catch (Exception)
+        {
+            countermodel.Id_Supplier = 0;
+        }
+        #endregion
+
+        #region Spinner
+        await Task.Delay(300);
+        this.spinnerVisibleProperty = false;
+        #endregion
+    }
+    #endregion
+
+    #region Submit
+    /// <summary>
+    /// Submit Form
+    /// </summary>
+    /// <returns></returns>
+    private async Task Submit()
+    {
+        bool success = false;
+        //countermodel.ReadingTime = (DateTime)TimeValue; // Ableseuhrzeit kopieren
+
+        var supplier = suppliers?.FirstOrDefault(x => x.Id == countermodel.Id_Supplier);
+
+
+        if (supplier != null)
+        {
+            noSupplier = false;
+
+            apiResponse = await wp!.PostDataAsync<ElectricMeter>(urlDataPost, countermodel);  // POST
+
+            if (apiResponse.MyHttpStatusCode == HttpStatusCode.Created)
+            {
+                ShowToastMessage(true, "Datensatz gespeichert (created)!");
+            }
+            else
+            {
+                ShowToastMessage(false, apiResponse.MyResponseString!);
+            }
+            success = ReadWriteMyAppSettings.WriteMyAppSettings(myAppSettings, "Electric", countermodel.Id_Supplier.ToString()); // ausgewählten Anbieter speichern
+            if (!success)
+            {
+                ShowToastMessage(false, "letzter Anbieter ausgewählter konnte nicht gespeichert werden!");
+            }
+            apiResponse = null; // Objekt vernichten
+        }
+        else
+        {
+            noSupplier = true;
+        }
+    }
+    #endregion
+
+    #region ShowSpinner
+    /// <summary>
+    /// Anzeigen des Spinners
+    /// </summary>
+    /// <returns></returns>
+    private async Task ShowSpinner()
+    {
+        await Task.Delay(1000);
+        this.spinnerVisibleProperty = false;
+    }
+    #endregion
+
+    #region ReadLoxoneTemperatures
+    /// <summary>
+    /// Auslesen der Loxone-Temperaturen
+    /// </summary>
+    /// <param name="settings"></param>
+    /// <returns></returns>
+    private async Task ReadLoxoneTemperatures(MyAppConfig settings)
+    {
+        this.spinnerVisibleProperty = true;
+        loxoneTemp = await LoxoneProcessor.LoadLoxoneTemp(settings.Loxone!.User!, settings.Loxone!.Password!);    // Loxone-Api auf Temperaturen abfragen
+        this.spinnerVisibleProperty = false;
+    }
+    #endregion
+
+    #region DateChangedHandler
+    /// <summary>
+    /// Datum wurde geändert
+    /// </summary>
+    /// <param name="args"></param>
+    private void DateChangedHandler(ChangedEventArgs<DateTime?> args)
+    {
+        countermodel.ReadingDate = args.Value.GetValueOrDefault();
+        countermodel.ReadingTime = new DateTime(countermodel.ReadingDate.Year, countermodel.ReadingDate.Month, countermodel.ReadingDate.Day, DateTime.Now.Hour, DateTime.Now.Minute, 0);
+    }
+    #endregion
+
+    #region ValueSelectHandler
+    /// <summary>
+    /// Rücksetzen des Flags zum Anzeigen der Messagebox
+    /// Die Messagebox wird angezeigt, wenn kein Anbieter ausgewählt ist
+    /// </summary>
+    /// <param name="args"></param>
+    private void ValueSelectHandler(SelectEventArgs<ElectricSupplier> args)
+    {
+        noSupplier = false;
+    }
+    #endregion
+
+    #region ShowToastMessage
+    /// <summary>
+    /// ShowToastMessage
+    /// </summary>
+    /// <param name="success"></param>
+    /// <param name="message"></param>
+    /// <returns></returns>
+    private void ShowToastMessage(bool success, string message)
+    {
+        if (success)
+        {
+            ShowToast("Erfolg", message, "e-toast-success", "e-circle-check");
+        }
+        else
+        {
+            ShowToast("Fehler", message, "e-toast-danger", "e-circle-close");
+        }
+    }
+    #endregion
+
+    #region ShowToast
+    /// <summary>
+    /// ShowToast
+    /// </summary>
+    /// <param name="title"></param>
+    /// <param name="content"></param>
+    /// <param name="cssClass"></param>
+    /// <param name="icon"></param>
+    private void ShowToast(string title, string content, string cssClass, string icon)
+    {
+        this.ToastService.Open(new ToastOption()
+            {
+                Title = title,
+                Content = content,
+                CssClass = cssClass,
+                Icon = icon,
+            });
+    }
+    #endregion
+}

@@ -1,0 +1,433 @@
+﻿@inject IJSRuntime JSRuntime
+
+<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        @if (!IconMenuActive)
+        {
+            <a class="navbar-brand" href="">GWS-Statistik</a>
+        }
+        else
+        {
+            <a class="navbar-brand bi bi-window-fullscreen" />
+        }
+        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+    </div>
+</div>
+
+<div class="@NavMenuCssClass">
+    <nav class="flex-column">
+
+        <div class="px-3">
+            <NavLink class="nav-link" Match="NavLinkMatch.All">
+                <div class="icon-menu-arrow">
+                    @if (!IconMenuActive)
+                    {
+                        <span class="bi bi-arrow-bar-left" style="color: white;" @onclick="ToggleIconMenu"></span>
+                        @* <span class="fa-solid fa-arrow-left" style="color: white;" @onclick="ToggleIconMenu"></span> *@
+                    }
+                    else
+                    {
+                        <span class="bi bi-arrow-bar-right" style="color: white;" @onclick="ToggleIconMenu"></span>
+                        @* <span class="fa-solid fa-arrow-right" style="color: white;" @onclick="ToggleIconMenu"></span> *@
+                    }
+                </div>
+            </NavLink>
+        </div>
+
+        <div class="px-3">
+            @if (!IconMenuActive)
+            {
+                <div class="content" style="margin:0px 0; color:white; text-align: center">
+                    <span>@DateTime.Now.ToString("dd.MM.yyyy HH:mm")</span>
+                </div>
+            }
+            else
+            {
+                <div class="content" style="margin:15px 0; color:white; text-align: center">
+                    <span class="fa-solid fa-clock fa-lg"></span>
+                </div>
+            }
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link p-3" href="" Match="NavLinkMatch.All">
+                <span class="fa-solid fa-house fa-lg" aria-hidden="true" title="Home"></span>
+                @if (!IconMenuActive)
+                {
+                    <span><label>Home</label></span>
+                }
+            </NavLink>
+        </div>
+
+        @* Gas *@
+        <div class="nav-item px-3" @onclick='@(() => ToggleSubMenu("gasMenu"))'>
+            <NavLink class="nav-link flex-container p-3" Match="NavLinkMatch.All">
+                <span class="fa-solid fa-fire-flame-simple fa-lg" aria-hidden="true" title="Gas"></span>
+                @if (!IconMenuActive)
+                {
+                    <span><label>Gas</label></span>
+                    <span class="bi bi-arrow-icon @(IsSubMenuOpen("gasMenu") ? "bi bi-arrow-up-short" : "bi bi-arrow-down-short")" aria-hidden="true"></span>
+                }
+            </NavLink>
+            <div class="sub-menu" style="display: @(IsSubMenuOpen("gasMenu") ? "block" : "none")">
+                <NavLink class="nav-link px-4" href="gas_supplier">
+                    <span class="fa-solid fa-truck-fast fa-xs" aria-hidden="true" title="Anbieter"></span>
+                    @if (!IconMenuActive)
+                    {
+                        <span><label>Anbieter</label></span>
+                    }
+                </NavLink>
+                <NavLink class="nav-link px-4" href="gas_price">
+                    <span class="fa-solid fa-coins fa-xs" aria-hidden="true" title="Preise"></span>
+                    @if (!IconMenuActive)
+                    {
+                        <span><label>Preise</label></span>
+                    }
+                </NavLink>
+                <NavLink class="nav-link px-4" href="gas_counter">
+                    <span class="fa-solid fa-table fa-xs" aria-hidden="true" title="Zählerstände"></span>
+                    @if (!IconMenuActive)
+                    {
+                        <span><label>Zählerstände</label></span>
+                    }
+                </NavLink>
+                <NavLink class="nav-link px-4" href="gas_consumption">
+                    <span class="fa-solid fa-chart-simple fa-xs" aria-hidden="true" title="Verbräuche"></span>
+                    @if (!IconMenuActive)
+                    {
+                        <span><label>Verbräuche</label></span>
+                    }
+                </NavLink>
+                <NavLink class="nav-link px-4" href="gas_payments">
+                    <span class="fa-regular fa-money-bill-1 fa-xs" aria-hidden="true" title="Zahlungen"></span>
+                    @if (!IconMenuActive)
+                    {
+                        <span><label>Zahlungen</label></span>
+                    }
+                </NavLink>
+                <NavLink class="nav-link px-4" href="gas_cost_payments">
+                    <span class="fa-solid fa-chart-column fa-xs" aria-hidden="true" title="Kostenübersicht"></span>
+                    @if (!IconMenuActive)
+                    {
+                        <span><label>Kostenübersicht</label></span>
+                    }
+                </NavLink>
+                <NavLink class="nav-link px-4" href="gas_cost_comparison">
+                    <span class="fa-solid fa-scale-unbalanced fa-xs" aria-hidden="true" title="Kostenvergleich"></span>
+                    @if (!IconMenuActive)
+                    {
+                        <span><label>Kostenvergleich</label></span>
+                    }
+                </NavLink>
+                <NavLink class="nav-link px-4" href="gas_boiler">
+                    <span class="fa-brands fa-steam fa-xs" aria-hidden="true" title="Therme-Daten"></span>
+                    @if (!IconMenuActive)
+                    {
+                        <span><label>Therme-Daten</label></span>
+                    }
+                </NavLink>
+                <NavLink class="nav-link px-4" href="gas_cost_development">
+                    <span class="fa-solid fa-money-bill-trend-up fa-xs" aria-hidden="true" title="Kostenentwicklung"></span>
+                    @if (!IconMenuActive)
+                    {
+                        <span><label>Kostenentwicklung</label></span>
+                    }
+                </NavLink>
+                <NavLink class="nav-link px-4" href="gas_counter_change">
+                    <span class="fa-solid fa-gauge fa-xs" aria-hidden="true" title="Zählerwechsel"></span>
+                    @if (!IconMenuActive)
+                    {
+                        <span><label>Zählerwechsel</label></span>
+                    }
+                </NavLink>
+            </div>
+        </div>
+
+        @* Wasser *@
+        <div class="nav-item px-3" @onclick='@(() => ToggleSubMenu("waterMenu"))'>
+            <NavLink class="nav-link flex-container p-3" Match="NavLinkMatch.All">
+                <span class="fa-solid fa-faucet-drip fa-lg" aria-hidden="true" title="Wasser"></span>
+                @if (!IconMenuActive)
+                {
+                    <span><label>Wasser</label></span>
+                    <span class="bi bi-arrow-icon @(IsSubMenuOpen("waterMenu") ? "bi bi-arrow-up-short" : "bi bi-arrow-down-short")" aria-hidden="true"></span>
+                }
+            </NavLink>
+            <div class="sub-menu" style="display: @(IsSubMenuOpen("waterMenu") ? "block" : "none")">
+                <NavLink class="nav-link px-4" href="water_supplier">
+                    <span class="fa-solid fa-truck-fast fa-xs" aria-hidden="true" title="Anbieter"></span>
+                    @if (!IconMenuActive)
+                    {
+                        <span><label>Anbieter</label></span>
+                    }
+                </NavLink>
+                <NavLink class="nav-link px-4" href="water_price">
+                    <span class="fa-solid fa-coins fa-xs" aria-hidden="true" title="Preise"></span>
+                    @if (!IconMenuActive)
+                    {
+                        <span><label>Preise</label></span>
+                    }
+                </NavLink>
+                <NavLink class="nav-link px-4" href="water_counter">
+                    <span class="fa-solid fa-table fa-xs" aria-hidden="true" title="Zählerstände"></span>
+                    @if (!IconMenuActive)
+                    {
+                        <span><label>Zählerstände</label></span>
+                    }
+                </NavLink>
+                <NavLink class="nav-link px-4" href="water_consumption">
+                    <span class="fa-solid fa-chart-simple fa-xs" aria-hidden="true" title="Verbräuche"></span>
+                    @if (!IconMenuActive)
+                    {
+                        <span><label>Verbräuche</label></span>
+                    }
+                </NavLink>
+                <NavLink class="nav-link px-4" href="water_payments">
+                    <span class="fa-regular fa-money-bill-1 fa-xs" aria-hidden="true" title="Zahlungen"></span>
+                    @if (!IconMenuActive)
+                    {
+                        <span><label>Zahlungen</label></span>
+                    }
+                </NavLink>
+                <NavLink class="nav-link px-4" href="water_cost_payments">
+                    <span class="fa-solid fa-chart-column fa-xs" aria-hidden="true" title="Kostenübersicht"></span>
+                    @if (!IconMenuActive)
+                    {
+                        <span><label>Kostenübersicht</label></span>
+                    }
+                </NavLink>
+                <NavLink class="nav-link px-4" href="water_cost_comparison">
+                    <span class="fa-solid fa-scale-unbalanced fa-xs" aria-hidden="true" title="Kostenvergleich"></span>
+                    @if (!IconMenuActive)
+                    {
+                        <span><label>Kostenvergleich</label></span>
+                    }
+                </NavLink>
+                <NavLink class="nav-link px-4" href="water_cost_development">
+                    <span class="fa-solid fa-money-bill-trend-up fa-xs" aria-hidden="true" title="Kostenentwicklung"></span>
+                    @if (!IconMenuActive)
+                    {
+                        <span><label>Kostenentwicklung</label></span>
+                    }
+                </NavLink>
+                <NavLink class="nav-link px-4" href="water_counter_change">
+                    <span class="fa-solid fa-gauge fa-xs" aria-hidden="true" title="Zählerwechsel"></span>
+                    @if (!IconMenuActive)
+                    {
+                        <span><label>Zählerwechsel</label></span>
+                    }
+                </NavLink>
+            </div>
+        </div>
+
+        @* Strom *@
+        <div class="nav-item px-3" @onclick='@(() => ToggleSubMenu("electricMenu"))'>
+            <NavLink class="nav-link flex-container p-3" Match="NavLinkMatch.All">
+                <span class="fa-solid fa-plug fa-lg" aria-hidden="true" title="Strom"></span>
+                @if (!IconMenuActive)
+                {
+                    <span><label>Strom</label></span>
+                    <span class="bi bi-arrow-icon @(IsSubMenuOpen("electricMenu") ? "bi bi-arrow-up-short" : "bi bi-arrow-down-short")" aria-hidden="true"></span>
+                }
+            </NavLink>
+
+            <div class="sub-menu" style="display: @(IsSubMenuOpen("electricMenu") ? "block" : "none")">
+                <NavLink class="nav-link px-4" href="electric_supplier">
+                    <span class="fa-solid fa-truck-fast fa-xs" aria-hidden="true" title="Anbieter"></span>
+                    @if (!IconMenuActive)
+                    {
+                        <span><label>Anbieter</label></span>
+                    }
+                </NavLink>
+                <NavLink class="nav-link px-4" href="electric_price">
+                    <span class="fa-solid fa-coins fa-xs" aria-hidden="true" title="Preise"></span>
+                    @if (!IconMenuActive)
+                    {
+                        <span><label>Preise</label></span>
+                    }
+                </NavLink>
+                <NavLink class="nav-link px-4" href="electric_counter">
+                    <span class="fa-solid fa-table fa-xs" aria-hidden="true" title="Zählerstände"></span>
+                    @if (!IconMenuActive)
+                    {
+                        <span><label>Zählerstände</label></span>
+                    }
+                </NavLink>
+                <NavLink class="nav-link px-4" href="electric_consumption">
+                    <span class="fa-solid fa-chart-simple fa-xs" aria-hidden="true" title="Verbräuche"></span>
+                    @if (!IconMenuActive)
+                    {
+                        <span><label>Verbräuche</label></span>
+                    }
+                </NavLink>
+                <NavLink class="nav-link px-4" href="electric_payments">
+                    <span class="fa-regular fa-money-bill-1 fa-xs" aria-hidden="true" title="Zahlungen"></span>
+                    @if (!IconMenuActive)
+                    {
+                        <span><label>Zahlungen</label></span>
+                    }
+                </NavLink>
+                <NavLink class="nav-link px-4" href="electric_cost_payments">
+                    <span class="fa-solid fa-chart-column fa-xs" aria-hidden="true" title="Kostenübersicht"></span>
+                    @if (!IconMenuActive)
+                    {
+                        <span><label>Kostenübersicht</label></span>
+                    }
+                </NavLink>
+                <NavLink class="nav-link px-4" href="electric_cost_comparison">
+                    <span class="fa-solid fa-scale-unbalanced fa-xs" aria-hidden="true" title="Kostenvergleich"></span>
+                    @if (!IconMenuActive)
+                    {
+                        <span><label>Kostenvergleich</label></span>
+                    }
+                </NavLink>
+                <NavLink class="nav-link px-4" href="electric_cost_development">
+                    <span class="fa-solid fa-money-bill-trend-up fa-xs" aria-hidden="true" title="Kostenentwicklung"></span>
+                    @if (!IconMenuActive)
+                    {
+                        <span><label>Kostenentwicklung</label></span>
+                    }
+                </NavLink>
+                <NavLink class="nav-link px-4" href="electric_counter_change">
+                    <span class="fa-solid fa-gauge fa-xs" aria-hidden="true" title="Zählerwechsel"></span>
+                    @if (!IconMenuActive)
+                    {
+                        <span><label>Zählerwechsel</label></span>
+                    }
+                </NavLink>
+            </div>
+        </div>
+
+        @* Allgemein *@
+        <div class="nav-item px-3" @onclick='@(() => ToggleSubMenu("commonMenu"))'>
+            <NavLink class="nav-link flex-container p-3" Match="NavLinkMatch.All">
+                <span class="fa-solid fa-house-user fa-lg" aria-hidden="true" title="Allgemein"></span>
+                @if (!IconMenuActive)
+                {
+                    <span><label>Allgemein</label></span>
+                    <span class="bi bi-arrow-icon @(IsSubMenuOpen("commonMenu") ? "bi bi-arrow-up-short" : "bi bi-arrow-down-short")" aria-hidden="true"></span>
+                }
+            </NavLink>
+            <div class="sub-menu" style="display: @(IsSubMenuOpen("commonMenu") ? "block" : "none")">
+                <NavLink class="nav-link px-4" href="energy">
+                    @* <span class="bi bi-speedometer" aria-hidden="true" title="Energiebedarf"></span> *@
+                    <span class="bi bi-house-up" aria-hidden="true" title="Energiebedarf"></span>
+                    @if (!IconMenuActive)
+                    {
+                        <span><label>Energiebedarf</label></span>
+                    }
+                </NavLink>
+            </div>
+        </div>
+
+        @* Einstellungen *@
+        <div class="nav-item px-3" @onclick='@(() => ToggleSubMenu("settingsMenu"))'>
+            <NavLink class="nav-link flex-container p-3" Match="NavLinkMatch.All">
+                <span class="fa-solid fa-gear fa-lg" aria-hidden="true" title="Einstellungen"></span>
+                @if (!IconMenuActive)
+                {
+                    <span><label>Einstellungen</label></span>
+                    <span class="bi bi-arrow-icon @(IsSubMenuOpen("settingsMenu") ? "bi bi-arrow-up-short" : "bi bi-arrow-down-short")" aria-hidden="true"></span>
+                }
+            </NavLink>
+          
+            <div class="sub-menu" style="display: @(IsSubMenuOpen("settingsMenu") ? "block" : "none")">
+                <NavLink class="nav-link px-4" href="parameter">
+                    <span class="fa-solid fa-house-circle-check fa-xs" aria-hidden="true" title="Parameter"></span>
+                    @if (!IconMenuActive)
+                    {
+                        <span><label>Parameter</label></span>
+                    }
+                </NavLink>
+
+                <NavLink class="nav-link px-4" href="efficiency">
+                    <span class="bi bi-speedometer2" aria-hidden="true" title="Effizienzklassen"></span>
+                    @* <span><img src="energyEfficiency.png" width="35" height="35"></span> *@
+                    @if (!IconMenuActive)
+                    {
+                        <span><label>Effizienzklassen</label></span>
+                    }
+                </NavLink>
+            </div>
+        </div>
+
+
+    </nav>
+</div>
+
+@code
+{
+    [Parameter]
+    public EventCallback<bool> ShowIconMenu { get; set; }
+
+    private bool IconMenuActive { get; set; } = false;
+    private bool collapseNavMenu = true;
+    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+    private Dictionary<string, bool> subMenuStates = new Dictionary<string, bool>();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("setResizeCallback", DotNetObjectReference.Create(this));
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnResize(bool isBelowThreshold)
+    {
+        if (isBelowThreshold && IconMenuActive)
+        {
+            collapseNavMenu = true;
+            await ToggleIconMenu();
+
+            await ShowIconMenu.InvokeAsync(IconMenuActive);
+
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+
+    private async Task ToggleIconMenu()
+    {
+        IconMenuActive = !IconMenuActive;
+
+        await ShowIconMenu.InvokeAsync(IconMenuActive);
+    }
+
+    private void ToggleSubMenu(string subMenuKey)
+    {
+        if (subMenuStates.ContainsKey(subMenuKey) && subMenuStates[subMenuKey])
+        {
+            subMenuStates[subMenuKey] = false;
+        }
+        else
+        {
+            foreach (var key in subMenuStates.Keys.ToList())
+            {
+                subMenuStates[key] = false;
+            }
+
+            if (subMenuStates.ContainsKey(subMenuKey))
+            {
+                subMenuStates[subMenuKey] = !subMenuStates[subMenuKey];
+            }
+            else
+            {
+                subMenuStates[subMenuKey] = true;
+            }
+        }
+    }
+
+    private bool IsSubMenuOpen(string subMenuKey)
+    {
+        return subMenuStates.ContainsKey(subMenuKey) && subMenuStates[subMenuKey];
+    }
+}
+

@@ -1,0 +1,25 @@
+﻿/* house image home page*/
+/*.house-img {
+    max-width: 20%;
+    max-height: 46vh;
+    overflow-y: hidden;
+    margin: 0px;
+}*/
+
+/*.bg-color-grey {
+    background: #e1e8e3;
+}*/
+
+
+/* syncfusion grid */
+/*.e-grid .e-headercelldiv {
+    font-size: 7px;
+}
+
+.e-grid .e-rowcell {
+    font-size: 5px;
+} */
+
+.chartHeader {
+    max-width:98%;
+}

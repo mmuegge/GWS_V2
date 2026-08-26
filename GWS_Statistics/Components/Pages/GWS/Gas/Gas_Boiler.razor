@@ -1,0 +1,809 @@
+﻿@page "/gas_boiler"
+
+@using GWS_Statistics.Components.Services
+@using GWS_Statistics.Helper
+@using System.Globalization
+@using System.Net
+
+@inject MyAppConfigModel myAppSettings
+@inject HttpClient myHttpClient
+@inject ILogger<Gas_Boiler> Logger
+@inject ToastService ToastService
+@inject SfDialogService DialogService
+@inject IJSRuntime JSRuntime;
+
+<PageTitle>Gas- Thermedaten</PageTitle>
+
+<div class="container">
+    <div class="row">
+        <div class="col col-md-12">
+            <div class="text-center fs-3 fw-bold">
+                <span class="fa-solid fa-fire-flame-simple fa-3xs" aria-hidden="true"> </span>
+                <label>Gas- Therme Verbrauchsdaten</label>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="control-section" id="target" align="center">
+    <SfGrid ID="SfDataGrid" @ref="SfDataGrid" DataSource="@boilerList"
+    AllowPaging="true"
+    AllowFiltering="true"
+    AllowReordering="true"
+    AllowResizing="true"
+    AllowExcelExport="true"
+    AllowPdfExport="true"
+    EnableHover="true"
+    AllowTextWrap="true"
+    AllowSelection="true"
+    AllowSorting="true"
+    Height="100%" Width="100%"
+    Toolbar=@toolbar
+    EnableStickyHeader="true">
+
+        <GridEditSettings AllowAdding="true"
+        AllowEditing="true"
+        AllowDeleting="true"
+        ShowDeleteConfirmDialog="true"
+        Mode="EditMode.Dialog"
+        Dialog="DialogParams">
+
+            <HeaderTemplate>
+                @{
+                    var DialogHeader = GetDialogHeader((context as Gas_BoilerModel)!);
+                    <span>@DialogHeader</span>
+                }
+            </HeaderTemplate>
+        </GridEditSettings>
+
+        <GridEvents OnToolbarClick="ToolbarBtnClickHandler"
+                    CommandClicked="OnCommandClicked"
+                    RowCreating="RowCreatingHandler"
+                    OnActionComplete="ActionCompleteHandler"
+                    TValue="Gas_BoilerModel">
+        </GridEvents>
+
+        <GridPageSettings PageSize="20" PageSizes="true"></GridPageSettings>
+
+        <GridFilterSettings Type="Syncfusion.Blazor.Grids.FilterType.CheckBox"></GridFilterSettings>
+
+        <GridSortSettings>
+            <GridSortColumns>
+                <GridSortColumn 
+                    Field="Verbrauchsjahr" 
+                    Direction="SortDirection.Descending">
+                </GridSortColumn>
+            </GridSortColumns>
+        </GridSortSettings>
+
+        <GridColumns>
+            <GridColumn IsPrimaryKey="true" Field="@nameof(Gas_BoilerModel.Id)" Visible="false"
+                        AllowAdding="false"
+                        AllowEditing="false"
+                        AllowSorting="false"
+                        AllowFiltering="false"
+                        Width="35">
+            </GridColumn>
+
+            <GridColumn Field=@nameof(Gas_BoilerModel.Verbrauchsjahr)
+                        Format="d"
+                        EditType="EditType.DatePickerEdit"
+                        Width="110"
+                        DefaultValue="DateTime.Now"
+                        HeaderText="Datum">
+
+                <HeaderTemplate>
+                    <SfTooltip Content="@GetTooltipContent("CY")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                        <span><b>Datum</b></span>
+                    </SfTooltip>
+                </HeaderTemplate>
+            </GridColumn>
+
+            <GridColumn Field=Gesamt_Verbrauch
+            Format="##0 kWh"
+            Width="105"
+            HeaderText="Gesamt-Verbrauch">
+
+                <EditTemplate>
+                    <SfNumericTextBox Placeholder="Gesamt-Verbrauch"
+                                      FloatLabelType="FloatLabelType.Always"
+                                      TValue="double?"
+                                      @bind-Value="@((context as Gas_BoilerModel)!.Gesamt_Verbrauch)"
+                                      Format="##0 kWh">
+                    </SfNumericTextBox>
+                </EditTemplate>
+
+                <HeaderTemplate>
+                    <SfTooltip Content="@GetTooltipContent("CT")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                        <span><b>Gesamt</b></span>
+                    </SfTooltip>
+                </HeaderTemplate>
+            </GridColumn>
+
+            <GridColumn Field=Heizung_Verbrauch
+                        Format="##0 kWh"
+                        Width="115"
+                        HeaderText="Heizung-Verbrauch">
+
+                <EditTemplate>
+                    <SfNumericTextBox Placeholder="Heizung-Verbrauch"
+                                      FloatLabelType="FloatLabelType.Always"
+                                      TValue="double?"
+                                      @bind-Value="@((context as Gas_BoilerModel)!.Heizung_Verbrauch)"
+                                      Format="##0 kWh">
+                    </SfNumericTextBox>
+                </EditTemplate>
+
+                <HeaderTemplate>
+                    <SfTooltip Content="@GetTooltipContent("CH")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                        <span><b>Heizung</b></span>
+                    </SfTooltip>
+                </HeaderTemplate>
+            </GridColumn>
+
+            <GridColumn Field=Warmwasser_Verbrauch
+                        Format="##0 kWh"
+                        Width="105"
+                        HeaderText="Warmwasser-Verbrauch">
+
+                <EditTemplate>
+                    <SfNumericTextBox Placeholder="Warmwasser-Verbrauch"
+                        FloatLabelType="FloatLabelType.Always"
+                        TValue="double?"
+                        @bind-Value="@((context as Gas_BoilerModel)!.Warmwasser_Verbrauch)"
+                        Format="##0 kWh">
+                    </SfNumericTextBox>
+                </EditTemplate>
+
+                <HeaderTemplate>
+                    <SfTooltip Content="@GetTooltipContent("CW")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                        <span><b>Wasser</b></span>
+                    </SfTooltip>
+                </HeaderTemplate>
+            </GridColumn>
+
+            <GridColumn Field=Strom_Verbrauch
+            Format="##0.00 kWh"
+            Width="105"
+            HeaderText="Strom-Verbrauch">
+
+                <EditTemplate>
+                    <SfNumericTextBox Placeholder="Strom-Verbrauch"
+                    FloatLabelType="FloatLabelType.Always"
+                    TValue="double?"
+                    @bind-Value="@((context as Gas_BoilerModel)!.Strom_Verbrauch)"
+                    Format="##0.00 kWh">
+                    </SfNumericTextBox>
+                </EditTemplate>
+
+                <HeaderTemplate>
+                    <SfTooltip Content="@GetTooltipContent("CE")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                        <span><b>Strom</b></span>
+                    </SfTooltip>
+                </HeaderTemplate>
+            </GridColumn>
+
+            <GridColumn Field=Bemerkung
+            Width="230"
+            HeaderText="Bemerkung">
+
+                <HeaderTemplate>
+                    <SfTooltip Content="@GetTooltipContent("RM")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                        <span><b>Bemerkung</b></span>
+                    </SfTooltip>
+                </HeaderTemplate>
+            </GridColumn>
+
+            <GridColumn HeaderText="Funktion" Width="20%" MinWidth="110">
+                <GridCommandColumns>
+                    <GridCommandColumn Type="CommandButtonType.Edit"
+                    ButtonOption="@(new CommandButtonOptions(){
+                                                    IconCss="e-icons e-edit",
+                                                    CssClass="e-flat"
+                                               })">
+                    </GridCommandColumn>
+                    <GridCommandColumn Type="CommandButtonType.Delete"
+                    ButtonOption="@(new CommandButtonOptions(){
+                                                    IconCss ="e-icons e-delete",
+                                                    CssClass="e-flat"
+                                               })">
+                    </GridCommandColumn>
+                    <GridCommandColumn Type="CommandButtonType.Save"
+                    ButtonOption="@(new CommandButtonOptions(){
+                                                    IconCss="e-icons e-update",
+                                                    CssClass="e-flat"
+                                               })">
+                    </GridCommandColumn>
+                    <GridCommandColumn Type="CommandButtonType.Cancel"
+                    ButtonOption="@(new CommandButtonOptions(){
+                                                    IconCss="e-icons e-cancel-icon",
+                                                    CssClass="e-flat"
+                                               })">
+                    </GridCommandColumn>
+                </GridCommandColumns>
+            </GridColumn>
+        </GridColumns>
+    </SfGrid>
+</div>
+
+<SfSpinner @bind-Visible="@SpinnerVisibleProperty" Type="SpinnerType.Tailwind" Size="40" CssClass="e-custom-color"></SfSpinner>
+
+@* Dialog*@
+<div>
+    <SfDialog Target="#target"
+              Width="320px"
+              Height=@dialogHeight
+              AllowDragging="true"
+              ShowCloseIcon=" true"
+              @bind-Visible="DialogVisible"
+              AllowPrerender="true"
+              IsModal="true"
+              CssClass="MyCss">
+
+        <DialogTemplates>
+            <Header>@Header</Header>
+        </DialogTemplates>
+
+        <DialogPositionData X="@dialogXValue" Y="@dialogYValue"></DialogPositionData>
+
+        <DialogAnimationSettings Effect="@animationEffect"></DialogAnimationSettings>
+
+        @if (showDialogButtons)
+        {
+            <DialogButtons>
+                <DialogButton Content="Ja" IsPrimary="true" OnClick="@YesClick" />
+                <DialogButton Content="Abbrechen" OnClick="@CancelClick" />
+            </DialogButtons>
+        }
+    </SfDialog>
+</div>
+
+@if (!isDeleteProcessed)
+{
+    <style>
+        .e-dlg-overlay {
+        background-color: slategray;
+        opacity: 0.6;
+        }
+
+        /* Dialog Editing*/
+        .e-dialog .e-dlg-header-content {
+        background-color: grey;
+        font-size: 24px;
+        }
+
+        .e-dialog .e-dlg-header {
+        color: white;
+        }
+
+        .e-dialog .e-dlg-content {
+        color: black;
+        background-color: lightgray;
+        font-size: 16px;
+        }
+
+        .bg-color-grey {
+        background: #deded9;
+        }
+
+        #toast_default .e-circle-check::before {
+        content: "\e72b";
+        font-size: 17px;
+        }
+
+        #toast_default .e-circle-close::before {
+        content: "\e878";
+        font-size: 17px;
+        }
+
+        .control-wrapper {
+        max-width: 250px;
+        min-width: 80px;
+        margin: 0 auto;
+        }
+
+        .control-label {
+        font-size: 14px;
+        margin: 6px 0px;
+        }
+
+        /* Dialog: Datensatz ändern */
+        .MyCss .e-dlg-header-content {
+        background-color: red;
+        }
+
+        .dialog-label {
+        color: black;
+        font-size: 14px;
+        margin-bottom: 2px;
+        }
+    </style>
+}
+else
+{
+    <style>
+        .e-dialog .e-dlg-content {
+            color: white;
+            background-color: red;
+            font-size: 16px;
+        }
+
+        .e-dlg-header-content {
+            margin-bottom: 2px;
+        }
+    </style>
+}
+
+@code
+{
+    #region Variablendeklaration
+
+    private bool isDeleteProcessed { get; set; }
+
+    private bool save = false;
+    private bool update = false;
+
+    private bool SpinnerVisibleProperty { get; set; } = false;
+
+    private DialogSettings DialogParams = new DialogSettings { MinHeight = "400px", Width = "450px" };
+    public DialogEffect animationEffect = DialogEffect.Zoom;
+    public bool DialogVisible { get; set; } = false;
+    private bool showDialogButtons = false;
+    private string DialogText { get; set; } = string.Empty;
+    private string dialogXValue = "center";
+    private string dialogYValue = "center";
+    private string dialogHeight = "130px";
+
+    public int? DropDownValueSupplier { get; set; } = 0;
+
+    readonly string urlBoiler = "gas/therme/";
+
+    string? Header { get; set; }
+    string? Content { get; set; }
+
+    GWSProcessor? gwsP;
+    ApiResponse? apiResponse;
+
+    private SfGrid<Gas_BoilerModel> SfDataGrid = new();
+
+    private List<Gas_BoilerModel>? boilerList = null;
+    private Gas_BoilerModel? boilerData = new();
+
+    private List<object> toolbar = new List<object>() { "Add", "Cancel", "Search", "ExcelExport", "PdfExport" };
+
+    public DateTime MinDate { get; set; } = new DateTime(1990, 1, 1);
+    public DateTime MaxDate { get; set; } = new DateTime(DateTime.Now.Year, 12, 31);
+    public DateTime DefaultDate { get; set; } = new DateTime(DateTime.Now.Year, 12, 31);
+
+    MyAppConfigModel? settings;
+
+    // Dictionary for column descriptions
+    public Dictionary<string, string> ColumnDescriptions = new()
+    {
+        { "CY", "Verbrauchsjahr" },
+        { "CT", "Gesamtverbrauch" },
+        { "CH", "Verbrauch Heizung" },
+        { "CW", "Verbrauch Warmwasser" },
+        { "CE", "Verbrauch Strom" },
+        { "RM", "Bemerkung" }
+    };
+
+    // PDF-Export Properties
+    public List<PdfHeaderFooterContent> HeaderContent = new List<PdfHeaderFooterContent>
+    {
+    new PdfHeaderFooterContent() { Type = ContentType.Line, Points= new PdfPoints { X1 = 0, Y1 = 4, X2 = 720, Y2 = 4}, Style = new PdfContentStyle() { PenColor = "#000080", DashStyle=PdfDashStyle.Solid } },
+    new PdfHeaderFooterContent() { Type = ContentType.Text, Value = "Gas-Preise", Position = new PdfPosition() { X = 350, Y = 20 }, Style = new PdfContentStyle() { TextBrushColor = "#000000", FontSize = 10 } },
+    new PdfHeaderFooterContent() { Type = ContentType.Line, Points= new PdfPoints { X1 = 0, Y1 = 40, X2 = 720, Y2 = 40}, Style = new PdfContentStyle() { PenColor = "#000080", DashStyle=PdfDashStyle.Solid } },
+
+    new PdfHeaderFooterContent() { Type = ContentType.PageNumber,  PageNumberType = PdfPageNumberType.Numeric, Position = new PdfPosition() { X = 470, Y = 650 }, Style = new PdfContentStyle() { TextBrushColor = "red", FontSize = 8, HAlign = PdfHorizontalAlign.Right } }
+    };
+
+    public List<PdfHeaderFooterContent> FooterContent = new List<PdfHeaderFooterContent>
+    {
+        // new PdfHeaderFooterContent() { Type = ContentType.Text, Value = "Seite: ", Position = new PdfPosition() { X = 400, Y = 600 }, Style = new PdfContentStyle() { TextBrushColor = "#000000", FontSize = 10 } },
+        // new PdfHeaderFooterContent() { Type = ContentType.PageNumber,  PageNumberType = PdfPageNumberType.Numeric, Position = new PdfPosition() { X = 470, Y = 650 }, Style = new PdfContentStyle() { TextBrushColor = "red", FontSize = 10, HAlign = PdfHorizontalAlign.Right } }
+    };
+    #endregion
+
+    // protected override async Task OnAfterRenderAsync(bool firstRender)
+    // {
+    //     if (firstRender)
+    //     {
+    //         await JSRuntime.InvokeVoidAsync("bindKeyDownEvent", SfDataGrid.ID, DotNetObjectReference.Create(this));
+    //     }
+    // }
+
+    #region OnInitializedAsync
+    /// <summary>
+    /// OnInitializedAsync
+    /// </summary>
+    /// <returns></returns>
+    protected override async Task OnInitializedAsync()
+    {
+        // Spinner
+        this.SpinnerVisibleProperty = true;
+
+        // MyAppSettings.json auslesen und letzten gespeicherten Anbieter auslesen
+        settings = GetSetMyAppConfig.GetMyAppSettings.ReadSettings(myAppSettings);
+
+        gwsP = new GWSProcessor(myHttpClient, settings!.GWSUri);
+        try
+        {
+            // Thermedaten auslesen
+            boilerList = await gwsP.LoadDataAsync<Gas_BoilerModel>(urlBoiler);
+
+            if (boilerList == null || !boilerList.Any())
+            {
+                OpenDialog("Keine Thermedaten vorhanden!", "60px", false);
+            }
+        }
+        catch (Exception)
+        {
+            throw new Exception("Es konnten keine Thermedaten geladen werden");
+        }
+
+        // Spinner
+        await Task.Delay(200);
+        this.SpinnerVisibleProperty = false;
+    }
+    #endregion
+
+    #region ToolbarBtnClickHandler
+    /// <summary>
+    /// ToolbarBtnClickHandler
+    ///
+    /// </summary>
+    /// <param name="args"></param>
+    public async Task ToolbarBtnClickHandler(Syncfusion.Blazor.Navigations.ClickEventArgs args)
+    {
+        isDeleteProcessed = args.Item.Text == "Delete" ? true : false;
+
+        if (args.Item.Id.Contains("_excelexport"))
+        {
+            ExcelExportProperties excelExportProperties = new();
+            excelExportProperties.FileName = $"Gastherme_{DateTime.Now.ToString("ddMMyyyy")}.xlsx";
+
+            ExcelTheme Theme = new ExcelTheme();
+            // Header
+            ExcelStyle ThemeStyleHeader = new ExcelStyle()
+                {
+                    FontName = "Calibri",
+                    FontSize = 12,
+                    Bold = true,
+                };
+            Theme.Header = ThemeStyleHeader;
+            // Data
+            ExcelStyle ThemeStyleRecord = new ExcelStyle()
+                {
+                    FontName = "Calibri",
+                    FontSize = 10,
+                    Bold = false,
+                };
+            Theme.Record = ThemeStyleRecord;
+
+            excelExportProperties.Theme = Theme;
+
+            await SfDataGrid.ExportToExcelAsync(excelExportProperties);
+        }
+        else if (args.Item.Id.Contains("_pdfexport"))
+        {
+            PdfExportProperties pdfExportProperties = new();
+            pdfExportProperties.IsRepeatHeader = true;
+            pdfExportProperties.FileName = $"Gastherme_{DateTime.Now.ToString("ddMMyyyy")}.pdf";
+            pdfExportProperties.PageOrientation = Syncfusion.Blazor.Grids.PageOrientation.Landscape;
+
+            PdfHeader pdfHeader = new()
+                {
+                    FromTop = 0,
+                    Height = 80,
+                    Contents = HeaderContent
+                };
+
+            PdfFooter pdfFooter = new()
+                {
+                    FromBottom = 0,
+                    Height = 80,
+                    Contents = FooterContent
+                };
+
+            PdfTheme Theme = new PdfTheme();
+
+            PdfThemeStyle HeaderThemeStyle = new PdfThemeStyle()
+                {
+                    FontColor = "Blue",
+                    FontName = "Calibri",
+                    FontSize = 8,
+                    Bold = true,
+                };
+            Theme.Header = HeaderThemeStyle;
+
+            pdfExportProperties.Theme = Theme;
+
+            pdfExportProperties.Header = pdfHeader;
+            pdfExportProperties.Footer = pdfFooter;
+
+            await SfDataGrid.ExportToPdfAsync(pdfExportProperties);
+        }
+        else if (args.Item.Id.Contains("XmlExport"))
+        {
+            Console.Write("Export to Xml function");        // wird nicht genutzt
+        }
+    }
+    #endregion
+
+    // #region ActionBeginHandler
+    // /// <summary>
+    // /// ActionBeginHandler
+    // /// </summary>
+    // /// <param name="args"></param>
+    // public void ActionBeginHandler(ActionEventArgs<Gas_BoilerModel> args)
+    // {
+    //     isDeleteProcessed = false;
+    //     if (args.Data != null)
+    //     {
+    //         if (!args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Save))
+    //         {
+    //             // Add
+    //             if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Add))
+    //             {
+    //                 // letzte Einträge holen und Variablen vorbesetzen
+    //                 if (boilerList != null && boilerList.Any())
+    //                 {
+    //                     Gas_BoilerModel? lastBoiler = boilerList?.FirstOrDefault();
+
+    //                     if (lastBoiler != null)
+    //                     {
+    //                         args.Data.Verbrauchsjahr = lastBoiler.Verbrauchsjahr.AddYears(1); // 1 Jahr addieren
+    //                         args.Data.Gesamt_Verbrauch = lastBoiler.Gesamt_Verbrauch;
+    //                         args.Data.Heizung_Verbrauch = lastBoiler.Heizung_Verbrauch;
+    //                         args.Data.Warmwasser_Verbrauch = lastBoiler.Warmwasser_Verbrauch;
+    //                         args.Data.Strom_Verbrauch = lastBoiler.Strom_Verbrauch;
+    //                         args.Data.Bemerkung = lastBoiler.Bemerkung;
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
+    // #endregion
+
+    #region ActionCompleteHandler
+    /// <summary>
+    /// ActionCompleteHandler
+    /// </summary>
+    /// <param name="args"></param>
+    public async Task ActionCompleteHandler(ActionEventArgs<Gas_BoilerModel> args)
+    {
+        if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Save))
+        {
+            if (args.Action == "Add")
+            {
+                save = true;
+                boilerData = args.Data;
+
+                OpenDialog("Datensatz speichern ?", "130px", true);
+            }
+            else if (args.Action == "Edit")
+            {
+                update = true;
+                boilerData = args.Data;
+
+                OpenDialog("Datensatz ändern ?", "130px", true);
+            }
+        }
+        else if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Delete))
+        {
+            if (args.Data.Id == 0)
+            {
+                boilerList = await gwsP!.LoadDataAsync<Gas_BoilerModel>(urlBoiler);
+            }
+            else
+            {
+                boilerData = await gwsP!.DeleteDataAsync<Gas_BoilerModel>(urlBoiler, Convert.ToString(args.Data.Id));
+                ShowToastMessage(true, "Datensatz gelöscht!");
+            }
+            SfDataGrid?.Refresh();
+        }
+    }
+    #endregion
+
+    #region CancelClick
+    /// <summary>
+    /// CancelClick
+    /// </summary>
+    private async void CancelClick()
+    {
+        DialogVisible = false;
+        boilerList = await gwsP!.LoadDataAsync<Gas_BoilerModel>(urlBoiler);  // Daten neu laden
+        SfDataGrid?.Refresh();
+    }
+    #endregion
+
+    #region YesClick
+    /// <summary>
+    /// YesClick
+    /// </summary>
+    private async void YesClick()
+    {
+        DialogVisible = false;
+
+        if (save) // Datensatz speichern
+        {
+            if (boilerData != null)
+            {
+                save = false;
+
+                apiResponse = await gwsP!.PostDataAsync<Gas_BoilerModel>(urlBoiler, boilerData);  // POST
+
+                if (apiResponse.MyHttpStatusCode == HttpStatusCode.Created)
+                {
+                    ShowToastMessage(true, "Datensatz gespeichert (created)!");
+                    boilerList = await gwsP!.LoadDataAsync<Gas_BoilerModel>(urlBoiler);  // Daten neu laden
+                }
+                else
+                {
+                    ShowToastMessage(false, "Datensatz nicht gespeichert!");
+                }
+            }
+        }
+        else if (update) // Datensatz updaten
+        {
+            update = false;
+
+            if (boilerData != null)
+            {
+                string url = urlBoiler + Convert.ToString(boilerData.Id);
+
+                apiResponse = await gwsP!.UpdateDataAsync<Gas_BoilerModel>(url, boilerData);  // Put
+                ShowToastMessage(true, "Datensatz aktualisiert!");
+                boilerList = await gwsP!.LoadDataAsync<Gas_BoilerModel>(urlBoiler);  // Daten neu laden
+            }
+        }
+        SfDataGrid?.Refresh();
+    }
+    #endregion
+
+    #region ShowToastMessage
+    /// <summary>
+    /// ShowToastMessage
+    /// </summary>
+    /// <param name="success"></param>
+    /// <param name="message"></param>
+    /// <returns></returns>
+    private void ShowToastMessage(bool success, string message)
+    {
+        if (success)
+        {
+            ShowToast("Erfolg", message, "e-toast-success", "e-circle-check");
+        }
+        else
+        {
+            ShowToast("Fehler", message, "e-toast-danger", "e-circle-close");
+        }
+    }
+    #endregion
+
+    #region ShowToast
+    /// <summary>
+    /// ShowToast
+    /// </summary>
+    /// <param name="title"></param>
+    /// <param name="content"></param>
+    /// <param name="cssClass"></param>
+    /// <param name="icon"></param>
+    private void ShowToast(string title, string content, string cssClass, string icon)
+    {
+        this.ToastService.Open(new ToastOption()
+            {
+                Title = title,
+                Content = content,
+                CssClass = cssClass,
+                Icon = icon,
+            });
+    }
+    #endregion
+
+    #region GetTooltipContent
+    /// <summary>
+    /// GetTooltipContent(string headerText)
+    /// </summary>
+    /// <param name="headerText"></param>
+    /// <returns></returns>
+    // Method to get tooltip content dynamically based on HeaderText
+    public string GetTooltipContent(string headerText)
+    {
+        return ColumnDescriptions.ContainsKey(headerText) ? ColumnDescriptions[headerText] : "No description available.";
+    }
+    #endregion
+
+    #region CloseDialog
+    /// <summary>
+    /// CloseDialog
+    /// </summary>
+    private void CloseDialog()
+    {
+        this.DialogVisible = false;
+    }
+    #endregion
+
+    #region OpenDialog
+    /// <summary>
+    /// CloseDialog
+    /// </summary>
+    private void OpenDialog(string header, string height, bool showButtons)
+    {
+        Header = header;
+        dialogHeight = height;
+        showDialogButtons = showButtons;
+        this.DialogVisible = true;
+    }
+    #endregion
+
+    #region GetDialogHeader
+    /// <summary>
+    /// GetDialogHeader
+    /// </summary>
+    /// <param name="supplier"></param>
+    /// <returns></returns>
+    public string GetDialogHeader(Gas_BoilerModel boiler)
+    {
+        return boiler.Id == 0
+            ? "Verbrauchsjahr: neuer Verbrauch"
+            : "Verbrauchsjahr: " + boiler.Verbrauchsjahr.ToString("yyyy");
+    }
+    #endregion
+
+    // not used
+    [JSInvokable]
+    public void DeleteKeyPressed(bool isDeleteInvoked)
+    {
+        isDeleteProcessed = isDeleteInvoked;
+        StateHasChanged();
+
+    }
+
+    // not used
+    public void RowDeletedHandler(RowDeletedEventArgs<Gas_BoilerModel> args)
+    {
+        isDeleteProcessed = false;
+    }
+
+    // not used
+    public void DoubleClickHandler(RecordDoubleClickEventArgs<Gas_BoilerModel> args)
+    {
+        isDeleteProcessed = false;
+    }
+
+    // wird ausgelöst wenn auf ein Commandbutton geklickt wurde (edit oder delete)
+    public void OnCommandClicked(CommandClickEventArgs<Gas_BoilerModel> args)
+    {
+        isDeleteProcessed = args.CommandColumn.Type == CommandButtonType.Delete ? true : false;
+    }
+
+    #region RowCreatingHandler
+    /// <summary>
+    ///  RowCreatingHandler
+    /// </summary>
+    /// <param name="args"></param>
+    public void RowCreatingHandler(RowCreatingEventArgs<Gas_BoilerModel> args)
+    {
+        isDeleteProcessed = false;
+
+        // letzte Einträge holen und Variablen vorbesetzen
+        if (boilerList != null && boilerList.Any())
+        {
+            Gas_BoilerModel? lastBoiler = boilerList?.FirstOrDefault();
+
+            if (lastBoiler != null)
+            {
+                args.Data.Verbrauchsjahr = lastBoiler.Verbrauchsjahr.AddYears(1); // 1 Jahr addieren
+                args.Data.Gesamt_Verbrauch = lastBoiler.Gesamt_Verbrauch;
+                args.Data.Heizung_Verbrauch = lastBoiler.Heizung_Verbrauch;
+                args.Data.Warmwasser_Verbrauch = lastBoiler.Warmwasser_Verbrauch;
+                args.Data.Strom_Verbrauch = lastBoiler.Strom_Verbrauch;
+                args.Data.Bemerkung = lastBoiler.Bemerkung;
+            }
+        }
+    }
+    #endregion
+}

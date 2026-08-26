@@ -1,0 +1,36 @@
+﻿<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">GWS- Zählerstände</a>
+    </div>
+</div>
+
+<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+
+<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
+    <nav class="flex-column">
+        <div class="content" style="margin:5px 0; color:white; text-align: center">
+            <span>@DateTime.Now.ToString("dd.MM.yyyy HH:mm")</span>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <span id="home-menu" class="fa-solid fa-globe" aria-hidden="true"></span>Home
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="gasinput">
+                <span class="sub-menu fa-solid fa-fire-flame-simple" aria-hidden="true"></span>Gas
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="waterinput">
+                <span class="sub-menu fa-solid fa-faucet-drip" aria-hidden="true"></span>Wasser
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="electricinput">
+                <span class="sub-menu fa-solid fa-plug" aria-hidden="true"></span>Strom
+            </NavLink>
+        </div>
+    </nav>
+</div>
+
