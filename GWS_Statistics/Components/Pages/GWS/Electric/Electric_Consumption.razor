@@ -833,11 +833,11 @@
                     break;
 
                 case Interval.monatlich:
-                    labelFormat_Cons = "N0";
+                    labelFormat_Cons = MaxRangeCons < 5 ? "N1" : "N0";
                     break;
 
                 default:
-                    labelFormat_Cons = "N0";
+                    labelFormat_Cons = MaxRangeCons < 3 ? "N1" : "N0";
                     break;
             }
 
