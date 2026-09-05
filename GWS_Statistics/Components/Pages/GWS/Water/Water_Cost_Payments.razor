@@ -3,13 +3,9 @@
 @using GWS_Statistics.Helper
 @using GWS_Statistics.Calculation
 @using System.Globalization
-@using System.Net
-@using System.ComponentModel.DataAnnotations
 @using Syncfusion.Blazor
 @using Syncfusion.Blazor.Charts
 @using Syncfusion.Blazor.Data
-@using System.ComponentModel
-@using System.Reflection
 
 @inject MyAppConfigModel myAppSettings
 @inject HttpClient myHttpClient
@@ -360,7 +356,7 @@
 
     #region OnInitializedAsync
     /// <summary>
-    /// OnInitializedAsync
+    /// OnInitializedAsync is called when the component is initialized
     /// </summary>
     /// <returns></returns>
     /// <exception cref="Exception"></exception>
@@ -446,7 +442,7 @@
 
     #region ValueSelectHandler
     /// <summary>
-    /// Ablesetage des ausgewählten Anbieters auslesen
+    /// Read the reading dates of the selected supplier
     /// </summary>
     /// <param name="args"></param>
     private async Task ValueSelectHandler(SelectEventArgs<Water_SupplierModel> args)
@@ -514,11 +510,10 @@
 
     #region GetPaymentsCosts
     /// <summary>
-    /// Berechnen Abschläge/Verbrauch monatlich
+    /// Calculate the discounts/consumption
     /// </summary>
     /// <param name="supplier"></param>
     /// <param name="counters"></param>
-    //public void GetPaymentsCosts(Water_SupplierModel supplier, List<GWS_PaymentModel> payments, List<Water_CostModel> costs)
     public void GetPaymentsCosts(Water_SupplierModel supplier, List<Water_CounterChangeModel>? counterChangeList, List<GWS_PaymentModel> payments, List<Water_CostModel> costs)
     {
         double monthlyCosts = 0.0d;
@@ -545,7 +540,7 @@
                 firstCost = true;
             }
 
-            if (costs.Count == 0) // es gibt keine anderen Preise ausser die in der Anbietertabelle
+            if (costs == null || costs.Any()) // es gibt keine anderen Preise ausser die in der Anbietertabelle
             {
                 monthlyCosts = Math.Round(CalcMonthlyCosts(item.Consumption, lastCost), 2);
             }
@@ -565,6 +560,14 @@
                 }
                 monthlyCosts = Math.Round(CalcMonthlyCosts(item.Consumption, lastCost), 2);
             }
+            if (item.Date != null && (item.Date.Value.Year >= DateTime.Now.Year)) // nur aktuelle und vergangene Jahre anzeigen
+            {
+                if (item.Date.Value.Month > DateTime.Now.Month)
+                {
+                    break; // keine zukünftigen Daten anzeigen
+                }
+            }
+
             totalCredit += (monthlyPayment - monthlyCosts);
             Consumption += item.Consumption;
             ChartPointList.Add(new ColumnChartData { Date = item.Date.GetValueOrDefault(), Payment = monthlyPayment, Costs = monthlyCosts, Credit = Math.Round(totalCredit, 2) });
@@ -575,7 +578,7 @@
 
     #region CalcMonthlyCosts
     /// <summary>
-    /// Berechnen der monatlichen Gesamtkosten
+    /// Calculation of monthly costs based on consumption and last costs
     /// </summary>
     /// <param name="consumption"></param>
     /// <returns></returns>
@@ -588,7 +591,7 @@
         double trinkwasserpreis;
         double abwasserpreis;
 
-        if (consumption != null && consumption > 0.0d)
+        if (consumption != null && consumption >= 0.0d)
         {
             zaehlermiete = cost.Zaehlermiete ?? 0.0d;
             verbrauch = consumption ?? 0.0d;
@@ -604,7 +607,7 @@
 
     #region CalcSum
     /// <summary>
-    /// Berechnen Durchschnitt/Summe/Min/Max
+    /// Calculate the sum of payments, costs, bonus, credit, and consumption
     /// </summary>
     public void CalcSum()
     {
@@ -625,7 +628,7 @@
 
     #region GetMockChartData
     /// <summary>
-    /// Auslesen der Mock-Daten
+    /// Read mock data for chart display (for testing purposes)
     /// </summary>
     /// <param name="data"></param>
     /// <param name="startPeriod"></param>
@@ -661,7 +664,7 @@
 
     #region PointRender
     /// <summary>
-    /// Verändert die Barfarbe in Abhängigkeit des Wertes (pos/negativ)
+    /// Changed the bar color depending on the value (positive/negative)
     /// </summary>
     /// <param name="args"></param>
     public void PointRender(PointRenderEventArgs args)
@@ -675,7 +678,7 @@
 
     #region ToolTipRenderEvent
     /// <summary>
-    /// Anzeige von 2 Nachkommastellen im Tooltip, immer 2 Nachkommastellen!
+    /// Display of 2 decimal places in the tooltip, always 2 decimal places!
     /// </summary>
     /// <param name="args"></param>
     public void ToolTipRenderEvent(SharedTooltipRenderEventArgs args)
@@ -708,7 +711,7 @@
 
     #region OpenDialog
     /// <summary>
-    /// OpenDialog
+    /// Show a dialog box with the specified header, height, width, and button visibility
     /// </summary>
     private void OpenDialog(string header, string height, string width, bool showButtons)
     {
@@ -722,7 +725,7 @@
 
     #region ClearSumAverage
     /// <summary>
-    /// ClearSumAverage
+    /// Reset the sum and average values to zero
     /// </summary>
     private void ClearSumAverage()
     {

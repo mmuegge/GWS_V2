@@ -1,9 +1,6 @@
 ﻿@page "/energy"
 
 @using GWS_Statistics.Helper
-@using GWS_Statistics.Calculation
-@using System.Globalization
-@using System.Net
 @using Syncfusion.Blazor.Charts
 
 @inject MyAppConfigModel myAppSettings
@@ -20,6 +17,24 @@
             <span class="bi bi-house-up fa-3xs" aria-hidden="true"> </span>
             <label>Energiebedarf</label>
         </div>
+    </div>
+</div>
+
+@* Min, Max *@
+    <div class="container chartHeader bg-color-grey mt-2 mb-1 py-1 border">
+    <div class="row">
+
+        @* Max/Min Verbrauch *@
+        <div class="col-6 col-xl-3">
+            <div class="control-wrapper">
+                <label class="control-label fw-bold mb-sm-1 me-1">Max/Min</label>
+                <SfNumericTextBox TValue="double?" Value="@EnergyHeatingMax_kWh" Enabled="false" Format="####0.00 kWh"></SfNumericTextBox>
+                <div class="mt-1">
+                    <SfNumericTextBox TValue="double?" Value="@EnergyHeatingMin_kWh" Enabled="false" Format="####0.00 kWh"></SfNumericTextBox>
+                </div>
+            </div>
+        </div>
+
     </div>
 </div>
 
@@ -273,6 +288,9 @@
 
     private ParameterModel? parameterData = new();
     private List<ParameterModel>? parameterList = null;
+
+    private double? EnergyHeatingMax_kWh => energyList?.Max(x => x.Heizung_Verbrauch);
+    private double? EnergyHeatingMin_kWh => energyList?.Min(x => x.Heizung_Verbrauch);
 
     #region Chart
     SfChart chart = new();
