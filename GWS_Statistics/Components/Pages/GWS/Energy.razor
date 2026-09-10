@@ -20,21 +20,41 @@
     </div>
 </div>
 
+<div class="card shadow-lg">
 @* Min, Max *@
     <div class="container chartHeader bg-color-grey mt-2 mb-1 py-1 border">
-    <div class="row">
-
-        @* Max/Min Verbrauch *@
-        <div class="col-6 col-xl-3">
-            <div class="control-wrapper">
-                <label class="control-label fw-bold mb-sm-1 me-1">Max/Min</label>
-                <SfNumericTextBox TValue="double?" Value="@EnergyHeatingMax_kWh" Enabled="false" Format="####0.00 kWh"></SfNumericTextBox>
-                <div class="mt-1">
-                    <SfNumericTextBox TValue="double?" Value="@EnergyHeatingMin_kWh" Enabled="false" Format="####0.00 kWh"></SfNumericTextBox>
+        <div class="row">
+            @* Max/Min Heizung Verbrauch *@
+            <div class="col-6 col-xl-3">
+                <div class="control-wrapper">
+                    <label class="control-label fw-bold mb-sm-1 me-1">Max/Min Heizung</label>
+                    <SfNumericTextBox TValue="double?" Value="@HeatingMax_kWh" Enabled="false" Format="####0.00 kWh"></SfNumericTextBox>
+                    <div class="mt-1">
+                        <SfNumericTextBox TValue="double?" Value="@HeatingMin_kWh" Enabled="false" Format="####0.00 kWh"></SfNumericTextBox>
+                    </div>
+                </div>
+            </div>
+            @* Max/Min Warmwasser Verbrauch *@
+            <div class="col-6 col-xl-3">
+                <div class="control-wrapper">
+                    <label class="control-label fw-bold mb-sm-1 me-1">Max/Min Warmwasser</label>
+                    <SfNumericTextBox TValue="double?" Value="@HotWaterMax_kWh" Enabled="false" Format="####0.00 kWh"></SfNumericTextBox>
+                    <div class="mt-1">
+                        <SfNumericTextBox TValue="double?" Value="@HotWaterMin_kWh" Enabled="false" Format="####0.00 kWh"></SfNumericTextBox>
+                    </div>
+                </div>
+            </div>
+            @* Max/Min Energie Verbrauch *@
+            <div class="col-6 col-xl-3">
+                <div class="control-wrapper">
+                    <label class="control-label fw-bold mb-sm-1 me-1">Max/Min Energiebedarf</label>
+                    <SfNumericTextBox TValue="double?" Value="@EnergyHeatingMax" Enabled="false" Format="####0.00 kWh/m²a"></SfNumericTextBox>
+                    <div class="mt-1">
+                        <SfNumericTextBox TValue="double?" Value="@EnergyHeatingMin" Enabled="false" Format="####0.00 kWh/m²a"></SfNumericTextBox>
+                    </div>
                 </div>
             </div>
         </div>
-
     </div>
 </div>
 
@@ -74,7 +94,7 @@
             </ChartPrimaryXAxis>
 
             <ChartPrimaryYAxis Title="Energie (kWh)"
-                               LabelFormat="{value} kWh"
+                               LabelFormat="{value}"
                                RangePadding="ChartRangePadding.Normal"
                                Interval="2000">
 
@@ -91,7 +111,7 @@
                            RangePadding="ChartRangePadding.Auto"
                            OpposedPosition="false"
                            Interval="@Interval_YAxis"
-                           LabelFormat="{value} kWh">
+                           LabelFormat="{value}">
                     <ChartAxisMajorGridLines Width="1"></ChartAxisMajorGridLines>
                 </ChartAxis>
 
@@ -100,7 +120,7 @@
                            RangePadding="ChartRangePadding.Auto"
                            OpposedPosition="false"
                            Interval="@Interval_YAxis"
-                           LabelFormat="{value} kWh">
+                           LabelFormat="{value}">
                     <ChartAxisMajorGridLines Width="1"></ChartAxisMajorGridLines>
                 </ChartAxis>
 
@@ -109,7 +129,7 @@
                            RangePadding="ChartRangePadding.Auto"
                            OpposedPosition="true"
                            Interval="@Interval_YAxis"
-                           LabelFormat="{value} kWh">
+                           LabelFormat="{value}">
                     <ChartAxisMajorGridLines Width="1"></ChartAxisMajorGridLines>
                 </ChartAxis>
             </ChartAxes>
@@ -186,7 +206,7 @@
             <ChartLegendSettings Visible="true"
                                  EnableHighlight="true">
             </ChartLegendSettings>
-            <ChartTooltipSettings Header="<b>${point.tooltip}</b>" Enable="true" Shared="true"></ChartTooltipSettings>
+            <ChartTooltipSettings Header="<b>${point.tooltip} kWh // kWh/m²a</b>" Enable="true" Shared="true" EnableHighlight="true"></ChartTooltipSettings>
         </SfChart>
     </div>
 
@@ -282,6 +302,7 @@
     private List<Gas_SupplierModel>? supplierList = new();
     private List<Energydata>? energyList = new();
     private Energydata? energyData = new();
+    private List<EnergieHeating>? energyHeatingList = new();
 
     private EfficiencyModel? efficiencyData = new();
     private List<EfficiencyModel>? efficiencyList = null;
@@ -289,8 +310,13 @@
     private ParameterModel? parameterData = new();
     private List<ParameterModel>? parameterList = null;
 
-    private double? EnergyHeatingMax_kWh => energyList?.Max(x => x.Heizung_Verbrauch);
-    private double? EnergyHeatingMin_kWh => energyList?.Min(x => x.Heizung_Verbrauch);
+    private double? HeatingMax_kWh => energyList?.Max(x => x.Heizung_Verbrauch);
+    private double? HeatingMin_kWh => energyList?.Min(x => x.Heizung_Verbrauch);
+    private double? HotWaterMax_kWh => energyList?.Max(x => x.Warmwasser_Verbrauch);
+    private double? HotWaterMin_kWh => energyList?.Min(x => x.Warmwasser_Verbrauch);
+
+    private double? EnergyHeatingMax = 9999;
+    private double? EnergyHeatingMin = -9999;
 
     #region Chart
     SfChart chart = new();
@@ -340,6 +366,11 @@
     }
     public List<ChartAnnotationData> Annotations = new();
 
+    public class EnergieHeating
+    {
+        public DateTime HeatingYear { get; set; }
+        public double HeatingConsumption { get; set; }
+    }
     #endregion
 
     protected override async Task OnInitializedAsync()
@@ -398,9 +429,14 @@
         Annotations.Clear();
         for (int i = 0; i < energyList!.Count; i++)
         {
-            double consumption = energyList[i].Heizung_Verbrauch.GetValueOrDefault() / wohnflaeche;
+            //double consumption = energyList[i].Heizung_Verbrauch.GetValueOrDefault() / wohnflaeche;
+            energyHeatingList?.Add(new EnergieHeating
+            {
+                HeatingYear = energyList[i].Verbrauchsjahr.GetValueOrDefault(),
+                HeatingConsumption = energyList[i].Heizung_Verbrauch.GetValueOrDefault() / wohnflaeche
+            });
             double? yVal = Math.Round(energyList[i].Heizung_Verbrauch.GetValueOrDefault() - ((energyList[i].Heizung_Verbrauch.GetValueOrDefault() - energyList[i].Warmwasser_Verbrauch.GetValueOrDefault()) / 2), 0);
-            EfficiencyValues effClass = GetEfficiencyClassValues(efficiencyList, consumption);
+            EfficiencyValues effClass = GetEfficiencyClassValues(efficiencyList, energyHeatingList?[i].HeatingConsumption);
 
             if (energyList[i].Gesamt_Verbrauch >= 1500.0)  // Bargraph muss bestimmte Höhe haben zum Anzeigen der Texte
             {
@@ -409,7 +445,8 @@
                     xVal = energyList[i].Verbrauchsjahr,
                     yVal = yVal,
                     ClassText = effClass.EfficiencyClass,
-                    ClassValue = $"({Convert.ToString(Math.Round(consumption))} kWh/m2a)"
+                    //ClassValue = $"({Convert.ToString(Math.Round(consumption))} kWh/m2a)"
+                    ClassValue = $"({Convert.ToString(Math.Round(Convert.ToDecimal(energyHeatingList?[i].HeatingConsumption)))})"
                 });
             }
             else
@@ -423,6 +460,10 @@
                 });
             }
         }
+
+        // Max/Min Energieverbrauch
+        EnergyHeatingMax = energyHeatingList?.Max(x => x.HeatingConsumption);
+        EnergyHeatingMin = energyHeatingList?.Min(x => x.HeatingConsumption);
 
         // Spinner
         await Task.Delay(200);
