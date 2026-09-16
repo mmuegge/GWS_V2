@@ -1,4 +1,3 @@
-using AutoMapper;
 using GWS_Api.Dtos.Electric;
 using GWS_Api.Models.Electric;
 using GWS_Api.Repositories.Electric;
@@ -6,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using AutoMapper;
 
 namespace GWS_Api.Controllers
 {

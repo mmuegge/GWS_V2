@@ -8,8 +8,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.OpenApi.Models;
 using Newtonsoft.Json.Serialization;
+using Microsoft.OpenApi;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,7 +31,11 @@ builder.Services.AddControllers().AddNewtonsoftJson(s =>
 });
 
 // Automapper
-builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+//builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+builder.Services.AddAutoMapper(cfg => 
+{
+    cfg.AddMaps(AppDomain.CurrentDomain.GetAssemblies());
+});  // Automapper für die gesamte Assembly
 
 // MySql-Repository
 builder.Services.AddScoped<IGWSRepository, MySQL_GWSRepository>();
