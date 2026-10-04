@@ -20,12 +20,12 @@
     </div>
 </div>
 
-<div class="card shadow-lg">
 @* Min, Max *@
-    <div class="container chartHeader bg-color-grey mt-2 mb-1 py-1 border">
-        <div class="row">
+<div class="card shadow-lg p-2 mb-1">
+    <div class="container-fluid bg-color-grey pb-2 border">
+        <div class="row justify-content-center">
             @* Max/Min Heizung Verbrauch *@
-            <div class="col-4 col-xl-3">
+            <div class="col-4 col-xl-3 mb-2">
                 <div class="control-wrapper">
                     <label class="control-label fw-bold mb-sm-1 me-1">Max/Min Heizung</label>
                     <SfNumericTextBox TValue="double?" Value="@HeatingMax_kWh" Enabled="false" Format="####0.00 kWh"></SfNumericTextBox>
@@ -35,7 +35,7 @@
                 </div>
             </div>
             @* Max/Min Warmwasser Verbrauch *@
-            <div class="col-4 col-xl-3">
+            <div class="col-4 col-xl-3 mb-2">
                 <div class="control-wrapper">
                     <label class="control-label fw-bold mb-sm-1 me-1">Max/Min Warmwasser</label>
                     <SfNumericTextBox TValue="double?" Value="@HotWaterMax_kWh" Enabled="false" Format="####0.00 kWh"></SfNumericTextBox>
@@ -45,7 +45,7 @@
                 </div>
             </div>
             @* Max/Min Energie Verbrauch *@
-            <div class="col-4 col-xl-3">
+            <div class="col-4 col-xl-3 mb-2">
                 <div class="control-wrapper">
                     <label class="control-label fw-bold mb-sm-1 me-1">Max/Min Energiebedarf</label>
                     <SfNumericTextBox TValue="double?" Value="@EnergyHeatingMax" Enabled="false" Format="####0.00 kWh/m²a"></SfNumericTextBox>

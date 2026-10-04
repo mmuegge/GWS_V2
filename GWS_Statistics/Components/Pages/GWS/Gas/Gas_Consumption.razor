@@ -26,13 +26,12 @@
             <span class="fa-solid fa-fire-flame-simple fa-3xs" aria-hidden="true"> </span>
             <label>Gas- Verbräuche</label>
         </div>
-        @* <span class="border-bottom border-dark mb-1"></span> *@
     </div>
 </div>
 
-@* Auswahl Anbieter und Anzeigen Start-Datum/Ende-Datum*@
-<div class="card shadow-lg">
-    <div class="container chartHeader bg-color-grey mb-1 mt-1 pb-2 border">
+@* Auswahl Anbieter *@
+<div class="card shadow-lg p-2 mb-1">
+    <div class="container-fluid bg-color-grey pb-2 border">
     <div class="row justify-content-center">
         <div class="col-6 col-xl-3">
             <div class="control-wrapper">
@@ -93,10 +92,10 @@
 </div>
 
 @* Durchschnitt, Summe, Min, Max *@
-    <div class="container chartHeader bg-color-grey mt-2 mb-1 py-1 border">
+    <div class="container-fluid bg-color-grey mt-2 pb-2 border">
     <div class="row">
         @* Durchschnittsverbrauch *@
-        <div class="col-6 col-xl-3">
+        <div class="col-6 col-xl-3 mb-2">
             <div class="control-wrapper">
                 <label class="control-label fw-bold mb-sm-1 me-1">Ø-Verbrauch</label>
                 <SfNumericTextBox TValue="double?" Value="@ConsAverage_kWh" Enabled="false" Format="####0.00 kWh"></SfNumericTextBox>
@@ -107,7 +106,7 @@
         </div>
 
         @* Gesamtverbrauch *@
-        <div class="col-6 col-xl-3">
+        <div class="col-6 col-xl-3 mb-2">
             <div class="control-wrapper">
                 <label class="control-label fw-bold mb-sm-1 me-1">&#8721-Verbrauch</label>
                 <SfNumericTextBox TValue="double?" Value="@ConsSum_kWh" Enabled="false" Format="####0.00 kWh"></SfNumericTextBox>
@@ -118,7 +117,7 @@
         </div>
 
         @* Max/Min Verbrauch *@
-        <div class="col-6 col-xl-3">
+        <div class="col-6 col-xl-3 mb-2">
             <div class="control-wrapper">
                 <label class="control-label fw-bold mb-sm-1 me-1">Max/Min</label>
                 <SfNumericTextBox TValue="double?" Value="@ConsMax_kWh" Enabled="false" Format="####0.00 kWh"></SfNumericTextBox>
@@ -131,7 +130,7 @@
         @* Durchschnittstemperatur *@
         @if (DdlInterval != Interval.jährlich)
         {
-            <div class="col-6 col-xl-3">
+            <div class="col-6 col-xl-3 mb-2">
                 <div class="control-wrapper">
                     <label class="control-label fw-bold mb-sm-1 me-1">Ø-Temperatur</label>
                     <SfNumericTextBox TValue="double?" Value="@TempAverage" Enabled="false" Format="##0.0 °C"></SfNumericTextBox>

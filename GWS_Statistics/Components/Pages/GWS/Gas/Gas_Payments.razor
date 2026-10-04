@@ -19,15 +19,17 @@
             <span class="fa-solid fa-fire-flame-simple fa-3xs" aria-hidden="true"> </span>
             <label>Gas- Zahlungen</label>
         </div>
-        @* <span class="border-bottom border-dark mb-1"></span> *@
     </div>
 </div>
 
 @* Auswahl Anbieter*@
-<div class="card shadow-lg mb-1">
-    <div class="container bg-color-grey mb-3 mt-2 pb-4 border">
+<div class="card shadow-lg p-2 mb-1">
+    @* <- p-2 für den Abstand zum Schatten hinzugefügt *@
+    @* Auswahl Anbieter und Anzeigen Start-Datum/Ende-Datum*@
+    @* container-fluid --> Breite = 100% *@
+    <div class="container-fluid bg-color-grey pb-2 border">
         <div class="row justify-content-center">
-            <div class="col-12 col-lg-4">
+            <div class="col-12 col-lg-4 mb-2">
                 <div class="control-wrapper">
                     <label class="control-label fw-bold mb-sm-1 me-1">Anbieter</label>
                     <SfDropDownList DataSource="@supplierDataList" TItem="Gas_SupplierDataModel" TValue="int" Placeholder="Anbieter auswählen" @bind-Value="@supplierData.Id">
@@ -37,14 +39,14 @@
                 </div>
             </div>
 
-            <div class="col-12 col-lg-4">
+            <div class="col-12 col-lg-4 mb-2">
                 <div class="control-wrapper">
                     <label class="control-label fw-bold mb-sm-1 me-1">Start-Datum</label>
                     <SfDatePicker TValue="DateTime?" Value="@startDate" Min="@MinDate" Format="dd.MM.yyyy" AllowEdit="false" Readonly="true"></SfDatePicker>
                 </div>
             </div>
 
-            <div class="col-12 col-lg-4">
+            <div class="col-12 col-lg-4 mb-2">
                 <div class="control-wrapper">
                     <label class="control-label fw-bold mb-sm-1 me-1">Ende-Datum</label>
                     <SfDatePicker TValue="DateTime?" Value="@endDate" Min="@MinDate" Format="dd.MM.yyyy" AllowEdit="false" Readonly="true"></SfDatePicker>
