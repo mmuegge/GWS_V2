@@ -51,7 +51,10 @@ app.UseRequestLocalization("de-DE");
 // Version 32.x.x
 //Syncfusion.Licensing.SyncfusionLicenseProvider.RegisterLicense("Ngo9BigBOggjHTQxAR8/V1JGaF5cXGpCf1FpRmJGdld5fUVHYVZUTXxaS00DNHVRdkdlWX5edHRURGNeUUx0X0NWYEs=");
 // Version 34.x.x
-Syncfusion.Licensing.SyncfusionLicenseProvider.RegisterLicense("Ngo9BigBOggjHTQxAR8/V1JAaF5cX2pCd1p/TH5YfUNzdUVEY1ZUTXxaS1ZhSXxVdkxiX39YdHZXQmlcVUx9XEY=");
+// Syncfusion.Licensing.SyncfusionLicenseProvider.RegisterLicense("Ngo9BigBOggjHTQxAR8/V1JAaF5cX2pCd1p/TH5YfUNzdUVEY1ZUTXxaS1ZhSXxVdkxiX39YdHZXQmlcVUx9XEY=");
+// Version 35.x.x
+Syncfusion.Licensing.SyncfusionLicenseProvider.RegisterLicense("Ngo9BigBOggjHTQxAR8/V1JBaF5cXmRCd1p/TH5YfUNzdUVEY1ZUTXxaS1ZhSXxVd0VjXX9bdH1UR2FVUkd9XEc=");
+
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
