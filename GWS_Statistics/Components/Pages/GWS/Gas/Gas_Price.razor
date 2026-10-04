@@ -2,36 +2,30 @@
 
 @using GWS_Statistics.Components.Services
 @using GWS_Statistics.Helper
-@using System.Globalization
 @using System.Net
 
 @inject MyAppConfigModel myAppSettings
 @inject HttpClient myHttpClient
 @inject ILogger<Gas_Price> Logger
 @inject ToastService ToastService
-@* @inject NavigationManager NavigationManager *@
 @inject SfDialogService DialogService
 
 <PageTitle>Gas- Preise</PageTitle>
 
 <div class="container">
     <div class="row">
-        <div class="col col-md-12">
-            @* <p class="text-center fs-2 fw-bold">Gas- Zahlungen</p> *@
-            <div class="text-center fs-3 fw-bold">
-                <span class="fa-solid fa-fire-flame-simple fa-3xs" aria-hidden="true"> </span>
-                <label>Gas- Preise</label>
-            </div>
+        <div class="text-center fs-3 fw-bold">
+            <span class="fa-solid fa-fire-flame-simple fa-3xs" aria-hidden="true"> </span>
+            <label>Gas- Preise</label>
         </div>
-        @* <span class="border-bottom border-dark mb-1"></span> *@
     </div>
 </div>
 
-@* Auswahl Anbieter*@
-<div class="card shadow-lg mb-1">
-    <div class="container bg-color-grey mb-3 mt-2 pb-4 border">
+@* Auswahl Anbieter *@
+<div class="card shadow-lg p-2 mb-1">
+    <div class="container-fluid bg-color-grey pb-2 border">
         <div class="row justify-content-center">
-            <div class="col-12 col-lg-4">
+            <div class="col-12 col-lg-4 mb-2">
                 <div class="control-wrapper">
                     <label class="control-label fw-bold mb-sm-1 me-1">Anbieter</label>
                     <SfDropDownList DataSource="@supplierDataList" TItem="Gas_SupplierDataModel" TValue="int" Placeholder="Anbieter auswählen" @bind-Value="@supplierData!.Id">
@@ -41,14 +35,14 @@
                 </div>
             </div>
 
-            <div class="col-12 col-lg-4">
+            <div class="col-12 col-lg-4 mb-2">
                 <div class="control-wrapper">
                     <label class="control-label fw-bold mb-sm-1 me-1">Start-Datum</label>
                     <SfDatePicker TValue="DateTime?" Value="@startDate" Min="@MinDate" Format="dd.MM.yyyy" AllowEdit="false" Readonly="true"></SfDatePicker>
                 </div>
             </div>
 
-            <div class="col-12 col-lg-4">
+            <div class="col-12 col-lg-4 mb-2">
                 <div class="control-wrapper">
                     <label class="control-label fw-bold mb-sm-1 me-1">Ende-Datum</label>
                     <SfDatePicker TValue="DateTime?" Value="@endDate" Min="@MinDate" Format="dd.MM.yyyy" AllowEdit="false" Readonly="true"></SfDatePicker>
