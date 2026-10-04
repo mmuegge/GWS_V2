@@ -8,17 +8,17 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.12" />
-    <PackageReference Include="Syncfusion.Blazor.Buttons" Version="34.2.8" />
-    <PackageReference Include="Syncfusion.Blazor.Calendars" Version="34.2.8" />
-    <PackageReference Include="Syncfusion.Blazor.DataForm" Version="34.2.8" />
-    <PackageReference Include="Syncfusion.Blazor.DropDowns" Version="34.2.8" />
-    <PackageReference Include="Syncfusion.Blazor.Inputs" Version="34.2.8" />
-    <PackageReference Include="Syncfusion.Blazor.Lists" Version="34.2.8" />
-    <PackageReference Include="Syncfusion.Blazor.Notifications" Version="34.2.8" />
-    <PackageReference Include="Syncfusion.Blazor.Popups" Version="34.2.8" />
-    <PackageReference Include="Syncfusion.Blazor.Spinner" Version="34.2.8" />
-    <PackageReference Include="Syncfusion.Blazor.SplitButtons" Version="34.2.8" />
-    <PackageReference Include="Syncfusion.Blazor.Themes" Version="34.2.8" />
+    <PackageReference Include="Syncfusion.Blazor.Buttons" Version="35.1.37" />
+    <PackageReference Include="Syncfusion.Blazor.Calendars" Version="35.1.37" />
+    <PackageReference Include="Syncfusion.Blazor.DataForm" Version="35.1.37" />
+    <PackageReference Include="Syncfusion.Blazor.DropDowns" Version="35.1.37" />
+    <PackageReference Include="Syncfusion.Blazor.Inputs" Version="35.1.37" />
+    <PackageReference Include="Syncfusion.Blazor.Lists" Version="35.1.37" />
+    <PackageReference Include="Syncfusion.Blazor.Notifications" Version="35.1.37" />
+    <PackageReference Include="Syncfusion.Blazor.Popups" Version="35.1.37" />
+    <PackageReference Include="Syncfusion.Blazor.Spinner" Version="35.1.37" />
+    <PackageReference Include="Syncfusion.Blazor.SplitButtons" Version="35.1.37" />
+    <PackageReference Include="Syncfusion.Blazor.Themes" Version="35.1.37" />
   </ItemGroup>
 
   <ItemGroup>
