@@ -721,30 +721,21 @@
     /// <param name="interval"></param>
     public async Task SelectChartData(Interval interval)
     {
-        switch (interval)
+        // Vorab-Abfrage für den Spezialfall (verhindert unnötige Aufrufe im Default-Zweig)
+        if (interval == Interval.jährlich)
         {
-            case Interval.täglich:
-                {
-                    await GetChartDataDaily(supplierData, counterList);
-                    break;
-                }
-            case Interval.monatlich:
-                {
-                    await GetChartDataMonthly(supplierData, counterList);
-                    break;
-                }
-            case Interval.jährlich:
-                {
-                    counterChangeList = await gwsP!.LoadDataAsync<Electric_CounterChangeModel>(urlCounterChangeAllSuppliers); // Zählerwechsel aller Anbieter laden
-                    await GetChartDataYearly(supplierList);
-                    break;
-                }
-            default:
-                {
-                    await GetChartDataDaily(supplierData, counterList);
-                    break;
-                }
+            counterChangeList = await gwsP!.LoadDataAsync<Electric_CounterChangeModel>(urlCounterChangeAllSuppliers);
         }
+
+        // Kompakte Zuweisung der Tasks via Switch-Expression
+        Task chartTask = interval switch
+        {
+            Interval.monatlich => GetChartDataMonthly(supplierData, counterList),
+            Interval.jährlich => GetChartDataYearly(supplierList),
+            _ => GetChartDataDaily(supplierData, counterList) // deckt täglich und default ab
+        };
+
+        await chartTask;
     }
     #endregion
 
@@ -815,20 +806,12 @@
             MaxRangeCons = maxValue + maxValue / 20; // +5%
             Interval_YAxis = MaxRangeCons / 4;
 
-            switch (DdlInterval)
+            labelFormat_Cons = DdlInterval switch
             {
-                case Interval.jährlich:
-                    labelFormat_Cons = "N0";
-                    break;
-
-                case Interval.monatlich:
-                    labelFormat_Cons = MaxRangeCons < 5 ? "N1" : "N0";
-                    break;
-
-                default:
-                    labelFormat_Cons = MaxRangeCons < 3 ? "N1" : "N0";
-                    break;
-            }
+                Interval.jährlich => "N0",
+                Interval.monatlich => MaxRangeCons < 5 ? "N1" : "N0",
+                _ => MaxRangeCons < 3 ? "N1" : "N0" // deckt standardmäßig alle anderen Intervalle ab
+            };
 
             // Y-Achse Temperatur
             if (DdlInterval != Interval.jährlich)
@@ -882,16 +865,14 @@
     /// <param name="args"></param>
     public void LabelRender(AxisLabelRenderEventArgs args)
     {
-        switch (args.Axis.Name)
+        string suffix = args.Axis.Name switch
         {
-            case "yAxisCons":
-                args.Text = args.Text + " kWh";
-                break;
+            "yAxisCons" => " kWh",
+            "yAxisTemp" => " °C",
+            _ => string.Empty
+        };
 
-            case "yAxisTemp":
-                args.Text = args.Text + " °C";
-                break;
-        }
+        args.Text = $"{args.Text}{suffix}";
     }
     #endregion
 
@@ -924,16 +905,12 @@
                     double.TryParse(s, NumberStyles.Any, displayCulture, out y);
             }
 
-            switch (args.Data[i].SeriesName)
+            args.Text[i] = args.Data[i].SeriesName switch
             {
-                case "Verbrauch":
-                    args.Text[i] = $"{di.SeriesName}: {y.ToString("N2", displayCulture)}  kWh";
-                    break;
-
-                case "Temperatur":
-                    args.Text[i] = $"{di.SeriesName}: {y.ToString("N0", displayCulture)} °C";
-                    break;
-            }
+                "Verbrauch" => $"{di.SeriesName}: {y.ToString("N2", displayCulture)} kWh",
+                "Temperatur" => $"{di.SeriesName}: {y.ToString("N0", displayCulture)} °C",
+                _ => args.Text[i] // Behält den alten Wert bei, falls kein Name matcht
+            };
         }
     }
     #endregion

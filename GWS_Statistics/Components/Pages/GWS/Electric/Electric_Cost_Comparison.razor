@@ -533,19 +533,19 @@
     /// <param name="args"></param>
     public void LabelRender(AxisLabelRenderEventArgs args)
     {
-        switch (args.Axis.Name)
+        // 1. Das passende Suffix anhand des Achsennamens ermitteln
+        string? suffix = args.Axis.Name switch
         {
-            case "yAxisCons_kWh":
-                args.Text = args.Text + " kWh";
-                break;
+            "yAxisCons_kWh" => " kWh",
+            "yAxisCost_kWh" => " ct/kWh",
+            "yAxisCost_Total" => " €",
+            _ => null // Fallback für andere Achsen
+        };
 
-            case "yAxisCost_kWh":
-                args.Text = args.Text + " ct/kWh";
-                break;
-
-            case "yAxisCost_Total":
-                args.Text = args.Text + " €";
-                break;
+        // 2. String elegant anhängen, falls eine bekannte Achse getroffen wurde
+        if (suffix != null)
+        {
+            args.Text += suffix;
         }
     }
     #endregion
@@ -579,20 +579,21 @@
                     double.TryParse(s, NumberStyles.Any, displayCulture, out y);
             }
 
-            switch (args.Data[i].SeriesName)
+            string seriesName = args.Data[i].SeriesName;
+
+            // 1. Einheit kompakt ermitteln
+            string? unit = seriesName switch
             {
-                case "Kosten":
-                    args.Text[i] = $"{di.SeriesName}: {y.ToString("N2", displayCulture)} ct/kWh";
-                    break;
+                "Kosten" => "ct/kWh",
+                "Verbrauch" => "kWh",
+                "Gesamtkosten" => "€",
+                _ => null // Fallback für unbekannte Serien
+            };
 
-                case "Verbrauch":
-                    args.Text[i] = $"{di.SeriesName}: {y.ToString("N2", displayCulture)} kWh";
-                    break;
-
-                case "Gesamtkosten":
-                    args.Text[i] = $"{di.SeriesName}: {y.ToString("N2", displayCulture)} €";
-                    break;
-                    
+            // 2. String zentral und ohne Redundanz zuweisen
+            if (unit != null)
+            {
+                args.Text[i] = $"{di.SeriesName}: {y.ToString("N2", displayCulture)} {unit}";
             }
         }
     }

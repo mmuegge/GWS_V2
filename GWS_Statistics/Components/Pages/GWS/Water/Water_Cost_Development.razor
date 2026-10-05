@@ -653,23 +653,20 @@
                     double.TryParse(s, NumberStyles.Any, displayCulture, out y);
             }
 
-            switch (args.Data[i].SeriesName)
+            string seriesName = args.Data[i].SeriesName;
+
+            // 1. Nur die passende Einheit anhand des Namens ermitteln
+            string? unit = seriesName switch
             {
-                case "Abwasserpreis":
-                    args.Text[i] = $"{di.SeriesName}: {y.ToString("N2", displayCulture)} €/m³";
-                    break;
+                "Abwasserpreis" or "Trinkwasserpreis" => "€/m³",
+                "Grundpreis" or "Zählermiete" => "€/Monat",
+                _ => null // Fallback für unbekannte Seriennamen
+            };
 
-                case "Trinkwasserpreis":
-                    args.Text[i] = $"{di.SeriesName}: {y.ToString("N2", displayCulture)} €/m³";
-                    break;
-
-                case "Grundpreis":
-                    args.Text[i] = $"{di.SeriesName}: {y.ToString("N2", displayCulture)} €/Monat";
-                    break;
-
-                case "Zählermiete":
-                    args.Text[i] = $"{di.SeriesName}: {y.ToString("N2", displayCulture)} €/Monat";
-                    break;
+            // 2. Den String nur ein einziges Mal zentral zusammenbauen (DRY-Prinzip)
+            if (unit != null)
+            {
+                args.Text[i] = $"{di.SeriesName}: {y.ToString("N2", displayCulture)} {unit}";
             }
         }
     }

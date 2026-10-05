@@ -606,18 +606,13 @@
                     double.TryParse(s, NumberStyles.Any, displayCulture, out y);
             }
 
-            switch (args.Data[i].SeriesName)
-            {
-                case "Arbeitspreis":
-                    args.Text[i] = $"{di.SeriesName}: {y.ToString("N2", displayCulture)} ct";
-                    break;
+            string seriesName = args.Data[i].SeriesName;
 
-                default:
-                    {
-                        args.Text[i] = $"{di.SeriesName}: {y.ToString("N2", displayCulture)} €";
-                        break;
-                    }
-            }
+            // Ermittelt die Einheit: "ct" für Arbeitspreis, ansonsten immer "€"
+            string unit = seriesName == "Arbeitspreis" ? "ct" : "€";
+
+            // Baut den String zentral und ohne Code-Duplikate zusammen
+            args.Text[i] = $"{di.SeriesName}: {y.ToString("N2", displayCulture)} {unit}";
         }
     }
     #endregion
