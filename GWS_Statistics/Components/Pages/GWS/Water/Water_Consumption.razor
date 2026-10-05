@@ -30,114 +30,106 @@
 </div>
 
 @* Auswahl Anbieter und Anzeigen Start-Datum/Ende-Datum*@
- <div class="card shadow-lg p-2 mb-1">
+<div class="card shadow-lg p-2 mb-1">
     <div class="container-fluid bg-color-grey pb-2 border">
-    <div class="row justify-content-center">
+        <div class="row justify-content-center">
 
-        <div class="col-6 col-xl-3">
-            <div class="control-wrapper">
-                <label class="control-label fw-bold mb-sm-1 me-1">Anbieter</label>
-                @if (supplierSelectEnabled)
-                {
-                    <SfDropDownList DataSource="@supplierList" TItem="Water_SupplierModel" TValue="int" Placeholder="Anbieter auswählen" @bind-Value="@supplierData!.Id" Enabled="@supplierSelectEnabled">
-                        <DropDownListFieldSettings Text="Anbieter" Value="Id"></DropDownListFieldSettings>
-                        <DropDownListEvents TItem="Water_SupplierModel" TValue="int" OnValueSelect="@ValueSelectHandler"></DropDownListEvents>
-                    </SfDropDownList>
-                }
-                else
-                {
-                    <SfTextBox Placeholder="Alle Anbieter" Readonly="true"></SfTextBox>
-                }
-            </div>
-        </div>
-
-        <div class="col-6 col-xl-3">
-            <div class="control-wrapper">
-                <label class="control-label fw-bold mb-sm-1 me-1">Interval</label>
-                <SfDropDownList DataSource="@EnumInterval" TItem="string" TValue="Interval" @bind-Value="DdlInterval">
-                    <DropDownListEvents TItem="string" TValue="Interval" ValueChange="@OnValueChangeInterval"></DropDownListEvents>
-                </SfDropDownList>
-            </div>
-        </div>
-
-        <div class="col-6 col-xl-3">
-            <div class="control-wrapper">
-                <label class="control-label fw-bold mb-sm-1 me-1">Start-Datum</label>
-                @if (supplierSelectEnabled)
-                {
-                    <SfDatePicker TValue="DateTime?" Value="@StartDate" Min="@MinDate" Format="dd.MM.yyyy" AllowEdit="false" Readonly="true"></SfDatePicker>
-                }
-                else
-                {
-                    <SfDatePicker TValue="DateTime?" Value="@StartDateYearly" Min="@MinDate" Format="dd.MM.yyyy" AllowEdit="false" Readonly="true"></SfDatePicker>
-                }
-            </div>
-        </div>
-
-        <div class="col-6 col-xl-3">
-            <div class="control-wrapper">
-                <label class="control-label fw-bold mb-sm-1 me-1">Ende-Datum</label>
-                @if (supplierSelectEnabled)
-                {
-                    <SfDatePicker TValue="DateTime?" Value="@EndDate" Min="@MinDate" Format="dd.MM.yyyy" AllowEdit="false" Readonly="true"></SfDatePicker>
-                }
-                else
-                {
-                    <SfDatePicker TValue="DateTime?" Value="@EndDateYearly" Min="@MinDate" Format="dd.MM.yyyy" AllowEdit="false" Readonly="true"></SfDatePicker>
-                }
-            </div>
-        </div>
-    </div>
-</div>
-
-@* Durchschnitt, Summe, Min, Max *@
-    <div class="container--fluid bg-color-grey mt-2 pb-2 border">
-    <div class="row">
-        @* Durchschnittsverbrauch *@
-        <div class="col-6 col-xl-3">
-            <div class="control-wrapper">
-                <label class="control-label fw-bold mb-sm-1 me-1">Ø-Verbrauch TW/AW</label>
-                <SfNumericTextBox TValue="double?" Value="@ConsAverage_TW_m3" Enabled="false" Format="####0.00 m³"></SfNumericTextBox>
-                <div class="mt-1">
-                    <SfNumericTextBox TValue="double?" Value="@ConsMin_TW_m3" Enabled="false" Format="####0.00 m³"></SfNumericTextBox>
-                </div>
-            </div>
-        </div>
-
-        @* Gesamtverbrauch *@
-        <div class="col-6 col-xl-3">
-            <div class="control-wrapper">
-                <label class="control-label fw-bold mb-sm-1 me-1">&#8721-Verbrauch TW/AW</label>
-                <SfNumericTextBox TValue="double?" Value="@ConsSum_TW_m3" Enabled="false" Format="####0.00 m³"></SfNumericTextBox>
-                <div class="mt-1">
-                    <SfNumericTextBox TValue="double?" Value="@ConsMin_TW_m3" Enabled="false" Format="####0.00 m³"></SfNumericTextBox>
-                </div>
-            </div>
-        </div>
-
-        @* Max/Min Verbrauch *@
-        <div class="col-6 col-xl-3">
-            <div class="control-wrapper">
-                <label class="control-label fw-bold mb-sm-1 me-1">Max/Min TW</label>
-                <SfNumericTextBox TValue="double?" Value="@ConsMax_TW_m3" Enabled="false" Format="####0.00 m³"></SfNumericTextBox>
-                <div class="mt-1">
-                    <SfNumericTextBox TValue="double?" Value="@ConsMin_TW_m3" Enabled="false" Format="####0.00 m³"></SfNumericTextBox>
-                </div>
-            </div>
-        </div>
-
-        @* Durchschnittstemperatur *@
-        @if (DdlInterval != Interval.jährlich)
-        {
+            @* Anbieter *@
             <div class="col-6 col-xl-3">
                 <div class="control-wrapper">
-                    <label class="control-label fw-bold mb-sm-1 me-1">Ø-Temperatur</label>
-                    <SfNumericTextBox TValue="double?" Value="@TempAverage" Enabled="false" Format="##0.0 °C"></SfNumericTextBox>
+                    <label class="control-label fw-bold mb-sm-1 me-1">Anbieter</label>
+                    @if (supplierSelectEnabled)
+                    {
+                        <SfDropDownList DataSource="@supplierList" TItem="Water_SupplierModel" TValue="int" Placeholder="Anbieter auswählen" @bind-Value="@supplierData!.Id">
+                            <DropDownListFieldSettings Text="Anbieter" Value="Id"></DropDownListFieldSettings>
+                            <DropDownListEvents TItem="Water_SupplierModel" TValue="int" OnValueSelect="@ValueSelectHandler"></DropDownListEvents>
+                        </SfDropDownList>
+                    }
+                    else
+                    {
+                        <SfTextBox Placeholder="Alle Anbieter" Readonly="true"></SfTextBox>
+                    }
                 </div>
             </div>
-        }
+
+            @* Intervall *@
+            <div class="col-6 col-xl-3">
+                <div class="control-wrapper">
+                    <label class="control-label fw-bold mb-sm-1 me-1">Interval</label>
+                    <SfDropDownList DataSource="@EnumInterval" TItem="string" TValue="Interval" @bind-Value="DdlInterval">
+                        <DropDownListEvents TItem="string" TValue="Interval" ValueChange="@OnValueChangeInterval"></DropDownListEvents>
+                    </SfDropDownList>
+                </div>
+            </div>
+
+            @* Start-Datum *@
+            <div class="col-6 col-xl-3">
+                <div class="control-wrapper">
+                    <label class="control-label fw-bold mb-sm-1 me-1">Start-Datum</label>
+                    <SfDatePicker TValue="DateTime?" Value="@(supplierSelectEnabled ? StartDate : StartDateYearly)" Min="@MinDate" Format="dd.MM.yyyy" Enabled="false"></SfDatePicker>
+                </div>
+            </div>
+
+            @* Ende-Datum *@
+            <div class="col-6 col-xl-3">
+                <div class="control-wrapper">
+                    <label class="control-label fw-bold mb-sm-1 me-1">Ende-Datum</label>
+                    <SfDatePicker TValue="DateTime?" Value="@(supplierSelectEnabled ? EndDate : EndDateYearly)" Min="@MinDate" Format="dd.MM.yyyy" Enabled="false"></SfDatePicker>
+                </div>
+            </div>
+        </div>
     </div>
-</div>
+
+    <div>
+        @* Durchschnitt, Summe, Min, Max *@
+        <div class="container--fluid bg-color-grey mt-2 pb-2 border">
+            <div class="row">
+                @* Durchschnittsverbrauch *@
+                <div class="col-6 col-xl-3">
+                    <div class="control-wrapper">
+                        <label class="control-label fw-bold mb-sm-1 me-1">Ø-Verbrauch TW/AW</label>
+                        <SfNumericTextBox TValue="double?" Value="@ConsAverage_TW_m3" Enabled="false" Format="####0.00 m³"></SfNumericTextBox>
+                        <div class="mt-1">
+                            <SfNumericTextBox TValue="double?" Value="@ConsMin_TW_m3" Enabled="false" Format="####0.00 m³"></SfNumericTextBox>
+                        </div>
+                    </div>
+                </div>
+
+                @* Gesamtverbrauch *@
+                <div class="col-6 col-xl-3">
+                    <div class="control-wrapper">
+                        <label class="control-label fw-bold mb-sm-1 me-1">&#8721-Verbrauch TW/AW</label>
+                        <SfNumericTextBox TValue="double?" Value="@ConsSum_TW_m3" Enabled="false" Format="####0.00 m³"></SfNumericTextBox>
+                        <div class="mt-1">
+                            <SfNumericTextBox TValue="double?" Value="@ConsMin_TW_m3" Enabled="false" Format="####0.00 m³"></SfNumericTextBox>
+                        </div>
+                    </div>
+                </div>
+
+                @* Max/Min Verbrauch *@
+                <div class="col-6 col-xl-3">
+                    <div class="control-wrapper">
+                        <label class="control-label fw-bold mb-sm-1 me-1">Max/Min TW</label>
+                        <SfNumericTextBox TValue="double?" Value="@ConsMax_TW_m3" Enabled="false" Format="####0.00 m³"></SfNumericTextBox>
+                        <div class="mt-1">
+                            <SfNumericTextBox TValue="double?" Value="@ConsMin_TW_m3" Enabled="false" Format="####0.00 m³"></SfNumericTextBox>
+                        </div>
+                    </div>
+                </div>
+
+                @* Durchschnittstemperatur *@
+                @if (DdlInterval != Interval.jährlich)
+                {
+                    <div class="col-6 col-xl-3">
+                        <div class="control-wrapper">
+                            <label class="control-label fw-bold mb-sm-1 me-1">Ø-Temperatur</label>
+                            <SfNumericTextBox TValue="double?" Value="@TempAverage" Enabled="false" Format="##0.0 °C"></SfNumericTextBox>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
 </div>
 
 @* Chart *@

@@ -30,12 +30,14 @@
 <div class="card shadow-lg p-2 mb-1">
     <div class="container-fluid bg-color-grey pb-2 border">
         <div class="row justify-content-center">
+
+            @* Anbieter *@
             <div class="col-6 col-xl-3">
                 <div class="control-wrapper">
                     <label class="control-label fw-bold mb-sm-1 me-1">Anbieter</label>
                     @if (supplierSelectEnabled)
                     {
-                        <SfDropDownList DataSource="@supplierList" TItem="Electric_SupplierModel" TValue="int" Placeholder="Anbieter auswählen" @bind-Value="@supplierData!.Id" Enabled="@supplierSelectEnabled">
+                        <SfDropDownList DataSource="@supplierList" TItem="Electric_SupplierModel" TValue="int" Placeholder="Anbieter auswählen" @bind-Value="@supplierData!.Id">
                             <DropDownListFieldSettings Text="Anbieter" Value="Id"></DropDownListFieldSettings>
                             <DropDownListEvents TItem="Electric_SupplierModel" TValue="int" OnValueSelect="@ValueSelectHandler"></DropDownListEvents>
                         </SfDropDownList>
@@ -47,6 +49,7 @@
                 </div>
             </div>
 
+            @* Intervall *@
             <div class="col-6 col-xl-3">
                 <div class="control-wrapper">
                     <label class="control-label fw-bold mb-sm-1 me-1">Interval</label>
@@ -56,76 +59,66 @@
                 </div>
             </div>
 
+            @* Start-Datum *@
             <div class="col-6 col-xl-3">
                 <div class="control-wrapper">
                     <label class="control-label fw-bold mb-sm-1 me-1">Start-Datum</label>
-                    @if (supplierSelectEnabled)
-                    {
-                        <SfDatePicker TValue="DateTime?" Value="@StartDate" Min="@MinDate" Format="dd.MM.yyyy" AllowEdit="false" Readonly="true"></SfDatePicker>
-                    }
-                    else
-                    {
-                        <SfDatePicker TValue="DateTime?" Value="@StartDateYearly" Min="@MinDate" Format="dd.MM.yyyy" AllowEdit="false" Readonly="true"></SfDatePicker>
-                    }
+                    <SfDatePicker TValue="DateTime?" Value="@(supplierSelectEnabled ? StartDate : StartDateYearly)" Min="@MinDate" Format="dd.MM.yyyy" Enabled="false"></SfDatePicker>
                 </div>
             </div>
 
+            @* Ende-Datum *@
             <div class="col-6 col-xl-3">
                 <div class="control-wrapper">
                     <label class="control-label fw-bold mb-sm-1 me-1">Ende-Datum</label>
-                    @if (supplierSelectEnabled)
-                    {
-                        <SfDatePicker TValue="DateTime?" Value="@EndDate" Min="@MinDate" Format="dd.MM.yyyy" AllowEdit="false" Readonly="true"></SfDatePicker>
-                    }
-                    else
-                    {
-                        <SfDatePicker TValue="DateTime?" Value="@EndDateYearly" Min="@MinDate" Format="dd.MM.yyyy" AllowEdit="false" Readonly="true"></SfDatePicker>
-                    }
+                    <SfDatePicker TValue="DateTime?" Value="@(supplierSelectEnabled ? EndDate : EndDateYearly)" Min="@MinDate" Format="dd.MM.yyyy" Enabled="false"></SfDatePicker>
                 </div>
             </div>
         </div>
     </div>
 
-    @* Durchschnitt, Summe, Min, Max *@
-    <div class="container-fluid bg-color-grey mt-2 pb-2 border">
-        <div class="row">
-            @* Durchschnittsverbrauch *@
-            <div class="col-6 col-xl-3">
-                <div class="control-wrapper">
-                    <label class="control-label fw-bold mb-sm-1 me-1">Ø-Verbrauch</label>
-                    <SfNumericTextBox TValue="double?" Value="@ConsAverage_kWh" Enabled="false" Format="####0.00 kWh"></SfNumericTextBox>
-                </div>
-            </div>
-
-            @* Gesamtverbrauch *@
-            <div class="col-6 col-xl-3 mb-2">
-                <div class="control-wrapper">
-                    <label class="control-label fw-bold mb-sm-1 me-1">&#8721-Verbrauch</label>
-                    <SfNumericTextBox TValue="double?" Value="@ConsSum_kWh" Enabled="false" Format="####0.00 kWh"></SfNumericTextBox>
-                </div>
-            </div>
-
-            @* Max/Min Verbrauch *@
-            <div class="col-6 col-xl-3 mb-2">
-                <div class="control-wrapper">
-                    <label class="control-label fw-bold mb-sm-1 me-1">Max/Min</label>
-                    <SfNumericTextBox TValue="double?" Value="@ConsMax_kWh" Enabled="false" Format="####0.00 kWh"></SfNumericTextBox>
-                    <div class="mt-1">
-                        <SfNumericTextBox TValue="double?" Value="@ConsMin_kWh" Enabled="false" Format="####0.00 kWh"></SfNumericTextBox>
+    <div>
+        @* Durchschnitt, Summe, Min, Max *@
+        <div class="container-fluid bg-color-grey mt-2 pb-2 border">
+            <div class="row">
+                @* Durchschnittsverbrauch *@
+                <div class="col-6 col-xl-3">
+                    <div class="control-wrapper">
+                        <label class="control-label fw-bold mb-sm-1 me-1">Ø-Verbrauch</label>
+                        <SfNumericTextBox TValue="double?" Value="@ConsAverage_kWh" Enabled="false" Format="####0.00 kWh"></SfNumericTextBox>
                     </div>
                 </div>
-            </div>
 
-            @* Durchschnittstemperatur *@
-            @if (DdlInterval != Interval.jährlich)
-            {
+                @* Gesamtverbrauch *@
                 <div class="col-6 col-xl-3 mb-2">
                     <div class="control-wrapper">
-                        <label class="control-label fw-bold mb-sm-1 me-1">Ø-Temperatur</label>
-                        <SfNumericTextBox TValue="double?" Value="@TempAverage" Enabled="false" Format="##0.0 °C"></SfNumericTextBox>
+                        <label class="control-label fw-bold mb-sm-1 me-1">&#8721-Verbrauch</label>
+                        <SfNumericTextBox TValue="double?" Value="@ConsSum_kWh" Enabled="false" Format="####0.00 kWh"></SfNumericTextBox>
                     </div>
                 </div>
-            }
+
+                @* Max/Min Verbrauch *@
+                <div class="col-6 col-xl-3 mb-2">
+                    <div class="control-wrapper">
+                        <label class="control-label fw-bold mb-sm-1 me-1">Max/Min</label>
+                        <SfNumericTextBox TValue="double?" Value="@ConsMax_kWh" Enabled="false" Format="####0.00 kWh"></SfNumericTextBox>
+                        <div class="mt-1">
+                            <SfNumericTextBox TValue="double?" Value="@ConsMin_kWh" Enabled="false" Format="####0.00 kWh"></SfNumericTextBox>
+                        </div>
+                    </div>
+                </div>
+
+                @* Durchschnittstemperatur *@
+                @if (DdlInterval != Interval.jährlich)
+                {
+                    <div class="col-6 col-xl-3 mb-2">
+                        <div class="control-wrapper">
+                            <label class="control-label fw-bold mb-sm-1 me-1">Ø-Temperatur</label>
+                            <SfNumericTextBox TValue="double?" Value="@TempAverage" Enabled="false" Format="##0.0 °C"></SfNumericTextBox>
+                        </div>
+                    </div>
+                }
+            </div>
         </div>
     </div>
 </div>
