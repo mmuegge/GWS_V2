@@ -6,6 +6,7 @@
 @using System.Globalization;
 @using GWS_BlazorServer.Components.Services
 
+@* @inject IJSRuntime JsRuntime *@
 @*@inject IConfiguration Configuration*@
 @inject MyAppConfig myAppSettings
 @inject HttpClient myHttpClient
@@ -13,125 +14,103 @@
 @inject ToastService ToastService
 
 <PageTitle>Wasser-Zählerstand</PageTitle>
-@* <br />
-<header>
-    <div class="mb-1">
-        <span class="fa-solid fa-faucet-drip fs-5" aria-hidden="true"></span>
-        <h4 class="d-inline m-1">Wasser-Zählerstand</h4>
-    </div>
-</header> *@
 
 <div class="card shadow-lg col-xl-4 m-auto mt-3 px-3" style="background-color: lightgray">
-    <div class="col-md-12 control-section">
-        <div class="control-wrapper mt-1 mb-1">
-            <div class="text-center">
-                <span class="fa-solid fa-faucet-drip fs-5" aria-hidden="true"></span>
-                <h4 class="d-inline">Wasser-Zählerstand</h4>
+    <div class="col-12 control-section">
+        <div class="control-wrapper my-1">
+            <div class="text-center mb-3">
+                <span class="fa-solid fa-faucet-drip fs-5 align-middle" aria-hidden="true"></span>
+                <h4 class="d-inline align-middle ms-1">Wasser-Zählerstand</h4>
             </div>
 
-            <SfDataForm ID="GWSInput"
-                        ColumnCount=3
+            <SfDataForm ID="GWSInputWater"
+                        ColumnCount="1"
                         ButtonsAlignment="FormButtonsAlignment.Center"
                         Model="@countermodel"
                         OnValidSubmit="Submit">
-
                 <FormValidator>
-                    <DataAnnotationsValidator></DataAnnotationsValidator>
-                    @* <ValidationSummary /> *@
+                    <DataAnnotationsValidator />
                 </FormValidator>
 
                 <FormItems>
-                    <FormItem Field="@nameof(countermodel.SupplierName)" ColumnSpan="4">
+                    <FormItem Field="@nameof(countermodel.Id_Supplier)">
                         <Template>
                             <label class="e-form-label">Anbieter</label>
-                            <SfDropDownList DataSource="@suppliers" TItem="WaterSupplier" TValue="int" Placeholder="Anbieter auswählen" @bind-Value="@countermodel.Id_Supplier" style="margin-bottom:2px">
-                                <DropDownListFieldSettings Text="Anbieter" Value="Id"></DropDownListFieldSettings>
-                                <DropDownListEvents TItem="WaterSupplier" TValue="int" OnValueSelect="@ValueSelectHandler"></DropDownListEvents>
+                            <SfDropDownList DataSource="@suppliers" TItem="WaterSupplier" TValue="int" Placeholder="Anbieter auswählen" @bind-Value="@countermodel.Id_Supplier" CssClass="mb-1">
+                                <DropDownListFieldSettings Text="Anbieter" Value="Id" />
+                                <DropDownListEvents TItem="WaterSupplier" TValue="int" OnValueSelect="@ValueSelectHandler" />
                             </SfDropDownList>
-                            @* <ValidationMessage For="@(() => countermodel.SupplierName)"></ValidationMessage> *@
                         </Template>
-
                         @if (noSupplier)
                         {
                             <SfMessage Severity="MessageSeverity.Error">Anbieter auswählen!</SfMessage>
                         }
                     </FormItem>
 
-                    <FormItem Field="@nameof(countermodel.ReadingDate)" ColumnSpan="4">
+                    <FormItem Field="@nameof(countermodel.ReadingDate)">
                         <Template>
                             <label class="e-form-label">Ablesedatum</label>
                             <SfDatePicker TValue="DateTime?" Value="countermodel.ReadingDate" Max="@MaxDate" Min="@MinDate" Format="dd.MM.yyyy" AllowEdit="false">
-                                <DatePickerEvents TValue="DateTime?" ValueChange="DateChangedHandler">
-                                </DatePickerEvents>
+                                <DatePickerEvents TValue="DateTime?" ValueChange="DateChangedHandler" />
                             </SfDatePicker>
-                            @* <ValidationMessage For="@(() => countermodel.ReadingTime)"></ValidationMessage> *@
                         </Template>
                     </FormItem>
 
-                    <FormItem Field="@nameof(countermodel.ReadingTime)" ColumnSpan="4">
+                    <FormItem Field="@nameof(countermodel.ReadingTime)">
                         <Template>
                             <label class="e-form-label">Ablesezeit</label>
-                            <SfTimePicker TValue="DateTime" @bind-Value="countermodel.ReadingTime" Format="HH:mm" AllowEdit="false"></SfTimePicker>
-                            @* <ValidationMessage For="@(() => countermodel.ReadingTime)"></ValidationMessage> *@
+                            <SfTimePicker TValue="DateTime" @bind-Value="countermodel.ReadingTime" Format="HH:mm" AllowEdit="false" />
                         </Template>
                     </FormItem>
 
-                    <FormItem Field="@nameof(countermodel.MeterValueInside)" ColumnSpan="4">
+                    <FormItem Field="@nameof(countermodel.MeterValueInside)">
                         <Template>
                             <label class="e-form-label">Zählerstand-Innen</label>
-                            <SfNumericTextBox id="counter1" Format="###.#### m³" Placeholder="Zählerstand [m³]" @bind-Value="countermodel.MeterValueInside" ShowSpinButton="false"/>
-
-                            @* <ValidationMessage For="@(() => countermodel.MeterValue_In)"></ValidationMessage> *@
+                            <SfNumericTextBox id="waterCounterInside" Format="###.#### m³" Placeholder="Zählerstand Innen [m³]" @bind-Value="countermodel.MeterValueInside" ShowSpinButton="false" />
                         </Template>
                     </FormItem>
 
-                    <div>
-                        <SfSpinner @bind-Visible="@spinnerVisibleProperty" Type="SpinnerType.Tailwind" Size="40" CssClass="e-custom-color"></SfSpinner>
+                    <div class="text-center my-2">
+                        <SfSpinner @bind-Visible="@spinnerVisibleProperty" Type="SpinnerType.Tailwind" Size="40" CssClass="e-custom-color" />
                     </div>
 
-                    <FormItem Field="@nameof(countermodel.MeterValueOutside)" ColumnSpan="4">
+                    <FormItem Field="@nameof(countermodel.MeterValueOutside)">
                         <Template>
                             <label class="e-form-label">Zählerstand-Aussen</label>
-                            <SfNumericTextBox id="counter1" Format="###.#### m³" Placeholder="Zählerstand [m³]" @bind-Value="countermodel.MeterValueOutside" ShowSpinButton="false" />
-
-                            @* <ValidationMessage For="@(() => countermodel.MeterValue_In)"></ValidationMessage> *@
+                            <SfNumericTextBox id="waterCounterOutside" Format="###.#### m³" Placeholder="Zählerstand Außen [m³]" @bind-Value="countermodel.MeterValueOutside" ShowSpinButton="false" />
                         </Template>
                     </FormItem>
 
-                    @*Format="##0 °C" --> ##0 sonst wird keine "0" angezeigt*@
-                    <FormItem Field="@nameof(countermodel.TemperatureInside)" ColumnSpan="4">
+                    <FormItem Field="@nameof(countermodel.TemperatureInside)">
                         <Template>
                             <label class="e-form-label">Innentemperatur</label>
-                            <SfNumericTextBox TValue="double?" Format="##0 °C" Placeholder="Temperatur [°C]" @bind-Value="countermodel.TemperatureInside" Min="-50.0" Max="50.0"></SfNumericTextBox>
-                            @* <ValidationMessage For="@(() => countermodel.TemperatureInside)"></ValidationMessage> *@
+                            <SfNumericTextBox TValue="double?" Format="##0 °C" Placeholder="Temperatur [°C]" @bind-Value="countermodel.TemperatureInside" Min="-50.0" Max="50.0" />
                         </Template>
                     </FormItem>
 
-                    <FormItem Field="@nameof(countermodel.TemperatureOutside)" ColumnSpan="4">
+                    <FormItem Field="@nameof(countermodel.TemperatureOutside)">
                         <Template>
                             <label class="e-form-label">Aussentemperatur</label>
-                            <SfNumericTextBox TValue="double?" Format="##0 °C" Placeholder="Temperatur [°C]" @bind-Value="countermodel.TemperatureOutside" Min="-50.0" Max="50.0"></SfNumericTextBox>
-                            @* <ValidationMessage For="@(() => countermodel.TemperatureOutside)"></ValidationMessage> *@
+                            <SfNumericTextBox TValue="double?" Format="##0 °C" Placeholder="Temperatur [°C]" @bind-Value="countermodel.TemperatureOutside" Min="-50.0" Max="50.0" />
                         </Template>
                     </FormItem>
 
-                    <FormItem Field="@nameof(countermodel.Remarks)" ColumnSpan="4">
+                    <FormItem Field="@nameof(countermodel.Remarks)">
                         <Template>
                             <label class="e-form-label">Bemerkung</label>
-                            <SfTextArea ResizeMode="Syncfusion.Blazor.Inputs.Resize.None" @bind-Value="countermodel.Remarks"></SfTextArea>
+                            <SfTextArea ResizeMode="Syncfusion.Blazor.Inputs.Resize.None" @bind-Value="countermodel.Remarks" />
                         </Template>
                     </FormItem>
                 </FormItems>
 
                 <FormButtons>
-                    <div class="mb-3">
-                        <SfButton typeof="submit" IsPrimary="true" CssClass="e-outline">Speichern</SfButton>
-                    </div>
+                    <SfButton typeof="submit" IsPrimary="true" CssClass="e-outline">Speichern</SfButton>
                 </FormButtons>
             </SfDataForm>
         </div>
     </div>
 </div>
+
 
 <style>
     .mobile .control-wrapper {
@@ -320,11 +299,7 @@
     /// Rücksetzen des Flags zum Anzeigen der Messagebox
     /// Die Messagebox wird angezeigt, wenn kein Anbieter ausgewählt ist
     /// </summary>
-    /// <param name="args"></param>
-    private void ValueSelectHandler(SelectEventArgs<WaterSupplier> args)
-    {
-        noSupplier = false;
-    }
+    private void ValueSelectHandler() => noSupplier = false;
     #endregion
 
     #region ShowToastMessage
@@ -336,14 +311,12 @@
     /// <returns></returns>
     private void ShowToastMessage(bool success, string message)
     {
-        if (success)
-        {
-            ShowToast("Erfolg", message, "e-toast-success", "e-circle-check");
-        }
-        else
-        {
-            ShowToast("Fehler", message, "e-toast-danger", "e-circle-close");
-        }
+        ShowToast(
+            success ? "Erfolg" : "Fehler",
+            message,
+            success ? "e-toast-success" : "e-toast-danger",
+            success ? "e-circle-check" : "e-circle-close"
+        );
     }
     #endregion
 

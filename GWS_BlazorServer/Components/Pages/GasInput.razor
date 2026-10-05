@@ -14,116 +14,97 @@
 @inject ToastService ToastService
 
 <PageTitle>Gas-Zählerstand</PageTitle>
-@* <br />
-<header>
-    <div class="mb-1">
-        <span class="fa-solid fa-fire-flame-simple fs-5" aria-hidden="true"></span>
-        <h4 class="d-inline m-1">Gas-Zählerstand</h4>
-    </div>
-</header> *@
 
 <div class="card shadow-lg col-xl-4 m-auto mt-3 px-3" style="background-color: lightgray">
-    <div class="col-md-12 control-section">
-        <div class="control-wrapper mt-1 mb-1">
-            <div class="text-center">
-                <span class="fa-solid fa-fire-flame-simple fs-5" aria-hidden="true"></span>
-                <h4 class="d-inline">Gas-Zählerstand</h4>
+    <div class="col-12 control-section">
+        <div class="control-wrapper my-1">
+            <div class="text-center mb-3">
+                <span class="fa-solid fa-fire-flame-simple fs-5 align-middle" aria-hidden="true"></span>
+                <h4 class="d-inline align-middle ms-1">Gas-Zählerstand</h4>
             </div>
 
             <SfDataForm ID="GWSInput"
-                        ColumnCount=3
+                        ColumnCount="1"
                         ButtonsAlignment="FormButtonsAlignment.Center"
                         Model="@countermodel"
                         OnValidSubmit="Submit">
-
                 <FormValidator>
-                    <DataAnnotationsValidator></DataAnnotationsValidator>
-                    @* <ValidationSummary /> *@
+                    <DataAnnotationsValidator />
                 </FormValidator>
 
                 <FormItems>
-                    <FormItem Field="@nameof(countermodel.SupplierName)" ColumnSpan="4">
+                    <FormItem Field="@nameof(countermodel.Id_Supplier)">
                         <Template>
                             <label class="e-form-label">Anbieter</label>
-                            <SfDropDownList DataSource="@suppliers" TItem="GasSupplier" TValue="int" Placeholder="Anbieter auswählen" @bind-Value="@countermodel.Id_Supplier" style="margin-bottom:2px">
-                                <DropDownListFieldSettings Text="Anbieter" Value="Id"></DropDownListFieldSettings>
-                                <DropDownListEvents TItem="GasSupplier" TValue="int" OnValueSelect="@ValueSelectHandler"></DropDownListEvents>
+                            <SfDropDownList DataSource="@suppliers" TItem="GasSupplier" TValue="int" Placeholder="Anbieter auswählen" @bind-Value="@countermodel.Id_Supplier" CssClass="mb-1">
+                                <DropDownListFieldSettings Text="Anbieter" Value="Id" />
+                                <DropDownListEvents TItem="GasSupplier" TValue="int" OnValueSelect="@ValueSelectHandler" />
                             </SfDropDownList>
-                            @* <ValidationMessage For="@(() => countermodel.SupplierName)"></ValidationMessage> *@
                         </Template>
-
                         @if (noSupplier)
                         {
                             <SfMessage Severity="MessageSeverity.Error">Anbieter auswählen!</SfMessage>
                         }
                     </FormItem>
 
-                    <FormItem Field="@nameof(countermodel.ReadingDate)" ColumnSpan="4">
+                    <FormItem Field="@nameof(countermodel.ReadingDate)">
                         <Template>
                             <label class="e-form-label">Ablesedatum</label>
                             <SfDatePicker TValue="DateTime?" Value="countermodel.ReadingDate" Max="@MaxDate" Min="@MinDate" Format="dd.MM.yyyy" AllowEdit="false">
-                                <DatePickerEvents TValue="DateTime?" ValueChange="DateChangedHandler">
-                                </DatePickerEvents>
+                                <DatePickerEvents TValue="DateTime?" ValueChange="DateChangedHandler" />
                             </SfDatePicker>
-                            @* <ValidationMessage For="@(() => countermodel.ReadingTime)"></ValidationMessage> *@
                         </Template>
                     </FormItem>
 
-                    <FormItem Field="@nameof(countermodel.ReadingTime)" ColumnSpan="4">
+                    <FormItem Field="@nameof(countermodel.ReadingTime)">
                         <Template>
                             <label class="e-form-label">Ablesezeit</label>
-                            <SfTimePicker TValue="DateTime" @bind-Value="countermodel.ReadingTime" Format="HH:mm" AllowEdit="false"></SfTimePicker>
-                            @* <ValidationMessage For="@(() => countermodel.ReadingTime)"></ValidationMessage> *@
+                            <SfTimePicker TValue="DateTime" @bind-Value="countermodel.ReadingTime" Format="HH:mm" AllowEdit="false" />
                         </Template>
                     </FormItem>
 
-                    <FormItem Field="@nameof(countermodel.MeterValue)" ColumnSpan="4">
+                    <FormItem Field="@nameof(countermodel.MeterValue)">
                         <Template>
                             <label class="e-form-label">Zählerstand</label>
                             <SfNumericTextBox id="counter1" Format="###.#### m³" Placeholder="Zählerstand [m³]" @bind-Value="countermodel.MeterValue" ShowSpinButton="false" />
-
-                            @* <ValidationMessage For="@(() => countermodel.MeterValue_In)"></ValidationMessage> *@
                         </Template>
                     </FormItem>
 
-                    <div>
-                        <SfSpinner @bind-Visible="@spinnerVisibleProperty" Type="SpinnerType.Tailwind" Size="40" CssClass="e-custom-color"></SfSpinner>
+                    @* Platzierung des Spinners direkt über dem Template oder als Full-Row Element *@
+                    <div class="text-center my-2">
+                        <SfSpinner @bind-Visible="@spinnerVisibleProperty" Type="SpinnerType.Tailwind" Size="40" CssClass="e-custom-color" />
                     </div>
 
-                    @*Format="##0 °C" --> ##0 sonst wird keine "0" angezeigt*@
-                    <FormItem Field="@nameof(countermodel.TemperatureInside)" ColumnSpan="4">
+                    <FormItem Field="@nameof(countermodel.TemperatureInside)">
                         <Template>
                             <label class="e-form-label">Innentemperatur</label>
-                            <SfNumericTextBox TValue="double?" Format="##0 °C" Placeholder="Temperatur [°C]" @bind-Value="countermodel.TemperatureInside" Min="-50.0" Max="50.0"></SfNumericTextBox>
-                            @* <ValidationMessage For="@(() => countermodel.TemperatureInside)"></ValidationMessage> *@
+                            <SfNumericTextBox TValue="double?" Format="##0 °C" Placeholder="Temperatur [°C]" @bind-Value="countermodel.TemperatureInside" Min="-50.0" Max="50.0" />
                         </Template>
                     </FormItem>
 
-                    <FormItem Field="@nameof(countermodel.TemperatureOutside)" ColumnSpan="4">
+                    <FormItem Field="@nameof(countermodel.TemperatureOutside)">
                         <Template>
                             <label class="e-form-label">Aussentemperatur</label>
-                            <SfNumericTextBox TValue="double?" Format="##0 °C" Placeholder="Temperatur [°C]" @bind-Value="countermodel.TemperatureOutside" Min="-50.0" Max="50.0"></SfNumericTextBox>
-                            @* <ValidationMessage For="@(() => countermodel.TemperatureOutside)"></ValidationMessage> *@
+                            <SfNumericTextBox TValue="double?" Format="##0 °C" Placeholder="Temperatur [°C]" @bind-Value="countermodel.TemperatureOutside" Min="-50.0" Max="50.0" />
                         </Template>
                     </FormItem>
 
-                    <FormItem Field="@nameof(countermodel.Remarks)" ColumnSpan="4">
+                    <FormItem Field="@nameof(countermodel.Remarks)">
                         <Template>
                             <label class="e-form-label">Bemerkung</label>
-                            <SfTextArea ResizeMode="Syncfusion.Blazor.Inputs.Resize.None" @bind-Value="countermodel.Remarks"></SfTextArea>
+                            <SfTextArea ResizeMode="Syncfusion.Blazor.Inputs.Resize.None" @bind-Value="countermodel.Remarks" />
                         </Template>
                     </FormItem>
                 </FormItems>
 
                 <FormButtons>
-                    <div class="mb-3">
-                        <SfButton typeof="submit" IsPrimary="true" CssClass="e-outline">Speichern</SfButton>
-                    </div>
+                    <SfButton typeof="submit" IsPrimary="true" CssClass="e-outline">Speichern</SfButton>
                 </FormButtons>
             </SfDataForm>
         </div>
     </div>
 </div>
+
 
 <style>
     .mobile .control-wrapper {
@@ -312,11 +293,7 @@
     /// Rücksetzen des Flags zum Anzeigen der Messagebox
     /// Die Messagebox wird angezeigt, wenn kein Anbieter ausgewählt ist
     /// </summary>
-    /// <param name="args"></param>
-    private void ValueSelectHandler(SelectEventArgs<GasSupplier> args)
-    {
-        noSupplier = false;
-    }
+    private void ValueSelectHandler() => noSupplier = false;
     #endregion
 
     #region ShowToastMessage
@@ -328,14 +305,12 @@
     /// <returns></returns>
     private void ShowToastMessage(bool success, string message)
     {
-        if (success)
-        {
-            ShowToast("Erfolg", message, "e-toast-success", "e-circle-check");
-        }
-        else
-        {
-            ShowToast("Fehler", message, "e-toast-danger", "e-circle-close");
-        }
+        ShowToast(
+               success ? "Erfolg" : "Fehler",
+               message,
+               success ? "e-toast-success" : "e-toast-danger",
+               success ? "e-circle-check" : "e-circle-close"
+          );
     }
     #endregion
 
