@@ -676,6 +676,7 @@
         }
         else if (args.RequestType == Syncfusion.Blazor.Grids.Action.Delete)
         {
+            // Abfrage, ob args.Data == null oder args.Data.Id <= 0
             if (args.Data is not { Id: > 0 })
             {
                 supplierList = await gwsP!.LoadDataAsync<Electric_SupplierModel>(urlSupplier);

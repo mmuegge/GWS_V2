@@ -574,21 +574,12 @@
     /// <param name="args"></param>
     public void LabelRender(AxisLabelRenderEventArgs args)
     {
-        switch (args.Axis.Name)
+        args.Text += args.Axis.Name switch
         {
-            case "yAxisTariff":
-                args.Text = args.Text + " ct/kWh";
-                break;
-
-            case "yAxisBasic":
-                args.Text = args.Text + " €/Monat";
-                break;
-
-            case "yAxisMeterRental":
-                args.Text = args.Text + " €/Monat";
-                break;
-        }
-
+            "yAxisTariff" => " ct/kWh",
+            "yAxisBasic" or "yAxisMeterRental" => " €/Monat",
+            _ => string.Empty
+        };
     }
     #endregion
 

@@ -4,7 +4,6 @@
 
 @using GWS_Statistics.Components.Services
 @using GWS_Statistics.Helper
-@using System.Globalization
 @using System.Net
 
 @inject MyAppConfigModel myAppSettings
@@ -689,6 +688,7 @@
         }
         else if (args.RequestType == Syncfusion.Blazor.Grids.Action.Delete)
         {
+            // Abfrage, ob args.Data == null oder args.Data.Id <= 0
             if (args.Data is not { Id: > 0 })
             {
                 supplierList = await gwsP!.LoadDataAsync<Water_SupplierModel>(urlSupplier);
