@@ -63,7 +63,7 @@
             <div class="col-6 col-xl-3">
                 <div class="control-wrapper">
                     <label class="control-label fw-bold mb-sm-1 me-1">Start-Datum</label>
-                    <SfDatePicker TValue="DateTime?" Value="@(supplierSelectEnabled ? StartDate : StartDateYearly)" Min="@MinDate" Format="dd.MM.yyyy" Enabled="false"></SfDatePicker>
+                    <SfDatePicker TValue="DateTime?" Value="@(supplierSelectEnabled ? StartDate : StartDateYearly)" Min="@MinDate" Format="dd.MM.yyyy" AllowEdit="false" Readonly="true"></SfDatePicker>
                 </div>
             </div>
 
@@ -71,7 +71,7 @@
             <div class="col-6 col-xl-3">
                 <div class="control-wrapper">
                     <label class="control-label fw-bold mb-sm-1 me-1">Ende-Datum</label>
-                    <SfDatePicker TValue="DateTime?" Value="@(supplierSelectEnabled ? EndDate : EndDateYearly)" Min="@MinDate" Format="dd.MM.yyyy" Enabled="false"></SfDatePicker>
+                    <SfDatePicker TValue="DateTime?" Value="@(supplierSelectEnabled ? EndDate : EndDateYearly)" Min="@MinDate" Format="dd.MM.yyyy" AllowEdit="false" Readonly="true"></SfDatePicker>
                 </div>
             </div>
         </div>

@@ -657,28 +657,26 @@
     /// ActionCompleteHandler
     /// </summary>
     /// <param name="args"></param>
-    public async void ActionCompleteHandler(ActionEventArgs<Electric_SupplierModel> args)
+    public async Task ActionCompleteHandler(ActionEventArgs<Electric_SupplierModel> args)
     {
-        if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Save))
+        if (args.RequestType == Syncfusion.Blazor.Grids.Action.Save)
         {
+            supplierData = args.Data;
+
             if (args.Action == "Add")
             {
                 save = true;
-                supplierData = args.Data;
-
                 OpenDialog("Datensatz speichern ?", "130px", "220px", true);
             }
             else if (args.Action == "Edit")
             {
                 update = true;
-                supplierData = args.Data;
-
                 OpenDialog("Datensatz ändern ?", "130px", "220px", true);
             }
         }
-        else if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Delete))
+        else if (args.RequestType == Syncfusion.Blazor.Grids.Action.Delete)
         {
-            if (args.Data.Id == 0)
+            if (args.Data is not { Id: > 0 })
             {
                 supplierList = await gwsP!.LoadDataAsync<Electric_SupplierModel>(urlSupplier);
                 ShowToastMessage(false, "Datensatz nicht gelöscht!");
@@ -688,7 +686,12 @@
                 supplierData = await gwsP!.DeleteDataAsync<Electric_SupplierModel>(urlSupplier, Convert.ToString(args.Data.Id));
                 ShowToastMessage(true, "Datensatz gelöscht!");
             }
-            SfDataGrid?.Refresh();
+
+            // Grid-Aktualisierung sicherstellen
+            if (SfDataGrid is not null)
+            {
+                await SfDataGrid.Refresh();
+            }
         }
     }
     #endregion
