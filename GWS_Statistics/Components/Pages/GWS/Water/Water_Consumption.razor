@@ -428,6 +428,7 @@
     {
         public DateTime Date { get; set; }
         public double? Cons_TW_m3 { get; set; }
+        public double? Cons_AW_m3 { get; set; }
         public double? Temp { get; set; }
     }
     #endregion
@@ -727,30 +728,22 @@
     /// <param name="interval"></param>
     public async Task SelectChartData(Interval interval)
     {
-        switch (interval)
+        
+        // Vorab-Abfrage für das Laden der Zählerwechsel-Daten (nur bei jährlich)
+        if (interval == Interval.jährlich)
         {
-            case Interval.täglich:
-                {
-                    await GetChartDataDaily(supplierData, counterList);
-                    break;
-                }
-            case Interval.monatlich:
-                {
-                    await GetChartDataMonthly(supplierData, counterList);
-                    break;
-                }
-            case Interval.jährlich:
-                {
-                    counterChangeList = await gwsP!.LoadDataAsync<Water_CounterChangeModel>(urlCounterChangeAllSuppliers); // Zählerwechsel aller Anbieter laden
-                    await GetChartDataYearly(supplierList);
-                    break;
-                }
-            default:
-                {
-                    await GetChartDataDaily(supplierData, counterList);
-                    break;
-                }
+            counterChangeList = await gwsP!.LoadDataAsync<Water_CounterChangeModel>(urlCounterChangeAllSuppliers);
         }
+
+        // Kompakte Zuordnung und Ausführung der Diagramm-Tasks
+        Task chartTask = interval switch
+        {
+            Interval.monatlich => GetChartDataMonthly(supplierData, counterList),
+            Interval.jährlich => GetChartDataYearly(supplierList),
+            _ => GetChartDataDaily(supplierData, counterList) // deckt täglich und default ab
+        };
+
+        await chartTask;
     }
     #endregion
 
@@ -761,9 +754,33 @@
     public void CalcAverageSum()
     {
         ConsAverage_TW_m3 = Math.Round(ChartPointList.Average(x => x.Cons_TW_m3).GetValueOrDefault(), 2);
-        ConsSum_TW_m3 = Math.Round(ChartPointList.Sum(x => x.Cons_TW_m3).GetValueOrDefault(), 2);
-        ConsAverage_TW_m3 = Math.Round(ChartPointList.Average(x => x.Cons_TW_m3).GetValueOrDefault(), 2);
-        ConsSum_TW_m3 = Math.Round(ChartPointList.Sum(x => x.Cons_TW_m3).GetValueOrDefault(), 2);
+
+        // Trinkwasserverbrauch: Wenn Start- und End-Zählerstand vorhanden, dann Differenz berechnen, ansonsten Summe der Verbrauchswerte
+        if (supplierData?.Ende_Zaehlerstand != null && supplierData?.Start_Zaehlerstand != null)
+        {
+            ConsSum_TW_m3 = Math.Round(supplierData.Ende_Zaehlerstand.Value - supplierData.Start_Zaehlerstand.Value, 2);
+        }
+        else
+        {
+            double actCounter = counterList?.MaxBy(c => c.Ablesetag)?.Zaehlerstand ?? 0.0d;
+            double startCounter = supplierData?.Start_Zaehlerstand ?? 0.0d;
+            ConsSum_TW_m3 = Math.Round(actCounter - startCounter, 2);
+        }
+
+        ConsAverage_AW_m3 = Math.Round(ChartPointList.Average(x => x.Cons_AW_m3).GetValueOrDefault(), 2);
+
+        // Abwasserverbrauch: Wenn Start- und End-Zählerstand vorhanden, dann Differenz berechnen, ansonsten Summe der Verbrauchswerte
+        if (supplierData?.Ende_Zaehlerstand_aussen != null && supplierData?.Start_Zaehlerstand_aussen != null)
+        {
+            ConsSum_AW_m3 = Math.Round(supplierData.Ende_Zaehlerstand_aussen.Value - supplierData.Start_Zaehlerstand_aussen.Value, 2);
+        }
+        else
+        {
+            double actCounter = counterList?.MaxBy(c => c.Ablesetag)?.Zaehlerstand ?? 0.0d;
+            double startCounter = supplierData?.Start_Zaehlerstand ?? 0.0d;
+            ConsSum_AW_m3 = Math.Round(actCounter - startCounter, 2);
+        }
+
         ConsMin_TW_m3 = Math.Round(ChartPointList.Min(x => x.Cons_TW_m3).GetValueOrDefault(), 2);
         ConsMax_TW_m3 = Math.Round(ChartPointList.Max(x => x.Cons_TW_m3).GetValueOrDefault(), 2);
         TempAverage = Math.Round(ChartPointList.Average(x => x.Temp).GetValueOrDefault(), 2);
@@ -890,16 +907,14 @@
     /// <param name="args"></param>
     public void LabelRender(AxisLabelRenderEventArgs args)
     {
-        switch (args.Axis.Name)
+        string suffix = args.Axis.Name switch
         {
-            case "yAxisCons":
-                args.Text = args.Text + " m³";
-                break;
+            "yAxisCons" => " m³",
+            "yAxisTemp" => " °C",
+            _ => string.Empty
+        };
 
-            case "yAxisTemp":
-                args.Text = args.Text + " °C";
-                break;
-        }
+        args.Text = $"{args.Text}{suffix}";
     }
     #endregion
 
@@ -932,16 +947,12 @@
                     double.TryParse(s, NumberStyles.Any, displayCulture, out y);
             }
 
-            switch (args.Data[i].SeriesName)
+            args.Text[i] = args.Data[i].SeriesName switch
             {
-                case "Verbrauch-TW":
-                    args.Text[i] = $"{di.SeriesName}: {y.ToString("N2", displayCulture)}  m³";
-                    break;
-
-                case "Temperatur":
-                    args.Text[i] = $"{di.SeriesName}: {y.ToString("N0", displayCulture)} °C";
-                    break;
-            }
+                "Verbrauch-TW" => $"{di.SeriesName}: {y.ToString("N2", displayCulture)} m³",
+                "Temperatur" => $"{di.SeriesName}: {y.ToString("N0", displayCulture)} °C",
+                _ => args.Text[i] // Behält den alten Wert bei, falls kein Name matcht
+            };
         }
     }
     #endregion

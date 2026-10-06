@@ -6,14 +6,14 @@ namespace GWS_Statistics.Calculation
     public static class GWS_Calculation
     {
         #region Variablen
-        private static ConsumptionType ConsType = ConsumptionType.Unknown;
-        enum ConsumptionType
-        {
-            Unknown = 0,
-            Gas = 1,
-            Water = 2,
-            Electric = 3
-        }
+        //private static ConsumptionType ConsType = ConsumptionType.Unknown;
+        //enum ConsumptionType
+        //{
+        //    Unknown = 0,
+        //    Gas = 1,
+        //    Water = 2,
+        //    Electric = 3
+        //}
         #endregion
 
         //#region CalcConsumptionDaily Gas
@@ -742,262 +742,144 @@ namespace GWS_Statistics.Calculation
         /// <param name="counterChanges"></param>
         /// <param name="counters"></param>
         /// <returns></returns>
-        public static List<IConsumption> CalcConsumptionDaily<T, U>(ISupplier? supplier, List<U>? counterChanges, List<T>? counters) where T : ICounter where U : ICounterChange
+        /// </summary>
+public static List<IConsumption> CalcConsumptionDaily<T, U>(ISupplier? supplier, List<U>? counterChanges, List<T>? counters)
+    where T : ICounter
+    where U : ICounterChange
+    {
+        var consumptions = new List<IConsumption>();
+
+        // 1. Guard Clauses (Frühzeitiger Abbruch bei ungültigen Daten)
+        if (supplier is null) return consumptions;
+
+        bool validDates = HelperMethods.CheckValidDates(supplier.Zeitraum_Start, supplier.Zeitraum_Ende);
+        if (!validDates) return consumptions;
+
+        DateTime startPeriod = supplier.Zeitraum_Start.GetValueOrDefault().Date;
+        DateTime endPeriod = supplier.Zeitraum_Ende.GetValueOrDefault().Date;
+
+        endPeriod = endPeriod < DateTime.Now.Date ? endPeriod : DateTime.Now.Date; // Enddatum darf nicht in der Zukunft liegen
+
+        int totalDays = (endPeriod - startPeriod).Days;
+
+        if (totalDays < 2) return consumptions;
+
+        // 2. Fall: Keine Zählerstände vorhanden -> Lineare Aufteilung des Gesamtzeitraums
+        if (counters is null || counters.Count == 0)
         {
-            bool validDates;
-            bool endOfCalc = false;
-            bool dataAvailable;
-            bool firstReading = true;
-            int day_index = 0;
-            int day_index_1 = 1;
-            int daysBetween;
-            double[] cons = { 0, 0, 0 };
-            double? temperature;
-            DateTime actDayPeriod = DateTime.Now;
-            DateTime nextDayPeriod;
-            double? actDayCons;
-            double? nextDayCons;
-            //ICounterChange counterChange;
-
-            Gas_SupplierModel? GasSupplier = null;
-            Water_SupplierModel? WaterSupplier = null;
-            Electric_SupplierModel? ElectricSupplier = null;
-
-            List<IConsumption> consumptions = [];
-
-            if (supplier == null || counters == null || counters?.Count == 0)
+            if (supplier.Start_Zaehlerstand.HasValue && supplier.Ende_Zaehlerstand.HasValue
+                && supplier.Start_Zaehlerstand <= supplier.Ende_Zaehlerstand)
             {
-                return consumptions;
-            }
+                double totalCons = (supplier.Ende_Zaehlerstand - supplier.Start_Zaehlerstand).Value;
+                double dailyCons = Math.Max(0.0d, totalCons / totalDays);
+                double temperature = 0.0d;
 
-            Type suppElementType = supplier!.GetType();
-
-            // Auslesen des Typen des List-Elements Counters
-            Type consElementType = counters!.GetType().GetGenericArguments().Single();
-
-            switch (consElementType.Name)  // Abfrage des Namens des List-Elements
-            {
-                case "Water_CounterModel":
-                    ConsType = ConsumptionType.Water;
-                    WaterSupplier = (Water_SupplierModel)supplier;
-                    break;
-
-                case "Gas_CounterModel":
-                    ConsType = ConsumptionType.Gas;
-                    GasSupplier = (Gas_SupplierModel)supplier;
-                    break;
-
-                case "Electric_CounterModel":
-                    ConsType = ConsumptionType.Electric;
-                    ElectricSupplier = (Electric_SupplierModel)supplier;
-                    break;
-
-                default:
-                    ConsType = ConsumptionType.Unknown;
-                    break;
-            }
-
-            // prüfen ob übergebene Daten ungültig sind
-            // und ob die Ableseperiode < 1 Tag ist
-            validDates = HelperMethods.CheckValidDates(supplier.Zeitraum_Start, supplier.Zeitraum_Ende);
-            daysBetween = validDates ? (supplier.Zeitraum_Ende - supplier.Zeitraum_Start).GetValueOrDefault().Days : 0;  // Anzahl Tage zwischen Zeitraum-Start u. Zeitraum-Ende
-            // prüfen ob Anfangsdatum und Enddatum des Anbieters vorhanden ist, wenn nicht wird keine Berechnung durchgeführt
-            if (!validDates || daysBetween < 2)
-            {
-                return consumptions;
-            }
-
-            dataAvailable = (counters != null && counters.Count > 0);
-
-            // Wenn es keine Zählerstände gibt werden nur Anfangs-Zählerstand/Ende-Zählerstand berücksichtigt
-            // hier muss der Zählerwechsel mit berücksichtigt werden, aber nur wenn der Ende-Zählerstand mit Zählerwechsel zusammen fällt
-            if (!dataAvailable && supplier.Ende_Zaehlerstand != null && supplier.Start_Zaehlerstand != null)
-            {
-                if (supplier.Start_Zaehlerstand <= supplier.Ende_Zaehlerstand)
+                for (int d = 0; d < totalDays; d++)
                 {
-                    actDayPeriod = supplier.Zeitraum_Start.GetValueOrDefault().Date;
-                    cons[0] = (supplier.Ende_Zaehlerstand - supplier.Start_Zaehlerstand).GetValueOrDefault() / daysBetween;
-
-
-                    temperature = 0.0d;
-                    for (int d = 0; d < daysBetween; d++)
+                    consumptions.Add(new ConsumptionData
                     {
-                        // Verbrauchswert 1
-                        consumptions.Add(new ConsumptionData { SupplierId = supplier.Id, Date = actDayPeriod, Consumption = cons[0], Temperature = temperature.GetValueOrDefault() });
-                        cons[0] = cons[0] >= 0.0d ? cons[0] : 0.0d;
-
-                        consumptions.Add(new ConsumptionData { SupplierId = supplier.Id, Date = actDayPeriod, Consumption = cons[0], Temperature = temperature.GetValueOrDefault() });
-                        cons[0] = cons[0] >= 0.0d ? cons[0] : 0.0d;
-
-                        actDayPeriod = actDayPeriod.AddDays(1); // Datum um einen Tag erhöhen
-                    }
-
-                    return consumptions;
-                }
-                else // Zählerwechsel
-                {
-                    // hier fehlt noch die Berücksichtigung des Zählerwechsels
-                    //braucht hier wahrscheinlich nicht berücksichtigt werden
+                        SupplierId = supplier.Id,
+                        Date = startPeriod.AddDays(d),
+                        Consumption = dailyCons,
+                        Temperature = temperature
+                    });
                 }
             }
-            do
-            {
-                try
-                {
-                    if (firstReading)  // nur beim ersten Durchlauf
-                    {
-                        firstReading = false;
-
-
-                        // Periode startet nicht am 01 des Monats, Tage mit Verbrauch = 0 bis zum Start der Periode eintragen
-                        if (counters?[0].Ablesetag.Day > 1)
-                        {
-                            DateTime startDate = new DateTime(counters[0].Ablesetag.Year, counters[0].Ablesetag.Month, 1, 0, 0, 0);
-                            for (int i = 0; i < counters?[0].Ablesetag.Day - 1; i++)
-                            {
-                                consumptions.Add(new ConsumptionData { SupplierId = supplier.Id, Date = startDate, Consumption = 0.0d, Temperature = 0.0d });
-                                startDate = startDate.AddDays(1);
-                            }
-                        }
-
-                        if (counters?[0].Ablesetag > supplier.Zeitraum_Start) // erster Ablesetag > Zeitraum-Start
-                        {
-                            actDayPeriod = supplier.Zeitraum_Start.GetValueOrDefault().Date;
-                            daysBetween = (counters[0].Ablesetag - actDayPeriod).Days;
-                            cons[0] = ((counters[0].Zaehlerstand - supplier.Start_Zaehlerstand).GetValueOrDefault() / (double)daysBetween);
-
-                            cons[0] = cons[0] >= 0.0d ? cons[0] : 0.0d; // prüfen ob Zählerstand >= 0 wenn nein Verbrauch=0.0
-
-                            temperature = counters[day_index].Temperatur_aussen != null ? counters[day_index].Temperatur_aussen : 0;
-                            for (int d = 0; d < daysBetween; d++)
-                            {
-                                consumptions.Add(new ConsumptionData { SupplierId = supplier.Id, Date = actDayPeriod, Consumption = cons[0], Temperature = temperature.GetValueOrDefault() });
-                                actDayPeriod = actDayPeriod.AddDays(1); // Datum um einen Tag erhöhen
-                            }
-                        }
-                    }
-                    else // index > 0
-                    {
-                        actDayPeriod = counters?[day_index].Ablesetag ?? DateTime.Now;  // Datum Ablesetag
-                        actDayCons = counters?[day_index].Zaehlerstand; // Zählerstand Ablesetag
-
-                        if (day_index < counters?.Count || actDayPeriod < supplier.Zeitraum_Ende)
-                        {
-                            nextDayPeriod = counters?[day_index_1].Ablesetag ?? DateTime.Now;
-                            daysBetween = (nextDayPeriod - actDayPeriod).Days;
-                            nextDayCons = counters?[day_index_1].Zaehlerstand;  // Zählerstand Tag+1
-                        }
-                        else
-                        {
-                            daysBetween = 1;
-                            nextDayCons = supplier.Ende_Zaehlerstand != null ? supplier.Ende_Zaehlerstand : actDayCons; // prüfen ob Ende_Zählerstand vorhanden ist, wenn nicht Ende-Zählerstand nehmen
-                        }
-
-                        if (nextDayCons.GetValueOrDefault() >= actDayCons.GetValueOrDefault()) // prüfen ob der Verbrauch Tag+1 > Verbrauch Tag ist
-                        {
-                            cons[0] = daysBetween > 0 ? ((nextDayCons - actDayCons).GetValueOrDefault() / daysBetween) : (nextDayCons - actDayCons).GetValueOrDefault();
-                        }
-                        else // Zählerstand Tag+1 < Zählerstand Tag => Zählerwechsel
-                        {
-                            if (counterChanges != null) // gibt es einen Zählerwechsel?
-                            {
-                                var counterChangeDate = counterChanges
-                                   .Where(s => s.Wechsel_Datum == counters?[day_index_1].Ablesetag)
-                                   .Select(s => s).FirstOrDefault();
-
-                                if (counterChangeDate != null)
-                                {
-                                    cons[0] = (counterChangeDate.Zaehlerstand_alt - counters?[day_index].Zaehlerstand + counters?[day_index_1].Zaehlerstand - counterChangeDate.Zaehlerstand_neu).GetValueOrDefault();
-                                }
-                                else
-                                {
-                                    //consumption = nextDayCons.GetValueOrDefault() / daysBetween;
-                                    cons[0] = 0.0d;
-                                }
-                            }
-                            else
-                            {
-                                cons[0] = 0.0d;
-                            }
-                        }
-
-                        //consumption = consumption >= 0.0d ? consumption : 0.0d; // prüfen ob Zählerstand >= 0 wenn nein Verbrauch=0.0
-
-                        temperature = counters?[day_index].Temperatur_aussen;
-
-                        if (daysBetween == 1)
-                        {
-                            consumptions.Add(new ConsumptionData { SupplierId = supplier.Id, Date = actDayPeriod, Consumption = cons[0], Temperature = temperature });
-                        }
-                        else
-                        // wenn es zwischen 2 Ablesungen mehr als 1 Tag Unterschied gibt, müssen Datum/Verbrauch hochgerechnet werden
-                        {
-                            for (int d = 0; d < daysBetween; d++)
-                            {
-                                consumptions.Add(new ConsumptionData { SupplierId = supplier.Id, Date = actDayPeriod, Consumption = cons[0], Temperature = temperature });
-                                actDayPeriod = actDayPeriod.AddDays(1); // Datum um einen Tag erhöhen
-                            }
-                        }
-                        day_index += 1;     // Tag
-                        day_index_1 += 1;   // Tag+1
-                    }
-
-                    if (day_index_1 >= counters?.Count)   // Ende der Liste erreicht, Zählerstand-Ende berücksichtigen
-                    {
-                        if (supplier.Ende_Zaehlerstand != null)
-                        {
-                            if (supplier.Zeitraum_Ende != null && supplier.Zeitraum_Ende >= counters[counters.Count - 1].Ablesetag)
-                            {
-                                daysBetween = (supplier.Zeitraum_Ende - counters[^1].Ablesetag).GetValueOrDefault().Days;
-                                cons[0] = ((supplier.Ende_Zaehlerstand - counters[^1].Zaehlerstand).GetValueOrDefault());
-
-                                cons[0] = cons[0] >= 0.0d ? cons[0] : 0.0d; // prüfen ob Zählerstand >= 0 wenn nein Verbrauch=0.0
-
-                                temperature = counters[^1].Temperatur_aussen;
-
-                                if (daysBetween < 1)
-                                {
-                                    consumptions.Add(new ConsumptionData { SupplierId = supplier.Id, Date = supplier.Zeitraum_Ende.GetValueOrDefault().Date, Consumption = cons[0], Temperature = temperature });
-                                }
-                                else if (daysBetween == 1)
-                                {
-                                    consumptions.Add(new ConsumptionData { SupplierId = supplier.Id, Date = supplier.Zeitraum_Ende.GetValueOrDefault().Date, Consumption = cons[0] / 2, Temperature = temperature });
-                                }
-                                else
-                                {
-                                    for (int d = 0; d < daysBetween; d++)
-                                    {
-                                        consumptions.Add(new ConsumptionData { SupplierId = supplier.Id, Date = actDayPeriod, Consumption = cons[0] / daysBetween, Temperature = temperature });
-                                        actDayPeriod = actDayPeriod.AddDays(1); // Datum um einen Tag erhöhen
-                                    }
-                                }
-                            }
-                        }
-                        endOfCalc = true;
-
-
-                    }
-                }
-                catch (Exception ex)
-                {
-                    throw new Exception($"Fehler: {ex.Message}");
-                }
-            }
-            while (!endOfCalc);
-
             return consumptions;
         }
-        #endregion
 
-        #region CalcConsumptionMonthly
-        /// <summary>
-        /// Calculation of monthly consumption
-        /// </summary>
-        /// <typeparam name="T, U"></typeparam>
-        /// <param name="supplier"></param>
-        /// <param name="consumptions"></param>
-        /// <returns></returns>
-        public static List<IConsumption> CalcConsumptionMonthly<T, U>(ISupplier? supplier, List<U>? counterChanges, List<T>? counters) where T : ICounter where U : ICounterChange
+        // 3. Fall: Zählerstände vorhanden -> Berechnung über die Intervalle
+        // Intervall vor dem ersten Ablesetag (Zeitraum-Start bis erster Ablesetag)
+        var firstCounter = counters[0];
+        if (firstCounter.Ablesetag > startPeriod && supplier.Start_Zaehlerstand.HasValue)
+        {
+            int initialDays = (firstCounter.Ablesetag.Date - startPeriod).Days;
+            if (initialDays > 0)
+            {
+                double diff = (firstCounter.Zaehlerstand - supplier.Start_Zaehlerstand).GetValueOrDefault();
+                double initialDailyCons = Math.Max(0.0d, diff / initialDays);
+                double temperature = firstCounter.Temperatur_aussen ?? 0.0d;
+
+                for (int d = 0; d < initialDays; d++)
+                {
+                    consumptions.Add(new ConsumptionData
+                    {
+                        SupplierId = supplier.Id,
+                        Date = startPeriod.AddDays(d),
+                        Consumption = initialDailyCons,
+                        Temperature = temperature
+                    });
+                }
+            }
+        }
+
+        // Intervalle zwischen den einzelnen Zählerständen abarbeiten
+        for (int i = 0; i < counters.Count; i++)
+        {
+            DateTime currentDay = counters[i].Ablesetag.Date;
+            double currentCons = counters[i].Zaehlerstand.GetValueOrDefault();
+            double temperature = counters[i].Temperatur_aussen ?? 0.0d;
+
+            DateTime nextDay;
+            double nextCons;
+
+            if (i < counters.Count - 1)
+            {
+                nextDay = counters[i + 1].Ablesetag.Date;
+                nextCons = counters[i + 1].Zaehlerstand.GetValueOrDefault();
+            }
+            else
+            {
+                // Letzter Eintrag: Bis zum Ende des Lieferanten-Zeitraums rechnen
+                nextDay = endPeriod;
+                nextCons = supplier.Ende_Zaehlerstand ?? currentCons;
+            }
+
+            int intervalDays = (nextDay - currentDay).Days;
+            if (intervalDays <= 0) continue;
+
+            double dailyCons;
+            if (nextCons >= currentCons)
+            {
+                dailyCons = (nextCons - currentCons) / intervalDays;
+            }
+            else
+            {
+                // Zählerwechsel-Logik greift hier
+                dailyCons = 0.0d;
+                if (counterChanges != null)
+                {
+                    // TODO: Zählerwechsel-Berechnung implementieren
+                }
+            }
+
+            dailyCons = Math.Max(0.0d, dailyCons);
+
+            for (int d = 0; d < intervalDays; d++)
+            {
+                consumptions.Add(new ConsumptionData
+                {
+                    SupplierId = supplier.Id,
+                    Date = currentDay.AddDays(d),
+                    Consumption = dailyCons,
+                    Temperature = temperature
+                });
+            }
+        }
+
+        return consumptions;
+    }
+    #endregion
+
+    #region CalcConsumptionMonthly
+    /// <summary>
+    /// Calculation of monthly consumption
+    /// </summary>
+    /// <typeparam name="T, U"></typeparam>
+    /// <param name="supplier"></param>
+    /// <param name="consumptions"></param>
+    /// <returns></returns>
+    public static List<IConsumption> CalcConsumptionMonthly<T, U>(ISupplier? supplier, List<U>? counterChanges, List<T>? counters) where T : ICounter where U : ICounterChange
         {
             DateTime? startDate;
             DateTime? endDate;

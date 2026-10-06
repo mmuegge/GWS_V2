@@ -746,7 +746,19 @@
     public void CalcAverageSum()
     {
         ConsAverage_kWh = Math.Round(ChartPointList.Average(x => x.Cons_kWh).GetValueOrDefault(), 2);
-        ConsSum_kWh = Math.Round(ChartPointList.Sum(x => x.Cons_kWh).GetValueOrDefault(), 2);
+
+        // Berechnung der Summe kWh: Wenn Start- und End-Zählerstand vorhanden, dann Differenz berechnen, ansonsten Summe der Verbrauchswerte
+        if (supplierData?.Ende_Zaehlerstand != null && supplierData?.Start_Zaehlerstand != null)
+        {
+            ConsSum_kWh = Math.Round(supplierData.Ende_Zaehlerstand.Value - supplierData.Start_Zaehlerstand.Value, 2);
+        }
+        else
+        {
+            double actCounter = counterList?.MaxBy(c => c.Ablesetag)?.Zaehlerstand ?? 0.0d;
+            double startCounter = supplierData?.Start_Zaehlerstand ?? 0.0d;
+            ConsSum_kWh = Math.Round(actCounter - startCounter, 2);
+        }
+
         ConsMin_kWh = Math.Round(ChartPointList.Min(x => x.Cons_kWh).GetValueOrDefault(), 2);
         ConsMax_kWh = Math.Round(ChartPointList.Max(x => x.Cons_kWh).GetValueOrDefault(), 2);
         TempAverage = Math.Round(ChartPointList.Average(x => x.Temp).GetValueOrDefault(), 2);
