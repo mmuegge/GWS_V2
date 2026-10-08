@@ -637,38 +637,6 @@
     }
     #endregion
 
-    // #region ActionBeginHandler
-    // /// <summary>
-    // /// ActionBeginHandler
-    // /// </summary>
-    // /// <param name="args"></param>
-    // public void ActionBeginHandler(ActionEventArgs<Gas_CounterModel> args)
-    // {
-    //     // not save
-    //     if (!args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Save))
-    //     {
-    //         // Add
-    //         if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Add))
-    //         {
-    //             if (DropDownValueSupplier == 0)
-    //             {
-    //                 if ((supplierDataList != null) && (supplierDataList.Count > 0))
-    //                 {
-    //                     DropDownValueSupplier = supplierData.Id; // ausgewählter Anbieter über Auswahlbox einlesen
-    //                 }
-    //             }
-    //         }
-    //         // Edit
-    //         else if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.BeginEdit))
-    //         {
-    //             DropDownValueSupplier = args.Data.ID_Anbieter;
-    //             temperatureOutside = args.Data.Temperatur_aussen;
-    //             temperatureInside = args.Data.Temperatur_innen;
-    //         }
-    //     }
-    // }
-    // #endregion
-
     #region ActionCompleteHandler
     /// <summary>
     /// ActionCompleteHandler
@@ -682,13 +650,26 @@
             {
                 save = true;
 
-                counterData = args.Data;
-                // Ablesedatum Uhrzeit korrigieren
-                var corDate = new DateTime(counterData.Ablesetag.Year, counterData.Ablesetag.Month, counterData.Ablesetag.Day, 0, 0, 0);
-                counterData.Ablesetag = corDate;
-                // Ableseuhrzeit korrigieren
-                var corTime = new DateTime(corDate.Year, corDate.Month, corDate.Day, counterData.Uhrzeit.GetValueOrDefault().Hour, counterData.Uhrzeit.GetValueOrDefault().Minute, counterData.Uhrzeit.GetValueOrDefault().Second);
-                counterData.Uhrzeit = corTime;
+                // counterData = args.Data;
+                // // Ablesedatum Uhrzeit korrigieren
+                // var corDate = new DateTime(counterData.Ablesetag.Year, counterData.Ablesetag.Month, counterData.Ablesetag.Day, 0, 0, 0);
+                // counterData.Ablesetag = corDate;
+                // // Ableseuhrzeit korrigieren
+                // var corTime = new DateTime(corDate.Year, corDate.Month, corDate.Day, counterData.Uhrzeit.GetValueOrDefault().Hour, counterData.Uhrzeit.GetValueOrDefault().Minute, counterData.Uhrzeit.GetValueOrDefault().Second);
+                // counterData.Uhrzeit = corTime;
+                
+                counterData = args?.Data;
+
+                // 1. Crash-Schutz: Wenn keine Daten da sind, sofort abbrechen
+                if (counterData == null) return;
+
+                // 2. Ablesetag auf 00:00:00 Uhr setzen
+                counterData.Ablesetag = counterData.Ablesetag.Date;
+
+                // 3. Uhrzeit korrigieren (Kombiniert das Datum vom Ablesetag mit der reinen Uhrzeit)
+                var timeOfDay = counterData.Uhrzeit.GetValueOrDefault().TimeOfDay;
+                counterData.Uhrzeit = counterData.Ablesetag.Add(timeOfDay);
+                
                 // Loxone-Temperaturen schreiben
                 counterData.Temperatur_aussen = temperatureOutside; // Loxone Temperatur Aussen aus SfNumericTextbox auslesen
                 counterData.Temperatur_innen = temperatureInside; // Temperatur Innen aus SfNumericTextbox auslesen
@@ -711,13 +692,13 @@
             }
             else if (args.Action == "Edit")
             {
-                if (DropDownValueSupplier != null && DropDownValueSupplier!= args.Data.ID_Anbieter)
+                if (DropDownValueSupplier != null && DropDownValueSupplier!= args.Data?.ID_Anbieter)
                 {
-                    args.Data.ID_Anbieter = DropDownValueSupplier.GetValueOrDefault();
+                    args.Data?.ID_Anbieter = DropDownValueSupplier.GetValueOrDefault();
                     string? supplierName = supplierDataList?.Where(x => x.Id == DropDownValueSupplier)
                                                                 .Select(a => a.Anbieter)
                                                                 .FirstOrDefault();
-                    args.Data.Anbieter = supplierName;
+                    args.Data?.Anbieter = supplierName;
                 }
                 
                 update = true;
@@ -727,7 +708,7 @@
         }
         else if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Delete))
         {
-            if (args.Data.ID_Tag == 0)
+            if (args.Data?.ID_Tag == 0)
             {
                 counterList = await gwsP!.LoadDataAsync<Gas_CounterModel>(urlMeter + Convert.ToString(supplierData?.Id));
                 ShowToastMessage(false, "Datensatz nicht gelöscht!");
@@ -736,7 +717,7 @@
             {
                 // Datensatz löschen
                 // Ablesetag für DELETE formatieren URL : 2021.10.24
-                string readingDay = $"{args.Data.Ablesetag.Year}.{args.Data.Ablesetag.Month}.{args.Data.Ablesetag.Day}";
+                string readingDay = $"{args.Data?.Ablesetag.Year}.{args.Data?.Ablesetag.Month}.{args.Data?.Ablesetag.Day}";
                 counterData = await gwsP!.DeleteDataAsync<Gas_CounterModel>(urlMeterDay, readingDay);
                 ShowToastMessage(true, "Datensatz gelöscht!");
             }

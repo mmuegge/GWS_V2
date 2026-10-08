@@ -885,9 +885,9 @@
     public void RowCreatingHandler(RowCreatingEventArgs<Electric_CounterChangeModel> args)
     {
            // Daten aus Dropdown "Anbieter" auslesen und Anbieter-Feld in Grip vorbesetzen
-            args.Data.Id_Anbieter = supplierData!.Id;
-            args.Data.Anbieter = supplierDataList?
-                                        .Where(x => x.Id == supplierData.Id)
+            args.Data?.Id_Anbieter = supplierData!.Id;
+            args.Data?.Anbieter = supplierDataList?
+                                        .Where(x => x.Id == supplierData?.Id)
                                         .Select(a => a.Anbieter)
                                         .FirstOrDefault();
     }
@@ -901,7 +901,7 @@
     public void RowEditingHandler(RowEditingEventArgs<Electric_CounterChangeModel> args)
     {
         // copy data
-        DropDownValueSupplier = args.Data.Id_Anbieter;
+        DropDownValueSupplier = args.Data?.Id_Anbieter;
     }
     #endregion
 }

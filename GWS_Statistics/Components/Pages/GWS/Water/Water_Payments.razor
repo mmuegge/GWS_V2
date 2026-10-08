@@ -662,50 +662,112 @@
     /// ActionCompleteHandler
     /// </summary>
     /// <param name="args"></param>
+    // public async Task ActionCompleteHandler(ActionEventArgs<GWS_PaymentModel> args)
+    // {
+    //     if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Save))
+    //     {
+    //         if (args.Action == "Add")
+    //         {
+    //             save = true;
+    //             paymentData = args.Data;
+
+    //             OpenDialog("Datensatz speichern ?", "130px", "220px", true);
+    //         }
+    //         else if (args.Action == "Edit")
+    //         {
+    //             // prüfen Anbieter geändert wurde (Anbieter-Name passt nicht zur Id_Anbieter??)
+    //             if (DropDownValueSupplier != null && DropDownValueSupplier !=args.Data.ID_Anbieter)
+    //             {
+    //                 string? anbieter = supplierDataList!.Where(id => id.Id == DropDownValueSupplier)
+    //                                                    .Select(name => name.Anbieter).FirstOrDefault();
+    //                 if (anbieter != null)
+    //                 {
+    //                     args.Data.ID_Anbieter = DropDownValueSupplier.GetValueOrDefault();
+    //                     args.Data.Anbieter = anbieter;
+    //                 }
+    //             }
+
+    //             update = true;
+    //             paymentData = args.Data;
+    //             OpenDialog("Datensatz ändern ?", "130px", "220px", true);
+    //         }
+    //     }
+    //     else if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Delete))
+    //     {
+    //         if (args.Data.ID_Zahlung == 0)
+    //         {
+    //             paymentList = await gwsP!.LoadDataAsync<GWS_PaymentModel>(urlPaymentsSupplier + Convert.ToString(supplierData.Id));
+    //         }
+    //         else
+    //         {
+    //             paymentData = await gwsP!.DeleteDataAsync<GWS_PaymentModel>(urlPayment, Convert.ToString(args.Data.ID_Zahlung));
+    //             ShowToastMessage(true, "Datensatz gelöscht!");
+    //         }
+    //         SfDataGrid?.Refresh();
+    //     }
+    // }
+
     public async Task ActionCompleteHandler(ActionEventArgs<GWS_PaymentModel> args)
     {
-        if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Save))
+        if (args == null) return;
+
+        if (args.RequestType == Syncfusion.Blazor.Grids.Action.Save)
         {
+            // Zentralisierte Zuweisung für Add und Edit
+            paymentData = args.Data!;
+            if (paymentData == null) return;
+
             if (args.Action == "Add")
             {
                 save = true;
-                paymentData = args.Data;
-
                 OpenDialog("Datensatz speichern ?", "130px", "220px", true);
             }
             else if (args.Action == "Edit")
             {
-                // prüfen Anbieter geändert wurde (Anbieter-Name passt nicht zur Id_Anbieter??)
-                if (DropDownValueSupplier != null && DropDownValueSupplier !=args.Data.ID_Anbieter)
+                // Prüfen, ob der Anbieter im Dropdown geändert wurde
+                if (DropDownValueSupplier != null && DropDownValueSupplier != paymentData.ID_Anbieter)
                 {
-                    string? anbieter = supplierDataList!.Where(id => id.Id == DropDownValueSupplier)
-                                                       .Select(name => name.Anbieter).FirstOrDefault();
-                    if (anbieter != null)
+                    paymentData.ID_Anbieter = DropDownValueSupplier.GetValueOrDefault();
+
+                    // Kompakter LINQ-Ausdruck: bricht die Suche beim ersten Treffer sofort ab
+                    var anbieterName = supplierDataList?
+                        .FirstOrDefault(s => s.Id == DropDownValueSupplier)?
+                        .Anbieter;
+
+                    if (anbieterName != null)
                     {
-                        args.Data.ID_Anbieter = DropDownValueSupplier.GetValueOrDefault();
-                        args.Data.Anbieter = anbieter;
+                        paymentData.Anbieter = anbieterName;
                     }
                 }
 
                 update = true;
-                paymentData = args.Data;
                 OpenDialog("Datensatz ändern ?", "130px", "220px", true);
             }
         }
-        else if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Delete))
+        else if (args.RequestType == Syncfusion.Blazor.Grids.Action.Delete)
         {
-            if (args.Data.ID_Zahlung == 0)
+            var dataToDelete = args.Data;
+            if (dataToDelete == null) return;
+
+            if (dataToDelete.ID_Zahlung == 0)
             {
-                paymentList = await gwsP!.LoadDataAsync<GWS_PaymentModel>(urlPaymentsSupplier + Convert.ToString(supplierData.Id));
+                // String-Interpolation statt altmodischer Verkettung
+                paymentList = await gwsP!.LoadDataAsync<GWS_PaymentModel>($"{urlPaymentsSupplier}{supplierData.Id}");
             }
             else
             {
-                paymentData = await gwsP!.DeleteDataAsync<GWS_PaymentModel>(urlPayment, Convert.ToString(args.Data.ID_Zahlung));
+                // ToString() ist bei festen numerischen Datentypen sauberer und performanter
+                paymentData = await gwsP!.DeleteDataAsync<GWS_PaymentModel>(urlPayment, dataToDelete.ID_Zahlung.ToString());
                 ShowToastMessage(true, "Datensatz gelöscht!");
             }
-            SfDataGrid?.Refresh();
+
+            if (SfDataGrid != null)
+            {
+                await SfDataGrid.Refresh();
+            }
         }
     }
+
     #endregion
 
     #region CancelClick

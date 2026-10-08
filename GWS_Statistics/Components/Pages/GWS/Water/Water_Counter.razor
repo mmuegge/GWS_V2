@@ -755,7 +755,7 @@
         }
         else if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Delete))
         {
-            if (args.Data.ID_Tag == 0)
+            if (args.Data?.ID_Tag == 0)
             {
                 counterList = await gwsP!.LoadDataAsync<Water_CounterModel>(urlMeter + Convert.ToString(supplierData!.Id));
                 ShowToastMessage(false, "Datensatz nicht gelöscht!");
