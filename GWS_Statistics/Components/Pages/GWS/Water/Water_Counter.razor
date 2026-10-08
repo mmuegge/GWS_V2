@@ -705,13 +705,18 @@
             {
                 save = true;
 
-                counterData = args.Data;
-                // Ablesedatum Uhrzeit korrigieren
-                var corDate = new DateTime(counterData.Ablesetag.Year, counterData.Ablesetag.Month, counterData.Ablesetag.Day, 0, 0, 0);
-                counterData.Ablesetag = corDate;
-                // Ableseuhrzeit korrigieren
-                var corTime = new DateTime(corDate.Year, corDate.Month, corDate.Day, counterData.Uhrzeit.GetValueOrDefault().Hour, counterData.Uhrzeit.GetValueOrDefault().Minute, counterData.Uhrzeit.GetValueOrDefault().Second);
-                counterData.Uhrzeit = corTime;
+                counterData = args?.Data;
+
+                // 1. Crash-Schutz: Wenn keine Daten da sind, sofort abbrechen
+                if (counterData == null) return;
+
+                // 2. Ablesetag auf 00:00:00 Uhr setzen
+                counterData.Ablesetag = counterData.Ablesetag.Date;
+
+                // 3. Uhrzeit korrigieren (Kombiniert das Datum vom Ablesetag mit der reinen Uhrzeit)
+                var timeOfDay = counterData.Uhrzeit.GetValueOrDefault().TimeOfDay;
+                counterData.Uhrzeit = counterData.Ablesetag.Add(timeOfDay);
+
                 // Loxone-Temperaturen schreiben
                 counterData.Temperatur_aussen = temperatureOutside; // Loxone Temperatur Aussen aus SfNumericTextbox auslesen
                 counterData.Temperatur_innen = temperatureInside; // Temperatur Innen aus SfNumericTextbox auslesen

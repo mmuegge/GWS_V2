@@ -593,7 +593,7 @@ else
         }
         else if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Delete))
         {
-            if (args.Data.Id == 0)
+            if (args.Data?.Id == 0)
             {
                 boilerList = await gwsP!.LoadDataAsync<Gas_BoilerModel>(urlBoiler);
             }
