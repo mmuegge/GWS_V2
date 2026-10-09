@@ -2,7 +2,6 @@
 
 @using GWS_Statistics.Components.Services
 @using GWS_Statistics.Helper
-@using System.Globalization
 @using System.Net
 
 @inject MyAppConfigModel myAppSettings
@@ -403,7 +402,7 @@
     public DateTime? startDate { get; set; } = new DateTime(2000, 1, 1);
     public DateTime? endDate { get; set; } = new DateTime(2000, 1, 1);
 
-    MyAppConfigModel settings = new();
+    MyAppConfigModel? settings = new();
 
     // Dictionary for column descriptions
     public Dictionary<string, string> ColumnDescriptions = new()
@@ -436,43 +435,49 @@
     #region OnInitializedAsync
     protected override async Task OnInitializedAsync()
     {
-        // Spinner anzeigen bis Daten ausgelesen wurden
-        this.spinnerVisibleProperty = true;
+        // 1. Spinner sofort einschalten
+        spinnerVisibleProperty = true;
 
-        // MyAppSettings.json auslesen und letzten gespeicherten Anbieter auslesen
-        settings = GetSetMyAppConfig.GetMyAppSettings.ReadSettings(myAppSettings)!;
-
-        gwsP = new GWSProcessor(myHttpClient, settings.GWSUri);
         try
         {
-            // Anbieterdaten auslesen (nur Anbieter und Id => durch Water_SupplierDataModel)
+            // Settings und API-Prozessor initialisieren
+            settings = GetSetMyAppConfig.GetMyAppSettings.ReadSettings(myAppSettings);
+            if (settings == null) return;
+
+            gwsP = new GWSProcessor(myHttpClient, settings.GWSUri);
+
+            // Anbieterdaten auslesen
             supplierDataList = await gwsP.LoadDataAsync<Water_SupplierDataModel>(urlSupplier);
 
-            if (supplierDataList != null && supplierDataList.Any()) // prüfen ob es Anbieterdaten gibt
+            if (supplierDataList != null && supplierDataList.Any())
             {
-                // gespeicherten letzten Anbieter auslesen
-                supplierData.Id = String.IsNullOrEmpty(settings.Supplier_Id!.Water) ? supplierData.Id = supplierDataList.Max(x => x.Id) : supplierData.Id = Int32.Parse(settings.Supplier_Id.Water);
-                // Anbieter Start-Datum auslesen
+                // ID sicher ermitteln (Verhindert Absturz, falls Parse fehlschlägt)
+                if (!string.IsNullOrEmpty(settings.Supplier_Id?.Water) && int.TryParse(settings.Supplier_Id.Water, out int savedId))
+                {
+                    supplierData.Id = savedId;
+                }
+                else
+                {
+                    supplierData.Id = supplierDataList.Max(x => x.Id);
+                }
 
-                startDate = supplierDataList
-                .Where(c => c.Id == supplierData.Id)
-                .Select(c => c.Zeitraum_Start).FirstOrDefault();
-
-                // Anbieter Ende-Datum auslesen
-                endDate = supplierDataList
-               .Where(c => c.Id == supplierData.Id)
-               .Select(c => c.Zeitraum_Ende).FirstOrDefault();
+                // Performance-Boost: Den gewählten Anbieter nur EINMAL suchen
+                var currentSupplier = supplierDataList.FirstOrDefault(c => c.Id == supplierData.Id);
+                if (currentSupplier != null)
+                {
+                    startDate = currentSupplier.Zeitraum_Start;
+                    endDate = currentSupplier.Zeitraum_Ende;
+                }
             }
             else
             {
-                // es gibt keine gültigen Daten der Anbieter
                 supplierData.Id = 0;
             }
 
+            // Zahlungen anbieterabhängig auslesen
             if (supplierData.Id > 0)
             {
-                // Zahlungen anbieterabhängig auslesen
-                paymentList = await gwsP.LoadDataAsync<GWS_PaymentModel>(urlPaymentsSupplier + Convert.ToString(supplierData.Id));
+                paymentList = await gwsP.LoadDataAsync<GWS_PaymentModel>($"{urlPaymentsSupplier}{supplierData.Id}");
                 if (paymentList == null || !paymentList.Any())
                 {
                     OpenDialog("Keine Wasser-Zahlungen vorhanden!", "60px", "380px", false);
@@ -482,16 +487,16 @@
             // Zahlungsarten laden
             paymentsMethodList = await gwsP.LoadDataAsync<GWS_PaymentsMethodModel>(urlPaymentsMethod);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw new Exception("Es konnten keine Wasser-Zahlungen geladen werden");
+            // Stacktrace erhalten durch Mitgabe der Original-Exception (ex)
+            throw new Exception("Es konnten keine Wasser-Zahlungen geladen werden.", ex);
         }
-
-        #region Spinner
-        await Task.Delay(200);
-        this.spinnerVisibleProperty = false;
-        #endregion
-
+        finally
+        {
+            // Spinner GARANTIERT ausschalten (künstliches Delay entfernt)
+            spinnerVisibleProperty = false;
+        }
     }
     #endregion
 
@@ -502,28 +507,44 @@
     /// <param name="args"></param>
     private async Task ValueSelectHandler(SelectEventArgs<Water_SupplierDataModel> args)
     {
+        // 1. Guard Clauses: Abbrechen, wenn Argumente oder API-Service fehlen
+        if (args?.ItemData == null || gwsP == null) return;
+
         supplierData = args.ItemData;
 
         if (supplierData.Id > 0)
         {
-            // Spinner
-            this.spinnerVisibleProperty = true;
-            success = GetSetMyAppConfig.SetMyAppSettings.WriteSettings(myAppSettings, "Supplier_Id.Water", supplierData.Id.ToString());
+            // 2. Spinner SOFORT einschalten, bevor die asynchronen Aktionen starten
+            spinnerVisibleProperty = true;
 
-            // Start-Zeitpunkt/Ende-Zeitpunkt auslesen
-            startDate = args.ItemData.Zeitraum_Start;
-            endDate = args.ItemData.Zeitraum_Ende;
-
-            paymentList = await gwsP!.LoadDataAsync<GWS_PaymentModel>(urlPaymentsSupplier + Convert.ToString(supplierData.Id)); // Daten des neu ausgewählten Anbieter laden
-            if (paymentList == null || !paymentList.Any())
+            try
             {
-                OpenDialog("Keine Wasser-Zahlungen vorhanden!", "60px", "380px", false);
-            }
-            SfDataGrid?.Refresh();
+                // Einstellungen schreiben
+                success = GetSetMyAppConfig.SetMyAppSettings.WriteSettings(myAppSettings, "Supplier_Id.Water", supplierData.Id.ToString());
 
-            // Spinner
-            await Task.Delay(200);
-            this.spinnerVisibleProperty = false;
+                // Zeiträume zuweisen
+                startDate = supplierData.Zeitraum_Start;
+                endDate = supplierData.Zeitraum_Ende;
+
+                // API-Aufruf (Der Spinner läuft währenddessen im Hintergrund)
+                paymentList = await gwsP.LoadDataAsync<GWS_PaymentModel>($"{urlPaymentsSupplier}{supplierData.Id}");
+
+                if (paymentList == null || !paymentList.Any())
+                {
+                    OpenDialog("Keine Wasser-Zahlungen vorhanden!", "60px", "380px", false);
+                }
+
+                // Grid asynchron aktualisieren
+                if (SfDataGrid != null)
+                {
+                    await SfDataGrid.Refresh();
+                }
+            }
+            finally
+            {
+                // 3. Spinner GARANTIERT wieder ausschalten (auch im Fehlerfall)
+                spinnerVisibleProperty = false;
+            }
         }
     }
     #endregion
@@ -536,125 +557,52 @@
     /// <param name="args"></param>
     public async Task ToolbarBtnClickHandler(Syncfusion.Blazor.Navigations.ClickEventArgs args)
     {
-        if (args.Item.Id.Contains("_excelexport"))
+        // 1. Guard Clauses: Sicherstellen, dass Argumente und das Grid existieren
+        if (args?.Item?.Id == null || SfDataGrid == null) return;
+
+        string dateSuffix = $"{DateTime.Now:ddMMyyyy}";
+        string itemId = args.Item.Id;
+
+        // --- FALL 1: EXCEL EXPORT ---
+        if (itemId.Contains("_excelexport"))
         {
-            ExcelExportProperties excelExportProperties = new();
-            excelExportProperties.FileName = $"Wasserzaehler_{DateTime.Now.ToString("ddMMyyyy")}.xlsx";
-
-            ExcelTheme Theme = new ExcelTheme();
-            // Header
-            ExcelStyle ThemeStyleHeader = new ExcelStyle()
+            ExcelExportProperties excelExportProperties = new()
+            {
+                FileName = $"Stromzaehler_{dateSuffix}.xlsx",
+                Theme = new()
                 {
-                    FontName = "Calibri",
-                    FontSize = 12,
-                    Bold = true,
-                };
-            Theme.Header = ThemeStyleHeader;
-            // Data
-            ExcelStyle ThemeStyleRecord = new ExcelStyle()
-                {
-                    FontName = "Calibri",
-                    FontSize = 10,
-                    Bold = false,
-                };
-            Theme.Record = ThemeStyleRecord;
-
-            excelExportProperties.Theme = Theme;
+                    Header = new() { FontName = "Calibri", FontSize = 12, Bold = true },
+                    Record = new() { FontName = "Calibri", FontSize = 10, Bold = false }
+                }
+            };
 
             await SfDataGrid.ExportToExcelAsync(excelExportProperties);
         }
-        else if (args.Item.Id.Contains("_pdfexport"))
+        // --- FALL 2: PDF EXPORT ---
+        else if (itemId.Contains("_pdfexport"))
         {
-            PdfExportProperties pdfExportProperties = new();
-            pdfExportProperties.IsRepeatHeader = true;
-            pdfExportProperties.FileName = $"Wasseranbieter_{DateTime.Now.ToString("ddMMyyyy")}.pdf";
-            pdfExportProperties.PageOrientation = Syncfusion.Blazor.Grids.PageOrientation.Landscape;
-
-            PdfHeader pdfHeader = new()
+            PdfExportProperties pdfExportProperties = new()
+            {
+                IsRepeatHeader = true,
+                FileName = $"Stromanbieter_{dateSuffix}.pdf",
+                PageOrientation = Syncfusion.Blazor.Grids.PageOrientation.Landscape,
+                Header = new() { FromTop = 0, Height = 80, Contents = HeaderContent },
+                Footer = new() { FromBottom = 0, Height = 80, Contents = FooterContent },
+                Theme = new()
                 {
-                    FromTop = 0,
-                    Height = 80,
-                    Contents = HeaderContent
-                };
-
-            PdfFooter pdfFooter = new()
-                {
-                    FromBottom = 0,
-                    Height = 80,
-                    Contents = FooterContent
-                };
-
-            PdfTheme Theme = new PdfTheme();
-
-            PdfThemeStyle HeaderThemeStyle = new PdfThemeStyle()
-                {
-                    FontColor = "Blue",
-                    FontName = "Calibri",
-                    FontSize = 8,
-                    Bold = true,
-                };
-            Theme.Header = HeaderThemeStyle;
-
-            pdfExportProperties.Theme = Theme;
-
-            pdfExportProperties.Header = pdfHeader;
-            pdfExportProperties.Footer = pdfFooter;
+                    Header = new() { FontColor = "Blue", FontName = "Calibri", FontSize = 8, Bold = true }
+                }
+            };
 
             await SfDataGrid.ExportToPdfAsync(pdfExportProperties);
         }
-        else if (args.Item.Id.Contains("XmlExport"))
+        // --- FALL 3: XML EXPORT (Ungenutzt) ---
+        else if (itemId.Contains("XmlExport"))
         {
-            Console.Write("Export to Xml function");        // wird nicht genutzt
+            // Wenn nicht genutzt, reicht ein simpler Kommentar, ohne Konsolenausgabe
         }
     }
-    #endregion
 
-    #region ActionBeginHandler
-    /// <summary>
-    /// ActionBeginHandler
-    /// </summary>
-    /// <param name="args"></param>
-    // public void ActionBeginHandler(ActionEventArgs<GWS_PaymentModel> args)
-    // {
-    //     if (args.Data != null)
-    //     {
-    //         if (!args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Save))
-    //         {
-    //             // Add
-    //             if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Add))
-    //             {
-    //                 // Daten aus Dropdown "Anbieter" auslesen und Anbieter-Feld in Grip vorbesetzen
-    //                 DropDownValueSupplier = supplierData.Id;
-
-    //                 args.Data.ID_Anbieter = supplierData.Id;
-    //                 args.Data.Anbieter = supplierDataList?
-    //                                           .Where(x => x.Id == supplierData.Id)
-    //                                           .Select(a => a.Anbieter)
-    //                                           .FirstOrDefault();
-
-    //                 if (DropDownValuePaymentsMethod == 0)
-    //                 {
-    //                     if (paymentsMethodList != null && paymentsMethodList.Any())
-    //                     {
-    //                         DropDownValuePaymentsMethod = paymentsMethodList
-    //                                                         .Where(c => c.Zahlungsart == args.Data.Zahlungsart)
-    //                                                         .Select(c => c.ID_Zahlungsart).FirstOrDefault();// ausgewählte Bezahlmethode über Auswahlbox einlesen
-    //                     }
-    //                 }
-    //                 else
-    //                 {
-    //                     args.Data.Zahlungsart = paymentsMethodList!
-    //                                                 .Where(a => a.ID_Zahlungsart == DropDownValuePaymentsMethod)
-    //                                                 .Select(a => a.Zahlungsart).FirstOrDefault();
-    //                 }
-    //             }
-    //             else if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.BeginEdit))
-    //             {
-    //                 DropDownValueSupplier = args.Data.ID_Anbieter;
-    //             }
-    //         }
-    //     }
-    // }
     #endregion
 
     #region ActionCompleteHandler
@@ -662,51 +610,6 @@
     /// ActionCompleteHandler
     /// </summary>
     /// <param name="args"></param>
-    // public async Task ActionCompleteHandler(ActionEventArgs<GWS_PaymentModel> args)
-    // {
-    //     if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Save))
-    //     {
-    //         if (args.Action == "Add")
-    //         {
-    //             save = true;
-    //             paymentData = args.Data;
-
-    //             OpenDialog("Datensatz speichern ?", "130px", "220px", true);
-    //         }
-    //         else if (args.Action == "Edit")
-    //         {
-    //             // prüfen Anbieter geändert wurde (Anbieter-Name passt nicht zur Id_Anbieter??)
-    //             if (DropDownValueSupplier != null && DropDownValueSupplier !=args.Data.ID_Anbieter)
-    //             {
-    //                 string? anbieter = supplierDataList!.Where(id => id.Id == DropDownValueSupplier)
-    //                                                    .Select(name => name.Anbieter).FirstOrDefault();
-    //                 if (anbieter != null)
-    //                 {
-    //                     args.Data.ID_Anbieter = DropDownValueSupplier.GetValueOrDefault();
-    //                     args.Data.Anbieter = anbieter;
-    //                 }
-    //             }
-
-    //             update = true;
-    //             paymentData = args.Data;
-    //             OpenDialog("Datensatz ändern ?", "130px", "220px", true);
-    //         }
-    //     }
-    //     else if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Delete))
-    //     {
-    //         if (args.Data.ID_Zahlung == 0)
-    //         {
-    //             paymentList = await gwsP!.LoadDataAsync<GWS_PaymentModel>(urlPaymentsSupplier + Convert.ToString(supplierData.Id));
-    //         }
-    //         else
-    //         {
-    //             paymentData = await gwsP!.DeleteDataAsync<GWS_PaymentModel>(urlPayment, Convert.ToString(args.Data.ID_Zahlung));
-    //             ShowToastMessage(true, "Datensatz gelöscht!");
-    //         }
-    //         SfDataGrid?.Refresh();
-    //     }
-    // }
-
     public async Task ActionCompleteHandler(ActionEventArgs<GWS_PaymentModel> args)
     {
         if (args == null) return;
@@ -736,6 +639,7 @@
 
                     if (anbieterName != null)
                     {
+                        paymentData.ID_Anbieter = DropDownValueSupplier.Value;
                         paymentData.Anbieter = anbieterName;
                     }
                 }
@@ -778,9 +682,18 @@
     private async Task CancelClick()
     {
         DialogVisible = false;
-        // Zahlungen anbieterabhängig auslesen
-        paymentList = await gwsP!.LoadDataAsync<GWS_PaymentModel>(urlPaymentsSupplier + Convert.ToString(supplierData.Id));
-        SfDataGrid?.Refresh();
+
+        // Guard Clause: Abbrechen, wenn benötigte Objekte oder IDs fehlen
+        if (gwsP == null || supplierData == null) return;
+
+        // Performante String-Interpolation statt Convert.ToString und sicherer API-Aufruf
+        string url = $"{urlPaymentsSupplier}{supplierData.Id}";
+        paymentList = await gwsP.LoadDataAsync<GWS_PaymentModel>(url);
+
+        if (SfDataGrid != null)
+        {
+            await SfDataGrid.Refresh(); // Syncfusion Grid-Refresh ist in der Regel async
+        }
     }
     #endregion
 
@@ -793,40 +706,45 @@
     {
         DialogVisible = false;
 
-        if (save) // Datensatz speichern
+        // 1. Frühzeitiger Abbruch (Guard Clause), wenn keine Daten vorhanden sind
+        if (paymentData == null || gwsP == null) return;
+
+        bool isSuccess = false;
+
+        if (save)
         {
-            if (paymentData != null)
+            save = false; // Direkt zurücksetzen, um Doppel-Klicks abzufangen
+            apiResponse = await gwsP.PostDataAsync<GWS_PaymentModel>(urlPayment, paymentData);
+            isSuccess = apiResponse?.MyHttpStatusCode == HttpStatusCode.Created;
+        }
+        else if (update)
+        {
+            update = false; // Direkt zurücksetzen
+            string url = $"{urlPayment}{paymentData.ID_Zahlung}"; // Sauberere String-Verkettung
+
+            apiResponse = await gwsP.UpdateDataAsync<GWS_PaymentModel>(url, paymentData);
+            // Hier fehlte die Prüfung! Angenommen, OK oder NoContent ist der Erfolgsstatus:
+            isSuccess = apiResponse?.MyHttpStatusCode == HttpStatusCode.OK || apiResponse?.MyHttpStatusCode == HttpStatusCode.NoContent;
+        }
+
+        // 2. Gemeinsame Logik für Erfolg/Fehler zusammenfassen
+        if (isSuccess)
+        {
+            string msg = save ? "Datensatz gespeichert!" : "Datensatz aktualisiert!";
+            ShowToastMessage(true, msg);
+
+            // Daten aktualisieren
+            paymentList = await gwsP.LoadDataAsync<GWS_PaymentModel>($"{urlPaymentsSupplier}{supplierData.Id}");
+
+            if (SfDataGrid != null)
             {
-                save = false;
-
-                string url = urlPayment;
-                apiResponse = await gwsP!.PostDataAsync<GWS_PaymentModel>(url, paymentData);
-
-                if (apiResponse.MyHttpStatusCode == HttpStatusCode.Created)
-                {
-                    ShowToastMessage(true, "Datensatz gespeichert (created)!");
-                    paymentList = await gwsP.LoadDataAsync<GWS_PaymentModel>(urlPaymentsSupplier + Convert.ToString(supplierData.Id));
-                }
-                else
-                {
-                    ShowToastMessage(false, "Datensatz nicht gespeichert!");
-                }
+                await SfDataGrid.Refresh();
             }
         }
-        else if (update) // Datensatz updaten
+        else if (save || update) // Nur Toast zeigen, wenn überhaupt eine Aktion stattgefunden hat
         {
-            update = false;
-
-            if (paymentData != null)
-            {
-                string url = urlPayment + Convert.ToString(paymentData.ID_Zahlung);
-
-                apiResponse = await gwsP!.UpdateDataAsync<GWS_PaymentModel>(url, paymentData);  // Put
-                ShowToastMessage(true, "Datensatz aktualisiert!");
-                paymentList = await gwsP!.LoadDataAsync<GWS_PaymentModel>(urlPaymentsSupplier + Convert.ToString(supplierData.Id));
-            }
+            ShowToastMessage(false, "Fehler beim Speichern oder Aktualisieren der Daten!");
         }
-        SfDataGrid?.Refresh();
     }
     #endregion
 
@@ -839,14 +757,12 @@
     /// <returns></returns>
     private void ShowToastMessage(bool success, string message)
     {
-        if (success)
-        {
-            ShowToast("Erfolg", message, "e-toast-success", "e-circle-check");
-        }
-        else
-        {
-            ShowToast("Fehler", message, "e-toast-danger", "e-circle-close");
-        }
+        // Die Parameter werden dynamisch anhand des Erfolgsstatus bestimmt
+        string title = success ? "Erfolg" : "Fehler";
+        string cssClass = success ? "e-toast-success" : "e-toast-danger";
+        string icon = success ? "e-circle-check" : "e-circle-close";
+
+        ShowToast(title, message, cssClass, icon);
     }
     #endregion
 
@@ -860,13 +776,13 @@
     /// <param name="icon"></param>
     private void ShowToast(string title, string content, string cssClass, string icon)
     {
-        this.ToastService.Open(new ToastOption()
-            {
-                Title = title,
-                Content = content,
-                CssClass = cssClass,
-                Icon = icon,
-            });
+        ToastService.Open(new()
+        {
+            Title = title,
+            Content = content,
+            CssClass = cssClass,
+            Icon = icon
+        });
     }
     #endregion
 
@@ -892,7 +808,7 @@
         dialogHeight = height;
         dialogWidth = width;
         showDialogButtons = showButtons;
-        this.DialogVisible = true;
+        DialogVisible = true;
     }
     #endregion
 
@@ -904,9 +820,12 @@
     /// <returns></returns>
     public string GetDialogHeader(GWS_PaymentModel payment)
     {
-        return payment.ID_Zahlung == 0
-            ? "Einzahlung: neue Einzahlung"
-            : "Einzahlung: " + payment.Datum.ToString("dd.MM.yyyy");
+        return payment switch
+        {
+            null => "Keine Einzahlung vorhanden!",
+            { ID_Zahlung: 0 } => "Einzahlung: neue Einzahlung",
+            _ => $"Einzahlung: {payment.Datum:dd.MM.yyyy}"
+        };
     }
     #endregion
 
@@ -917,34 +836,39 @@
     /// <param name="args"></param>
     public void RowCreatingHandler(RowCreatingEventArgs<GWS_PaymentModel> args)
     {
-            if(supplierData != null)
+        // 1. Guard Clause: Wenn keine Anbieterdaten da sind, sofort abbrechen
+        if (supplierData == null || args?.Data == null) return;
+
+        // Anbieter-Daten zuweisen
+        DropDownValueSupplier = supplierData.Id;
+        args.Data.ID_Anbieter = supplierData.Id;
+
+        // Kompaktes LINQ: Findet direkt den Anbieter-Namen
+        args.Data.Anbieter = supplierDataList?
+            .FirstOrDefault(x => x.Id == supplierData.Id)?
+            .Anbieter;
+
+        // 2. Bezahlmethode verarbeiten
+        if (DropDownValuePaymentsMethod == 0)
+        {
+            // Wert aus der Liste anhand der Daten lesen
+            var method = paymentsMethodList?
+                .FirstOrDefault(c => c.Zahlungsart == args.Data.Zahlungsart);
+
+            if (method != null)
             {
-                // copy data
-                DropDownValueSupplier = supplierData.Id;
-
-                args.Data.ID_Anbieter = supplierData.Id;
-                    args.Data.Anbieter = supplierDataList?
-                                              .Where(x => x.Id == supplierData.Id)
-                                              .Select(a => a.Anbieter)
-                                              .FirstOrDefault();
-
-                if (DropDownValuePaymentsMethod == 0)
-                {
-                    if (paymentsMethodList != null && paymentsMethodList.Any())
-                    {
-                        DropDownValuePaymentsMethod = paymentsMethodList
-                                                        .Where(c => c.Zahlungsart == args.Data.Zahlungsart)
-                                                        .Select(c => c.ID_Zahlungsart).FirstOrDefault();// ausgewählte Bezahlmethode über Auswahlbox einlesen
-                    }
-                }
-                else
-                {
-                    args.Data.Zahlungsart = paymentsMethodList!
-                                                .Where(a => a.ID_Zahlungsart == DropDownValuePaymentsMethod)
-                                                .Select(a => a.Zahlungsart).FirstOrDefault();
-                }
+                DropDownValuePaymentsMethod = method.ID_Zahlungsart;
             }
+        }
+        else
+        {
+            // Wert aus der Liste anhand der ID lesen (Sicherer Null-Check statt !)
+            args.Data.Zahlungsart = paymentsMethodList?
+                .FirstOrDefault(a => a.ID_Zahlungsart == DropDownValuePaymentsMethod)?
+                .Zahlungsart;
+        }
     }
+
     #endregion
 
     #region RowEditingHandler
@@ -954,8 +878,11 @@
     /// <param name="args"></param>
     public void RowEditingHandler(RowEditingEventArgs<GWS_PaymentModel> args)
     {
-        // copy data
-        DropDownValueSupplier = args.Data.ID_Anbieter;
+        // C# 8+ Null-Conditional Assignment: Zuweisung erfolgt nur, wenn args und Data nicht null sind
+        if (args?.Data != null)
+        {
+            DropDownValueSupplier = args.Data.ID_Anbieter;
+        }
     }
     #endregion
 }
