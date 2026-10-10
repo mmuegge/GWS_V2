@@ -128,15 +128,15 @@
     <div class="card shadow-lg">
         <SfChart @ref="chart" Title="Übersicht" Width="@Width" Height="@Height" Palettes="@palettes">
             <ChartEvents 
-                OnAxisLabelRender="LabelRender"
-                SharedTooltipRender="ToolTipRenderEvent">
+            OnAxisLabelRender="LabelRender"
+            SharedTooltipRender="ToolTipRenderEvent">
             </ChartEvents>
 
             <ChartTitleStyle Size="24px" 
-                             Color="black" 
-                             FontFamily=@fontFamily 
-                             FontWeight="normal" 
-                             FontStyle="normal">
+            Color="black" 
+            FontFamily=@fontFamily 
+            FontWeight="normal" 
+            FontStyle="normal">
             </ChartTitleStyle>
 
             <ChartArea Background="#8c8b87" Width="auto">
@@ -148,11 +148,11 @@
             <ChartZoomSettings EnableMouseWheelZooming="true" EnablePinchZooming="true" EnableSelectionZooming="true"></ChartZoomSettings>
 
             <ChartPrimaryXAxis RangePadding="ChartRangePadding.Additional"
-                               ValueType="Syncfusion.Blazor.Charts.ValueType.DateTimeCategory"
-                               EdgeLabelPlacement="EdgeLabelPlacement.None"
-                               Interval="@IntervalDuration"
-                               Format="@DateTimeFormat"
-                               IntervalType="@IntervalType">
+            ValueType="Syncfusion.Blazor.Charts.ValueType.DateTimeCategory"
+            EdgeLabelPlacement="EdgeLabelPlacement.None"
+            Interval="@IntervalDuration"
+            Format="@DateTimeFormat"
+            IntervalType="@IntervalType">
 
                 <ChartAxisMajorGridLines Width="0"></ChartAxisMajorGridLines>
                 <ChartAxisLabelStyle FontFamily=@fontFamily></ChartAxisLabelStyle>
@@ -161,8 +161,8 @@
             </ChartPrimaryXAxis>
 
             <ChartPrimaryYAxis Title="Verbrauch"
-                               LabelFormat="{value} kWh"
-                               RangePadding="ChartRangePadding.Normal">
+            LabelFormat="{value} kWh"
+            RangePadding="ChartRangePadding.Normal">
 
                 <ChartAxisLineStyle Width="0"></ChartAxisLineStyle>
                 <ChartAxisLabelStyle FontFamily=@fontFamily></ChartAxisLabelStyle>
@@ -173,52 +173,52 @@
 
             <ChartAxes>
                 <ChartAxis Name="yAxisCons"
-                           Title="Verbrauch"
-                           RangePadding="ChartRangePadding.Auto"
-                           OpposedPosition="false"
-                           Interval="@Interval_YAxis"
-                           Minimum="0"
-                           Maximum="@MaxRangeCons"
-                           LabelFormat="@labelFormat_Cons">
+                Title="Verbrauch"
+                RangePadding="ChartRangePadding.Auto"
+                OpposedPosition="false"
+                Interval="@Interval_YAxis"
+                Minimum="0"
+                Maximum="@MaxRangeCons"
+                LabelFormat="@labelFormat_Cons">
                     <ChartAxisMajorGridLines Width="1"></ChartAxisMajorGridLines>
                 </ChartAxis>
 
                 <ChartAxis Name="yAxisTemp"
-                           Title="Temperatur"
-                           RangePadding="ChartRangePadding.Auto"
-                           OpposedPosition="true"
-                           Interval="5"
-                           Minimum="@MinRangeTemp"
-                           Maximum="@MaxRangeTemp"
-                           LabelFormat="N0">
+                Title="Temperatur"
+                RangePadding="ChartRangePadding.Auto"
+                OpposedPosition="true"
+                Interval="5"
+                Minimum="@MinRangeTemp"
+                Maximum="@MaxRangeTemp"
+                LabelFormat="N0">
                     <ChartAxisMajorGridLines Width="0"></ChartAxisMajorGridLines>
                 </ChartAxis>
             </ChartAxes>
 
             <ChartSeriesCollection>
                 <ChartSeries Type="ChartSeriesType.Column"
-                             DataSource="@ChartPointList"
-                             Visible="@serieConskWh_Visible"
-                             YAxisName="yAxisCons"
-                             XName="Date"
-                             YName="Cons_kWh"
-                             Width="3"
-                             GroupName="Consumption"
-                             Name="Verbrauch"
-                             TooltipFormat="${series.name} : ${point.y} kWh">
+                DataSource="@ChartPointList"
+                Visible="@serieConskWh_Visible"
+                YAxisName="yAxisCons"
+                XName="Date"
+                YName="Cons_kWh"
+                Width="3"
+                GroupName="Consumption"
+                Name="Verbrauch"
+                TooltipFormat="${series.name} : ${point.y} kWh">
                 </ChartSeries>
 
                 @if (DdlInterval != Interval.jährlich)
                 {
                     <ChartSeries Type="ChartSeriesType.Line"
-                                 DataSource="@ChartPointList"
-                                 YAxisName="yAxisTemp"
-                                 Visible=@serieTempVisible
-                                 XName="Date"
-                                 YName="Temp"
-                                 Width="1"
-                                 Name="Temperatur"
-                                 TooltipFormat="${series.name} : ${point.y} °C">
+                    DataSource="@ChartPointList"
+                    YAxisName="yAxisTemp"
+                    Visible=@serieTempVisible
+                    XName="Date"
+                    YName="Temp"
+                    Width="1"
+                    Name="Temperatur"
+                    TooltipFormat="${series.name} : ${point.y} °C">
                     </ChartSeries>
                 }
             </ChartSeriesCollection>
@@ -312,16 +312,6 @@
     #region Interval
     public IEnumerable<string> EnumInterval = Enum.GetNames(typeof(Interval));
     public Interval DdlInterval { get; set; } = Interval.täglich;
-
-    public enum Interval
-    {
-        [Display(Name = "täglich")]
-        täglich = 1,
-        [Display(Name = "monatlich")]
-        monatlich = 2,
-        [Display(Name = "jährlich")]
-        jährlich = 3
-    }
     #endregion
 
     #region Spinner
@@ -430,82 +420,106 @@
     /// <exception cref="Exception"></exception>
     protected override async Task OnInitializedAsync()
     {
-        int lastSupplierId=0;
-        int enumValue;
-        bool success;
-
         this.spinnerVisibleProperty = true;
 
-        // MyAppSettings.json auslesen und letzten gespeicherten Anbieter auslesen
-        settings = await Task.Run(() => GetSetMyAppConfig.GetMyAppSettings.ReadSettings(myAppSettings));
-        // Anzeigeintervall auslesen
-        success = Int32.TryParse(settings!.Display_Interval!.Electric, out enumValue);
-        if (success)
-        {
-            DdlInterval = Enum.IsDefined(typeof(Interval), enumValue) ? DdlInterval = (Interval)enumValue : DdlInterval = Interval.täglich;
-            supplierSelectEnabled = DdlInterval == Interval.jährlich ? false : true;
-        }
-        else
-        {
-            DdlInterval = Interval.täglich;
-        }
-
-
-        gwsP = new GWSProcessor(myHttpClient, settings.GWSUri);
         try
         {
-            // Anbieterdaten auslesen (nur Anbieter und Id => durch ElectricSupplierDataModel)
+            // 1. Einstellungen asynchron laden & parsen
+            settings = await Task.Run(() => GetSetMyAppConfig.GetMyAppSettings.ReadSettings(myAppSettings));
+
+            if (settings?.Display_Interval?.Electric != null && int.TryParse(settings.Display_Interval.Electric, out int enumValue) && Enum.IsDefined(typeof(Interval), enumValue))
+            {
+                DdlInterval = (Interval)enumValue;
+                supplierSelectEnabled = DdlInterval != Interval.jährlich;
+            }
+            else
+            {
+                DdlInterval = Interval.täglich;
+                supplierSelectEnabled = true;
+            }
+
+            // 2. API-Prozessor initialisieren und Stammdaten laden
+            gwsP = new GWSProcessor(myHttpClient, settings?.GWSUri ?? string.Empty);
+
             supplierList = await gwsP.LoadDataAsync<Electric_SupplierModel>(urlSupplier);
 
-            if (supplierList != null && supplierList.Any()) // prüfen ob es Anbieterdaten gibt
+            int targetSupplierId = 0;
+
+            if (supplierList != null && supplierList.Count > 0)
             {
-                // gespeicherten letzten Anbieter auslesen
-                lastSupplierId = String.IsNullOrEmpty(settings.Supplier_Id!.Electric) || settings.Supplier_Id.Electric == "0" ? lastSupplierId = supplierList.Max(x => x.Id) : lastSupplierId = Int32.Parse(settings.Supplier_Id.Electric);
-                if (!supplierList.Any(s => s.Id == lastSupplierId)) // prüfen ob der gespeicherte Anbieter noch existiert
+                // ID-Ermittlung: Verhindert mehrfaches Berechnen von Max() via LINQ
+                int maxSupplierId = supplierList.Max(x => x.Id);
+
+                if (string.IsNullOrEmpty(settings?.Supplier_Id?.Electric) || settings.Supplier_Id.Electric == "0")
                 {
-                    lastSupplierId = supplierList.Max(x => x.Id); // wenn nicht, dann den letzten Anbieter auslesen
+                    targetSupplierId = maxSupplierId;
+                }
+                else if (int.TryParse(settings.Supplier_Id.Electric, out int parsedId) && supplierList.Any(s => s.Id == parsedId))
+                {
+                    targetSupplierId = parsedId;
+                }
+                else
+                {
+                    targetSupplierId = maxSupplierId;
                 }
 
-                supplierData = supplierList
-                                .Where(s => s.Id == lastSupplierId)
-                                .Select(s => s).FirstOrDefault();
+                // Anbieter direkt heraussuchen
+                supplierData = supplierList.FirstOrDefault(s => s.Id == targetSupplierId);
 
                 if (supplierData != null)
                 {
-                    // Start-Datum/Ende-Datum auslesen
                     StartDate = supplierData.Zeitraum_Start ?? DateTime.Now;
                     EndDate = supplierData.Zeitraum_Ende ?? DateTime.Now;
                 }
             }
             else
             {
-                // es gibt keine gültigen Daten der Anbieter
-                supplierData!.Id = 0;
+                // Null-Safe Absicherung, falls supplierData vorher null war
+                supplierData ??= new Electric_SupplierModel();
+                supplierData.Id = 0;
             }
 
-            counterList = await gwsP!.LoadDataAsync<Electric_CounterModel>(urlMeter + Convert.ToString(supplierData!.Id)); // Daten des neu ausgewählten Anbieter laden
+            // 3. Zählerdaten parallel laden (Performance-Boost)
+            string supplierIdStr = (supplierData?.Id ?? 0).ToString();
+            var counterTask = gwsP.LoadDataAsync<Electric_CounterModel>($"{urlMeter}{supplierIdStr}");
+            var changeTask = gwsP.LoadDataAsync<Electric_CounterChangeModel>($"{urlCounterChange}{supplierIdStr}");
 
-            counterChangeList = await gwsP!.LoadDataAsync<Electric_CounterChangeModel>(urlCounterChange + Convert.ToString(supplierData.Id)); // Zählerwechsel des Anbieter laden
+            // Beide Requests laufen gleichzeitig
+            await Task.WhenAll(counterTask, changeTask);
 
-            if (counterList != null && counterList.Any())
+            counterList = await counterTask;
+            counterChangeList = await changeTask;
+
+            // 4. Verbräuche verarbeiten
+            if (counterList != null && counterList.Count > 0)
             {
-                counterList?.Sort((x, y) => x.Ablesetag.CompareTo(y.Ablesetag));
+                // Schnelleres Sortieren im Speicher (In-Place)
+                counterList.Sort((x, y) => x.Ablesetag.CompareTo(y.Ablesetag));
                 await Task.Run(() => SelectChartData(DdlInterval));
             }
             else
             {
-                ClearSumAverage();
-                OpenDialog("Keine Strom-Verbräuche vorhanden!", "60px", "380px", false);
+                HandleMissingData();
             }
         }
         catch (Exception)
         {
-            OpenDialog("Keine Strom-Verbräuche vorhanden!", "60px", "380px", false);
+            HandleMissingData();
         }
+        finally
+        {
+            // Das Delay bleibt hier, um einen Runtime-Fault zu verhindern.
+            // Durch das 'finally' wird der Spinner jetzt auch bei Abstürzen sicher abgeschaltet.
+            await Task.Delay(500); 
+            this.spinnerVisibleProperty = false;
+        }
+    }
 
-        // Spinner
-        await Task.Delay(500);
-        this.spinnerVisibleProperty = false;
+    //Optionale Hilfsmethode zur Vermeidung von Code-Duplizierung
+    private void HandleMissingData()
+    {
+        ClearSumAverage();
+        OpenDialog("Keine Strom-Verbräuche vorhanden!", "60px", "380px", false);
     }
     #endregion
 
@@ -516,47 +530,63 @@
     /// <param name="args"></param>
     private async Task ValueSelectHandler(SelectEventArgs<Electric_SupplierModel> args)
     {
+        // Falls args oder ItemData null sind, direkt abbrechen (Null-Guard)
+        if (args?.ItemData == null) return;
+
         this.spinnerVisibleProperty = true;
-        //Anbieterdaten laden abhängig vom Dropdown "Anbieter"
-        supplierData = supplierList!
-                           .Where(s => s.Id == args.ItemData.Id)
-                           .Select(s => s).FirstOrDefault();
 
-        if (supplierData != null && supplierData.Id > 0)
+        try
         {
-            StartDate = supplierData.Zeitraum_Start ?? DateTime.Now;
-            EndDate = supplierData.Zeitraum_Ende ?? DateTime.Now;
+            // LINQ optimiert: Direkt FirstOrDefault mit Bedingung statt Where().Select()
+            supplierData = supplierList?.FirstOrDefault(s => s.Id == args.ItemData.Id);
 
-            counterList = await gwsP!.LoadDataAsync<Electric_CounterModel>(urlMeter + Convert.ToString(supplierData.Id)); // Daten des neu ausgewählten Anbieter laden
-
-            if (counterList != null && counterList.Any())
+            if (gwsP != null && supplierData != null && supplierData.Id > 0)
             {
-                counterList?.Sort((x, y) => x.Ablesetag.CompareTo(y.Ablesetag));
+                StartDate = supplierData.Zeitraum_Start ?? DateTime.Now;
+                EndDate = supplierData.Zeitraum_Ende ?? DateTime.Now;
+
+                // API-Aufruf mit sauberer String-Interpolation
+                counterList = await gwsP.LoadDataAsync<Electric_CounterModel>($"{urlMeter}{supplierData.Id}");
+
+                if (counterList != null && counterList.Count > 0)
+                {
+                    counterList.Sort((x, y) => x.Ablesetag.CompareTo(y.Ablesetag));
+                }
+                else
+                {
+                    OpenDialog("Keine Strom-Verbräuche vorhanden!", "60px", "380px", false);
+                }
+
+                // Chart-Daten berechnen
+                await Task.Run(() => SelectChartData(DdlInterval));
+
+                // Einstellungen asynchron speichern
+                bool writeSuccess = await Task.Run(() => GetSetMyAppConfig.SetMyAppSettings.WriteSettings(myAppSettings, "Supplier_Id.Electric", supplierData.Id.ToString()));
+
+                if (!writeSuccess)
+                {
+                    OpenDialog("Strom-Anbieter nicht gespeichert!", "60px", "380px", false);
+                }
             }
             else
             {
+                ClearSumAverage();
                 OpenDialog("Keine Strom-Verbräuche vorhanden!", "60px", "380px", false);
             }
-
-            await Task.Run(() => SelectChartData(DdlInterval));
-
-            success = await Task.Run(() => GetSetMyAppConfig.SetMyAppSettings.WriteSettings(myAppSettings, "Supplier_Id.Electric", supplierData.Id.ToString())); // ausgewählten Anbieter in MyAppConfig speichern
-            if (!success)
-            {
-                OpenDialog("Strom-Anbieter nicht gespeichert!", "60px", "380px", false);
-            }
         }
-        else
+        catch (Exception)
         {
-            ClearSumAverage();
-
-            OpenDialog("Keine Strom-Verbräuche vorhanden!", "60px", "380px", false);
+            // Optional: Hier einen Fehlerdialog anzeigen, falls die API oder das Dateisystem fehlschlägt
+            OpenDialog("Ein Fehler ist aufgetreten!", "60px", "380px", false);
         }
-
-        // Spinner
-        await Task.Delay(200);
-        this.spinnerVisibleProperty = false;
+        finally
+        {
+            // Gewährleistet, dass der Spinner nach dem Delay immer ausgeblendet wird
+            await Task.Delay(200);
+            this.spinnerVisibleProperty = false;
+        }
     }
+
     #endregion
 
     #region OnValueChangeInterval

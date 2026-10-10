@@ -1,5 +1,4 @@
-﻿using GWS_Statistics.Components.Pages.GWS.Gas;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 
 namespace GWS_Statistics
 {

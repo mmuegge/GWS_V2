@@ -4,13 +4,10 @@
 @using GWS_Statistics.Helper
 @using GWS_Statistics.Calculation
 @using System.Globalization
-@using System.Net
 @using System.ComponentModel.DataAnnotations
 @using Syncfusion.Blazor
 @using Syncfusion.Blazor.Charts
 @using Syncfusion.Blazor.Data
-@using System.ComponentModel
-@using System.Reflection
 
 @inject MyAppConfigModel myAppSettings
 @inject HttpClient myHttpClient
@@ -321,16 +318,6 @@
     #region Interval
     public IEnumerable<string> EnumInterval = Enum.GetNames(typeof(Interval));
     public Interval DdlInterval { get; set; } = Interval.täglich;
-
-    public enum Interval
-    {
-        [Display(Name = "täglich")]
-        täglich = 1,
-        [Display(Name = "monatlich")]
-        monatlich = 2,
-        [Display(Name = "jährlich")]
-        jährlich = 3
-    }
     #endregion
 
     #region Spinner
@@ -443,83 +430,99 @@
     /// <exception cref="Exception"></exception>
     protected override async Task OnInitializedAsync()
     {
-        int lastSupplierId = 0;
-        int enumValue;
-        bool success;
-
         this.spinnerVisibleProperty = true;
 
-        // MyAppSettings.json auslesen und letzten gespeicherten Anbieter auslesen
-        settings = await Task.Run(() => GetSetMyAppConfig.GetMyAppSettings.ReadSettings(myAppSettings));
-        // Anzeigeintervall auslesen
-        success = Int32.TryParse(settings!.Display_Interval!.Water, out enumValue);
-        if (success)
-        {
-            DdlInterval = Enum.IsDefined(typeof(Interval), enumValue) ? DdlInterval = (Interval)enumValue : DdlInterval = Interval.täglich;
-            supplierSelectEnabled = DdlInterval == Interval.jährlich ? false : true;
-        }
-        else
-        {
-            DdlInterval = Interval.täglich;
-        }
-
-
-        gwsP = new GWSProcessor(myHttpClient, settings.GWSUri);
         try
         {
-            // Anbieterdaten auslesen (nur Anbieter und Id => durch WaterSupplierDataModel)
+            // 1. Einstellungen asynchron laden & parsen
+            settings = await Task.Run(() => GetSetMyAppConfig.GetMyAppSettings.ReadSettings(myAppSettings));
+
+            if (settings?.Display_Interval?.Water != null && int.TryParse(settings.Display_Interval.Water, out int enumValue) && Enum.IsDefined(typeof(Interval), enumValue))
+            {
+                DdlInterval = (Interval)enumValue;
+                supplierSelectEnabled = DdlInterval != Interval.jährlich;
+            }
+            else
+            {
+                DdlInterval = Interval.täglich;
+                supplierSelectEnabled = true;
+            }
+
+            // 2. API-Prozessor initialisieren und Stammdaten laden (Null-Safe)
+            gwsP = new GWSProcessor(myHttpClient, settings?.GWSUri ?? string.Empty);
             supplierList = await gwsP.LoadDataAsync<Water_SupplierModel>(urlSupplier);
 
-            if (supplierList != null && supplierList.Any()) // prüfen ob es Anbieterdaten gibt
-            {
-                // gespeicherten letzten Anbieter auslesen
-                lastSupplierId = String.IsNullOrEmpty(settings.Supplier_Id!.Water) || settings.Supplier_Id.Water == "0" ? lastSupplierId = supplierList.Max(x => x.Id) : lastSupplierId = Int32.Parse(settings.Supplier_Id.Water);
+            int targetSupplierId = 0;
 
-                if (!supplierList.Any(s => s.Id == lastSupplierId)) // prüfen ob der gespeicherte Anbieter noch existiert
+            if (supplierList != null && supplierList.Count > 0)
+            {
+                // ID-Ermittlung: Max() nur einmal ausführen (Performance)
+                int maxSupplierId = supplierList.Max(x => x.Id);
+
+                if (string.IsNullOrEmpty(settings?.Supplier_Id?.Water) || settings.Supplier_Id.Water == "0")
                 {
-                    lastSupplierId = supplierList.Max(x => x.Id); // wenn nicht, dann den letzten Anbieter auslesen
+                    targetSupplierId = maxSupplierId;
+                }
+                else if (int.TryParse(settings.Supplier_Id.Water, out int parsedId) && supplierList.Any(s => s.Id == parsedId))
+                {
+                    targetSupplierId = parsedId;
+                }
+                else
+                {
+                    targetSupplierId = maxSupplierId;
                 }
 
-                supplierData = supplierList
-                                .Where(s => s.Id == lastSupplierId)
-                                .Select(s => s).FirstOrDefault();
+                // Anbieter direkt auslesen
+                supplierData = supplierList.FirstOrDefault(s => s.Id == targetSupplierId);
 
                 if (supplierData != null)
                 {
-                    // Start-Datum/Ende-Datum auslesen
                     StartDate = supplierData.Zeitraum_Start ?? DateTime.Now;
                     EndDate = supplierData.Zeitraum_Ende ?? DateTime.Now;
                 }
             }
             else
             {
-                // es gibt keine gültigen Daten der Anbieter
-                supplierData!.Id = 0;
+                // Null-Safe Absicherung für die ID, falls supplierData null ist
+                supplierData ??= new Water_SupplierModel();
+                supplierData.Id = 0;
             }
 
-            counterList = await gwsP!.LoadDataAsync<Water_CounterModel>(urlMeter + Convert.ToString(supplierData!.Id)); // Daten des neu ausgewählten Anbieter laden
+            // 3. Zählerdaten laden (Null-Safe)
+            string supplierIdStr = (supplierData?.Id ?? 0).ToString();
+            counterList = await gwsP.LoadDataAsync<Water_CounterModel>($"{urlMeter}{supplierIdStr}");
 
-            // if (counterList?.Count != 0)
-            if (counterList?.Any() == true)
+            // 4. Verbräuche verarbeiten
+            if (counterList != null && counterList.Count > 0)
             {
-                counterList?.Sort((x, y) => x.Ablesetag.CompareTo(y.Ablesetag));
+                counterList.Sort((x, y) => x.Ablesetag.CompareTo(y.Ablesetag));
                 await Task.Run(() => SelectChartData(DdlInterval));
             }
             else
             {
-                ClearSumAverage();
-                OpenDialog("Keine Wasser-Verbräuche vorhanden!", "60px", "380px", false);
+                HandleMissingData();
             }
         }
         catch (Exception)
         {
-            OpenDialog("Keine Wasser-Verbräuche vorhanden!", "60px", "380px", false);
+            HandleMissingData();
         }
-
-        // Spinner
-        await Task.Delay(500); // muss sein sonst Runtime fault
-        this.spinnerVisibleProperty = false;
+        finally
+        {
+            // Das Delay bleibt hier, um einen Runtime-Fault zu verhindern.
+            // Durch das 'finally' wird der Spinner jetzt auch bei Abstürzen sicher abgeschaltet.
+            await Task.Delay(500);
+            this.spinnerVisibleProperty = false;
+        }
     }
+
+    // Hilfsmethode gegen Code-Duplizierung
+    private void HandleMissingData()
+    {
+        ClearSumAverage();
+        OpenDialog("Keine Wasser-Verbräuche vorhanden!", "60px", "380px", false);
+    }
+
     #endregion
 
     #region ValueSelectHandler
