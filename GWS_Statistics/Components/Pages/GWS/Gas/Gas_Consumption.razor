@@ -130,150 +130,157 @@
 </div>
 
 @* Chart *@
-<div class="control-section" id="target" align="center">
-    <div class="card shadow-lg">
-        <SfChart @ref="chart" Title="Übersicht" Width="@Width" Height="@Height" Palettes="@palettes">
-            <ChartEvents 
+@if (ChartPointList != null && ChartPointList.Count > 0)
+{
+    <div class="control-section" id="target" align="center">
+        <div class="card shadow-lg">
+            <SfChart @ref="chart" Title="Übersicht" Width="@Width" Height="@Height" Palettes="@palettes">
+                <ChartEvents 
                 OnAxisLabelRender="LabelRender"
                 SharedTooltipRender="ToolTipRenderEvent">
-            </ChartEvents>
+                </ChartEvents>
 
-            <ChartTitleStyle Size="24px"
-                             Color="black"
-                             FontFamily=@fontFamily
-                             FontWeight="normal"
-                             FontStyle="normal">
-            </ChartTitleStyle>
+                <ChartTitleStyle Size="24px"
+                Color="black"
+                FontFamily=@fontFamily
+                FontWeight="normal"
+                FontStyle="normal">
+                </ChartTitleStyle>
 
-            <ChartArea Background="#8c8b87"
-                       Width="auto">
-                <ChartAreaBorder Color="black" Width="1"></ChartAreaBorder>
-            </ChartArea>
+                <ChartArea Background="#8c8b87"
+                Width="auto">
+                    <ChartAreaBorder Color="black" Width="1"></ChartAreaBorder>
+                </ChartArea>
 
-            <ChartMargin Left="20" Right="20" Top="10" Bottom="0"></ChartMargin>
+                <ChartMargin Left="20" Right="20" Top="10" Bottom="0"></ChartMargin>
 
-            <ChartZoomSettings EnableMouseWheelZooming="true" EnablePinchZooming="true" EnableSelectionZooming="true"></ChartZoomSettings>
+                <ChartZoomSettings EnableMouseWheelZooming="true" EnablePinchZooming="true" EnableSelectionZooming="true"></ChartZoomSettings>
 
-            <ChartPrimaryXAxis RangePadding="ChartRangePadding.Additional"
-                               ValueType="Syncfusion.Blazor.Charts.ValueType.DateTimeCategory"
-                               EdgeLabelPlacement="EdgeLabelPlacement.None"
-                               Interval="@IntervalDuration"
-                               Format="@DateTimeFormat"
-                               IntervalType="@IntervalType">
+                <ChartPrimaryXAxis RangePadding="ChartRangePadding.Additional"
+                ValueType="Syncfusion.Blazor.Charts.ValueType.DateTimeCategory"
+                EdgeLabelPlacement="EdgeLabelPlacement.None"
+                Interval="@IntervalDuration"
+                Format="@DateTimeFormat"
+                IntervalType="@IntervalType">
 
-                <ChartAxisMajorGridLines Width="0"></ChartAxisMajorGridLines>
-                <ChartAxisLabelStyle FontFamily=@fontFamily></ChartAxisLabelStyle>
-                <ChartAxisTitleStyle FontFamily=@fontFamily></ChartAxisTitleStyle>
-                <ChartAxisCrosshairTooltip Fill="magenta" Enable="true"></ChartAxisCrosshairTooltip>
-            </ChartPrimaryXAxis>
-
-            <ChartPrimaryYAxis Title="Verbrauch"
-                               LabelFormat="{value}"
-                               RangePadding="ChartRangePadding.Normal">
-
-                <ChartAxisLineStyle Width="0"></ChartAxisLineStyle>
-                <ChartAxisLabelStyle FontFamily=@fontFamily></ChartAxisLabelStyle>
-                <ChartAxisTitleStyle FontFamily=@fontFamily></ChartAxisTitleStyle>
-                <ChartAxisMajorGridLines Width="0"></ChartAxisMajorGridLines>
-                <ChartAxisCrosshairTooltip Fill="magenta" Enable="false"></ChartAxisCrosshairTooltip>
-            </ChartPrimaryYAxis>
-
-            <ChartAxes>
-                <ChartAxis Name="yAxisCons"
-                           Title="Verbrauch (kWh)"
-                           RangePadding="ChartRangePadding.Auto"
-                           OpposedPosition="false"
-                           Interval="@Interval_YAxis_kWh"
-                           Minimum="0"
-                           Maximum="@MaxRangeCons_kWh"
-                           LabelFormat="N0">
-                    <ChartAxisMajorGridLines Width="1"></ChartAxisMajorGridLines>
-                </ChartAxis>
-
-                <ChartAxis Name="yAxisCons-m3"
-                           Title="Verbrauch (m3)"
-                           RangePadding="ChartRangePadding.Auto"
-                           OpposedPosition="false"
-                           Interval="@Interval_YAxis_m3"
-                           Minimum="0"
-                           Maximum="@MaxRangeCons_m3"
-                           LabelFormat="N0">
                     <ChartAxisMajorGridLines Width="0"></ChartAxisMajorGridLines>
-                </ChartAxis>
+                    <ChartAxisLabelStyle FontFamily=@fontFamily></ChartAxisLabelStyle>
+                    <ChartAxisTitleStyle FontFamily=@fontFamily></ChartAxisTitleStyle>
+                    <ChartAxisCrosshairTooltip Fill="magenta" Enable="true"></ChartAxisCrosshairTooltip>
+                </ChartPrimaryXAxis>
 
-                <ChartAxis Name="yAxisTemp"
-                           Title="Temperatur"
-                           RangePadding="ChartRangePadding.Auto"
-                           OpposedPosition="true"
-                           Interval="5"
-                           Minimum="@MinRangeTemp"
-                           Maximum="@MaxRangeTemp"
-                           LabelFormat="N0">
+                <ChartPrimaryYAxis Title="Verbrauch"
+                LabelFormat="{value}"
+                RangePadding="ChartRangePadding.Normal">
+
+                    <ChartAxisLineStyle Width="0"></ChartAxisLineStyle>
+                    <ChartAxisLabelStyle FontFamily=@fontFamily></ChartAxisLabelStyle>
+                    <ChartAxisTitleStyle FontFamily=@fontFamily></ChartAxisTitleStyle>
                     <ChartAxisMajorGridLines Width="0"></ChartAxisMajorGridLines>
-                </ChartAxis>
-            </ChartAxes>
+                    <ChartAxisCrosshairTooltip Fill="magenta" Enable="false"></ChartAxisCrosshairTooltip>
+                </ChartPrimaryYAxis>
 
-            <ChartSeriesCollection>
-                <ChartSeries Type="ChartSeriesType.Column"
-                             DataSource="@ChartPointList"
-                             YAxisName="yAxisCons"
-                             Visible="@serieConskWh_Visible"
-                             XName="Date"
-                             YName="Cons_kWh"
-                             Width="3"
-                             GroupName="Consumption"
-                             Name="Verbrauch (kWh)"
-                             TooltipFormat="${series.name} : ${point.y} kWh">
-                </ChartSeries>
+                <ChartAxes>
+                    <ChartAxis Name="yAxisCons"
+                    Title="Verbrauch (kWh)"
+                    RangePadding="ChartRangePadding.Auto"
+                    OpposedPosition="false"
+                    Interval="@Interval_YAxis_kWh"
+                    Minimum="0"
+                    Maximum="@MaxRangeCons_kWh"
+                    LabelFormat="N0">
+                        <ChartAxisMajorGridLines Width="1"></ChartAxisMajorGridLines>
+                    </ChartAxis>
 
-                <ChartSeries Type="ChartSeriesType.Column"
-                             DataSource="@ChartPointList"
-                             YAxisName="yAxisCons-m3"
-                             Visible="@serieConsm3_Visible"
-                             XName="Date"
-                             YName="Cons_m3"
-                             Width="3"
-                             GroupName="Consumption"
-                             Name="Verbrauch (m³)"
-                             TooltipFormat="${series.name} : ${point.y} m³">
-                </ChartSeries>
+                    <ChartAxis Name="yAxisCons-m3"
+                    Title="Verbrauch (m3)"
+                    RangePadding="ChartRangePadding.Auto"
+                    OpposedPosition="false"
+                    Interval="@Interval_YAxis_m3"
+                    Minimum="0"
+                    Maximum="@MaxRangeCons_m3"
+                    LabelFormat="N0">
+                        <ChartAxisMajorGridLines Width="0"></ChartAxisMajorGridLines>
+                    </ChartAxis>
 
-                @if (DdlInterval != Interval.jährlich)
-                {
-                    <ChartSeries Type="ChartSeriesType.Line"
-                                 DataSource="@ChartPointList"
-                                 YAxisName="yAxisTemp"
-                                 Visible=@serieTempVisible
-                                 XName="Date"
-                                 YName="Temp"
-                                 Width="1"
-                                 Name="Temperatur"
-                                 TooltipFormat="${series.name} : ${point.y} °C">
+                    <ChartAxis Name="yAxisTemp"
+                    Title="Temperatur"
+                    RangePadding="ChartRangePadding.Auto"
+                    OpposedPosition="true"
+                    Interval="5"
+                    Minimum="@MinRangeTemp"
+                    Maximum="@MaxRangeTemp"
+                    LabelFormat="N0">
+                        <ChartAxisMajorGridLines Width="0"></ChartAxisMajorGridLines>
+                    </ChartAxis>
+                </ChartAxes>
+
+                <ChartSeriesCollection>
+                    <ChartSeries Type="ChartSeriesType.Column"
+                    DataSource="@ChartPointList"
+                    YAxisName="yAxisCons"
+                    Visible="@serieConskWh_Visible"
+                    XName="Date"
+                    YName="Cons_kWh"
+                    Width="3"
+                    GroupName="Consumption"
+                    Name="Verbrauch (kWh)"
+                    TooltipFormat="${series.name} : ${point.y} kWh">
                     </ChartSeries>
-                }
-            </ChartSeriesCollection>
 
-            <ChartCrosshairSettings Enable="true" LineType="LineType.Both"></ChartCrosshairSettings>
+                    <ChartSeries Type="ChartSeriesType.Column"
+                    DataSource="@ChartPointList"
+                    YAxisName="yAxisCons-m3"
+                    Visible="@serieConsm3_Visible"
+                    XName="Date"
+                    YName="Cons_m3"
+                    Width="3"
+                    GroupName="Consumption"
+                    Name="Verbrauch (m³)"
+                    TooltipFormat="${series.name} : ${point.y} m³">
+                    </ChartSeries>
 
-            <ChartLegendSettings Visible="true" EnableHighlight="true"></ChartLegendSettings>
+                    @if (DdlInterval != Interval.jährlich)
+                    {
+                        <ChartSeries Type="ChartSeriesType.Line"
+                        DataSource="@ChartPointList"
+                        YAxisName="yAxisTemp"
+                        Visible=@serieTempVisible
+                        XName="Date"
+                        YName="Temp"
+                        Width="1"
+                        Name="Temperatur"
+                        TooltipFormat="${series.name} : ${point.y} °C">
+                        </ChartSeries>
+                    }
+                </ChartSeriesCollection>
 
-            <ChartTooltipSettings Header="<b>${point.tooltip}</b>" Enable="true" Shared="true"></ChartTooltipSettings>
-        </SfChart>
+                <ChartCrosshairSettings Enable="true" LineType="LineType.Both"></ChartCrosshairSettings>
 
-        <SfSpinner @bind-Visible="@spinnerVisibleProperty" Type="SpinnerType.Tailwind" Size="40" CssClass="e-custom-color"></SfSpinner>
+                <ChartLegendSettings Visible="true" EnableHighlight="true"></ChartLegendSettings>
 
-        @* Dialog*@
-        <div>
-            <SfDialog Target="#target" Width="@dialogWidth" Height="@dialogHeight" AllowDragging="true" ShowCloseIcon="true" @bind-Visible="@DialogVisible" AllowPrerender="true" IsModal="true">
-                <DialogTemplates>
-                    <Header>@Header</Header>
-                </DialogTemplates>
-                <DialogPositionData X="@dialogXValue" Y="@dialogYValue"></DialogPositionData>
-                <DialogAnimationSettings Effect="@animationEffect"></DialogAnimationSettings>
-            </SfDialog>
+                <ChartTooltipSettings Header="<b>${point.tooltip}</b>" Enable="true" Shared="true"></ChartTooltipSettings>
+            </SfChart>
+
+            <SfSpinner @bind-Visible="@spinnerVisibleProperty" Type="SpinnerType.Tailwind" Size="40" CssClass="e-custom-color"></SfSpinner>
+
+            @* Dialog*@
+            <div>
+                <SfDialog Target="#target" Width="@dialogWidth" Height="@dialogHeight" AllowDragging="true" ShowCloseIcon="true" @bind-Visible="@DialogVisible" AllowPrerender="true" IsModal="true">
+                    <DialogTemplates>
+                        <Header>@Header</Header>
+                    </DialogTemplates>
+                    <DialogPositionData X="@dialogXValue" Y="@dialogYValue"></DialogPositionData>
+                    <DialogAnimationSettings Effect="@animationEffect"></DialogAnimationSettings>
+                </SfDialog>
+            </div>
         </div>
     </div>
-</div>
+}
+else
+{
+    <SfSpinner @bind-Visible="@spinnerVisibleProperty" Label="Lade Daten..." Size="40"></SfSpinner>
+}
 
 <style>
     .e-dlg-overlay {
@@ -553,10 +560,9 @@
         }
         finally
         {
-            // Das Delay bleibt hier, um einen Runtime-Fault zu verhindern.
             // Durch das 'finally' wird der Spinner jetzt auch bei Abstürzen sicher abgeschaltet.
-            await Task.Delay(500); 
             this.spinnerVisibleProperty = false;
+            StateHasChanged();
         }
     }
 
@@ -566,7 +572,6 @@
         ClearSumAverage();
         OpenDialog("Keine Gas-Verbräuche vorhanden!", "60px", "380px", false);
     }
-
     #endregion
 
     #region ValueSelectHandler
@@ -925,13 +930,16 @@
     /// <summary>
     /// Anzeigen des Dialogs
     /// </summary>
-    private void OpenDialog(string header, string height, string width, bool showButtons)
+    private void OpenDialog(string header, string height="auto", string width="500px", bool showButtons=true)
     {
         Header = header;
         dialogHeight = height;
         dialogWidth = width;
         showDialogButtons = showButtons;
         this.DialogVisible = true;
+
+        // Erzwingt das Neu-Rendern der UI (wichtig in Blazor für Dialoge)
+        this.StateHasChanged();
     }
     #endregion
 

@@ -1,8 +1,8 @@
 ﻿@page "/electric_cost_comparison"
 
 @using GWS_Statistics.Helper
+@using static GWS_Statistics.Helper.HelperMethods
 @using GWS_Statistics.Calculation
-@using System.Globalization
 @using Syncfusion.Blazor
 @using Syncfusion.Blazor.Charts
 @using Syncfusion.Blazor.Data
@@ -57,143 +57,150 @@
 </div>
 
 @* Chart *@
-<div class="control-section" id="target" align="center">
-    <div class="card shadow-lg">
-        <SfChart @ref="chart" Title="Übersicht" Width="@Width" Height="@Height" Palettes="@palettes">
-            <ChartEvents OnAxisLabelRender="LabelRender"
-                         SharedTooltipRender="ToolTipRenderEvent">
-            </ChartEvents>
-            <ChartTitleStyle Size="24px"
-                             Color="black"
-                             FontFamily=@fontFamily
-                             FontWeight="normal"
-                             FontStyle="normal">
-            </ChartTitleStyle>
+@if (ChartPointList != null && ChartPointList.Count > 0)
+{
+    <div class="control-section" id="target" align="center">
+        <div class="card shadow-lg">
+            <SfChart @ref="chart" Title="Übersicht" Width="@Width" Height="@Height" Palettes="@palettes">
+                <ChartEvents OnAxisLabelRender="LabelRender"
+                SharedTooltipRender="ToolTipRenderEvent">
+                </ChartEvents>
+                <ChartTitleStyle Size="24px"
+                Color="black"
+                FontFamily=@fontFamily
+                FontWeight="normal"
+                FontStyle="normal">
+                </ChartTitleStyle>
 
-            <ChartArea Background="#8c8b87"
-                       Width="auto">
-                <ChartAreaBorder Color="black"
-                                 Width="1"></ChartAreaBorder>
-            </ChartArea>
+                <ChartArea Background="#8c8b87"
+                Width="auto">
+                    <ChartAreaBorder Color="black"
+                    Width="1"></ChartAreaBorder>
+                </ChartArea>
 
-            <ChartMargin Left="20" Right="20" Top="10" Bottom="0"></ChartMargin>
+                <ChartMargin Left="20" Right="20" Top="10" Bottom="0"></ChartMargin>
 
-            <ChartZoomSettings EnableMouseWheelZooming="true" EnablePinchZooming="true" EnableSelectionZooming="true"></ChartZoomSettings>
+                <ChartZoomSettings EnableMouseWheelZooming="true" EnablePinchZooming="true" EnableSelectionZooming="true"></ChartZoomSettings>
 
-            <ChartPrimaryXAxis RangePadding="ChartRangePadding.Additional"
-                               ValueType="Syncfusion.Blazor.Charts.ValueType.DateTimeCategory"
-                               EdgeLabelPlacement="EdgeLabelPlacement.None"
-                               Interval="@IntervalDuration"
-                               Format="@DateTimeFormat"
-                               IntervalType="@IntervalType">
+                <ChartPrimaryXAxis RangePadding="ChartRangePadding.Additional"
+                ValueType="Syncfusion.Blazor.Charts.ValueType.DateTimeCategory"
+                EdgeLabelPlacement="EdgeLabelPlacement.None"
+                Interval="@IntervalDuration"
+                Format="@DateTimeFormat"
+                IntervalType="@IntervalType">
 
-                <ChartAxisMajorGridLines Width="0"></ChartAxisMajorGridLines>
-                <ChartAxisLabelStyle FontFamily=@fontFamily></ChartAxisLabelStyle>
-                <ChartAxisTitleStyle FontFamily=@fontFamily></ChartAxisTitleStyle>
-                <ChartAxisCrosshairTooltip Fill="magenta" Enable="true"></ChartAxisCrosshairTooltip>
-            </ChartPrimaryXAxis>
-
-            <ChartPrimaryYAxis Title="Verbrauch (kWh)"
-                               LabelFormat="{value}"
-                               RangePadding="ChartRangePadding.Normal">
-
-                <ChartAxisLineStyle Width="0"></ChartAxisLineStyle>
-                <ChartAxisLabelStyle FontFamily=@fontFamily></ChartAxisLabelStyle>
-                <ChartAxisTitleStyle FontFamily=@fontFamily></ChartAxisTitleStyle>
-                <ChartAxisMajorGridLines Width="0"></ChartAxisMajorGridLines>
-                <ChartAxisCrosshairTooltip Fill="magenta" Enable="false"></ChartAxisCrosshairTooltip>
-            </ChartPrimaryYAxis>
-
-            <ChartAxes>
-                <ChartAxis Name="yAxisCons_kWh"
-                           Title="Verbrauch"
-                           RangePadding="ChartRangePadding.Auto"
-                           OpposedPosition="false"
-                           Interval="@Interval_YAxis_kWh"
-                           Minimum="@MinRangeCons_kWh"
-                           Maximum="@MaxRangeCons_kWh"
-                           LabelFormat="N0">
-                    <ChartAxisMajorGridLines Width="1"></ChartAxisMajorGridLines>
-                </ChartAxis>
-
-                <ChartAxis Name="yAxisCost_kWh"
-                           Title="Kosten"
-                           RangePadding="ChartRangePadding.Auto"
-                           OpposedPosition="false"
-                           Interval="@Interval_YAxis_Cost_kWh"
-                           Minimum="@MinRangeCost_kWh"
-                           Maximum="@MaxRangeCost_kWh"
-                           LabelFormat="N0">
                     <ChartAxisMajorGridLines Width="0"></ChartAxisMajorGridLines>
-                </ChartAxis>
+                    <ChartAxisLabelStyle FontFamily=@fontFamily></ChartAxisLabelStyle>
+                    <ChartAxisTitleStyle FontFamily=@fontFamily></ChartAxisTitleStyle>
+                    <ChartAxisCrosshairTooltip Fill="magenta" Enable="true"></ChartAxisCrosshairTooltip>
+                </ChartPrimaryXAxis>
 
-                <ChartAxis Name="yAxisCost_Total"
-                           Title="Gesamtkosten"
-                           RangePadding="ChartRangePadding.Auto"
-                           OpposedPosition="true"
-                           Interval="@Interval_YAxis_Cost_Total"
-                           Minimum="@MinRangeCost_Total"
-                           Maximum="@MaxRangeCost_Total"
-                           LabelFormat="N0">
+                <ChartPrimaryYAxis Title="Verbrauch (kWh)"
+                LabelFormat="{value}"
+                RangePadding="ChartRangePadding.Normal">
+
+                    <ChartAxisLineStyle Width="0"></ChartAxisLineStyle>
+                    <ChartAxisLabelStyle FontFamily=@fontFamily></ChartAxisLabelStyle>
+                    <ChartAxisTitleStyle FontFamily=@fontFamily></ChartAxisTitleStyle>
                     <ChartAxisMajorGridLines Width="0"></ChartAxisMajorGridLines>
-                </ChartAxis>
-            </ChartAxes>
+                    <ChartAxisCrosshairTooltip Fill="magenta" Enable="false"></ChartAxisCrosshairTooltip>
+                </ChartPrimaryYAxis>
 
-            <ChartSeriesCollection>
-                <ChartSeries Type="ChartSeriesType.Column"
-                             DataSource="@ChartPointList"
-                             YAxisName="yAxisCons_kWh"
-                             XName="Date"
-                             YName="Cons_kWh"
-                             Width="3"
-                             Name="Verbrauch"
-                             TooltipFormat="${series.name} : ${point.y} kWh">
-                </ChartSeries>
+                <ChartAxes>
+                    <ChartAxis Name="yAxisCons_kWh"
+                    Title="Verbrauch"
+                    RangePadding="ChartRangePadding.Auto"
+                    OpposedPosition="false"
+                    Interval="@Interval_YAxis_kWh"
+                    Minimum="@MinRangeCons_kWh"
+                    Maximum="@MaxRangeCons_kWh"
+                    LabelFormat="N0">
+                        <ChartAxisMajorGridLines Width="1"></ChartAxisMajorGridLines>
+                    </ChartAxis>
 
-                <ChartSeries Type="ChartSeriesType.Column"
-                             DataSource="@ChartPointList"
-                             YAxisName="yAxisCost_kWh"
-                             XName="Date"
-                             YName="Cost_kWh"
-                             Width="3"
-                             Name="Kosten"
-                             TooltipFormat="${series.name} : ${point.y} ct/kWh">
-                </ChartSeries>
+                    <ChartAxis Name="yAxisCost_kWh"
+                    Title="Kosten"
+                    RangePadding="ChartRangePadding.Auto"
+                    OpposedPosition="false"
+                    Interval="@Interval_YAxis_Cost_kWh"
+                    Minimum="@MinRangeCost_kWh"
+                    Maximum="@MaxRangeCost_kWh"
+                    LabelFormat="N0">
+                        <ChartAxisMajorGridLines Width="0"></ChartAxisMajorGridLines>
+                    </ChartAxis>
 
-                <ChartSeries Type="ChartSeriesType.Column"
-                             DataSource="@ChartPointList"
-                             YAxisName="yAxisCost_Total"
-                             XName="Date"
-                             YName="Cost_Total"
-                             Width="3"
-                             Name="Gesamtkosten"
-                             TooltipFormat="${series.name} : ${point.y} €">
-                </ChartSeries>
+                    <ChartAxis Name="yAxisCost_Total"
+                    Title="Gesamtkosten"
+                    RangePadding="ChartRangePadding.Auto"
+                    OpposedPosition="true"
+                    Interval="@Interval_YAxis_Cost_Total"
+                    Minimum="@MinRangeCost_Total"
+                    Maximum="@MaxRangeCost_Total"
+                    LabelFormat="N0">
+                        <ChartAxisMajorGridLines Width="0"></ChartAxisMajorGridLines>
+                    </ChartAxis>
+                </ChartAxes>
 
-            </ChartSeriesCollection>
+                <ChartSeriesCollection>
+                    <ChartSeries Type="ChartSeriesType.Column"
+                    DataSource="@ChartPointList"
+                    YAxisName="yAxisCons_kWh"
+                    XName="Date"
+                    YName="Cons_kWh"
+                    Width="3"
+                    Name="Verbrauch"
+                    TooltipFormat="${series.name} : ${point.y} kWh">
+                    </ChartSeries>
 
-            <ChartCrosshairSettings Enable="true" LineType="LineType.Both"></ChartCrosshairSettings>
+                    <ChartSeries Type="ChartSeriesType.Column"
+                    DataSource="@ChartPointList"
+                    YAxisName="yAxisCost_kWh"
+                    XName="Date"
+                    YName="Cost_kWh"
+                    Width="3"
+                    Name="Kosten"
+                    TooltipFormat="${series.name} : ${point.y} ct/kWh">
+                    </ChartSeries>
 
-            <ChartLegendSettings Visible="true"
-                                 EnableHighlight="true">
-            </ChartLegendSettings>
-            <ChartTooltipSettings Header="<b>${point.tooltip}</b>" Enable="true" Shared="true"></ChartTooltipSettings>
+                    <ChartSeries Type="ChartSeriesType.Column"
+                    DataSource="@ChartPointList"
+                    YAxisName="yAxisCost_Total"
+                    XName="Date"
+                    YName="Cost_Total"
+                    Width="3"
+                    Name="Gesamtkosten"
+                    TooltipFormat="${series.name} : ${point.y} €">
+                    </ChartSeries>
 
-            <SfSpinner @bind-Visible="@spinnerVisibleProperty" Type="SpinnerType.Tailwind" Size="40" CssClass="e-custom-color"></SfSpinner>
+                </ChartSeriesCollection>
 
-            @* Dialog*@
-            <div>
-                <SfDialog Target="#target" Width="320px" Height=@dialogHeight AllowDragging="true" ShowCloseIcon=" true" @bind-Visible="DialogVisible" AllowPrerender="true" IsModal="true">
-                    <DialogTemplates>
-                        <Header>@Header</Header>
-                    </DialogTemplates>
-                    <DialogPositionData X="@dialogXValue" Y="@dialogYValue"></DialogPositionData>
-                    <DialogAnimationSettings Effect="@animationEffect"></DialogAnimationSettings>
-                </SfDialog>
-            </div>
-        </SfChart>
+                <ChartCrosshairSettings Enable="true" LineType="LineType.Both"></ChartCrosshairSettings>
+
+                <ChartLegendSettings Visible="true"
+                EnableHighlight="true">
+                </ChartLegendSettings>
+                <ChartTooltipSettings Header="<b>${point.tooltip}</b>" Enable="true" Shared="true"></ChartTooltipSettings>
+
+                <SfSpinner @bind-Visible="@spinnerVisibleProperty" Type="SpinnerType.Tailwind" Size="40" CssClass="e-custom-color"></SfSpinner>
+
+                @* Dialog*@
+                <div>
+                    <SfDialog Target="#target" Width="320px" Height=@dialogHeight AllowDragging="true" ShowCloseIcon=" true" @bind-Visible="DialogVisible" AllowPrerender="true" IsModal="true">
+                        <DialogTemplates>
+                            <Header>@Header</Header>
+                        </DialogTemplates>
+                        <DialogPositionData X="@dialogXValue" Y="@dialogYValue"></DialogPositionData>
+                        <DialogAnimationSettings Effect="@animationEffect"></DialogAnimationSettings>
+                    </SfDialog>
+                </div>
+            </SfChart>
+        </div>
     </div>
-</div>
+}
+else
+{
+    <SfSpinner @bind-Visible="@spinnerVisibleProperty" Label="Lade Daten..." Size="40"></SfSpinner>
+}
 
 <style>
     .e-dlg-overlay {
@@ -327,9 +334,9 @@
     private double Interval_YAxis_Cost_kWh { get; set; } = 10.0d;
     private double Interval_YAxis_Cost_Total { get; set; } = 300.0d;
 
-    private double? MaxRangeCons_kWh { get; set; } = 5000;
-    private double? MaxRangeCost_kWh { get; set; } = 50;
-    private double? MaxRangeCost_Total { get; set; } = 2000;
+    private double MaxRangeCons_kWh { get; set; } = 5000;
+    private double MaxRangeCost_kWh { get; set; } = 50;
+    private double MaxRangeCost_Total { get; set; } = 2000;
 
     private double MinRangeCons_kWh { get; set; } = 0;
     private double MinRangeCost_kWh { get; set; } = 0;
@@ -340,199 +347,283 @@
     public class ColumnChartData
     {
         public DateTime Date { get; set; }
-        public double? Cons_kWh { get; set; }
-        public double? Cost_kWh { get; set; }
-        public double? Cost_Total { get; set; }
+        public double Cons_kWh { get; set; }
+        public double Cost_kWh { get; set; }
+        public double Cost_Total { get; set; }
     }
     #endregion
+    // private static readonly CultureInfo DisplayCulture = new CultureInfo("de-DE");
     #endregion
 
     #region OnInitializedAsync
     /// <summary>
-    /// OnInitializedAsync
+    /// Startet beim Laden der Seite automatisch und ruft die Daten parallel ab, berechnet die Chart-Daten und zeigt ggf. Dialoge an.
     /// </summary>
     /// <returns></returns>
     protected override async Task OnInitializedAsync()
     {
         this.spinnerVisibleProperty = true;
 
-        // MyAppSettings.json auslesen und letzten gespeicherten Anbieter auslesen
-        settings = GetSetMyAppConfig.GetMyAppSettings.ReadSettings(myAppSettings);
-
-        gwsP = new GWSProcessor(myHttpClient, settings!.GWSUri);
         try
         {
-            supplierList = await gwsP.LoadDataAsync<Electric_SupplierModel>(urlSupplier);
+            // 1. Einstellungen lesen
+            settings = GetSetMyAppConfig.GetMyAppSettings.ReadSettings(myAppSettings);
+            gwsP = new GWSProcessor(myHttpClient, settings!.GWSUri);
 
-            if (supplierList != null && supplierList.Any())
-            {
-                supplierList?.Sort((x, y) => x.Id.CompareTo(y.Id));
+            // 2. Performance-Boost: Beide API-Aufrufe PARALLEL starten (halbiert die Ladezeit!)
+            Task<List<Electric_SupplierModel>?> supplierTask = gwsP.LoadDataAsync<Electric_SupplierModel>(urlSupplier);
+            Task<List<GWS_PaymentModel>?> paymentTask = gwsP.LoadDataAsync<GWS_PaymentModel>(urlPayments);
 
-                paymentList = await gwsP.LoadDataAsync<GWS_PaymentModel>(urlPayments);
+            // Warten, bis beide Anfragen fertig sind
+            await Task.WhenAll(supplierTask, paymentTask);
 
-                if (paymentList != null && paymentList.Any())
-                {
-                    paymentList?.Sort((x, y) => x.ID_Anbieter.CompareTo(y.ID_Anbieter));
-                    await CalcChartData(supplierList, paymentList);
-                }
-                else
-                {
-                    OpenDialog("Keine Strom-Zahlungen vorhanden!", "60px", "380px", false);
-                }
-            }
-            else
+            supplierList = supplierTask.Result;
+            paymentList = paymentTask.Result;
+
+            // 3. Early Exits statt tief verschachtelter If-Statements
+            if (supplierList == null || supplierList.Count == 0)
             {
                 OpenDialog("Keine Strom-Anbieter vorhanden!", "60px", "380px", false);
+                return;
             }
+
+            if (paymentList == null || paymentList.Count == 0)
+            {
+                OpenDialog("Keine Strom-Zahlungen vorhanden!", "60px", "380px", false);
+                return;
+            }
+
+            // HINWEIS: Das manuelle Sortieren (.Sort) wurde ENTFERNT.
+            // Da CalcChartData jetzt ein Dictionary verwendet, ist die Reihenfolge der Listen völlig egal!
+
+            // 4. Daten verarbeiten
+            await CalcChartData(supplierList, paymentList);
         }
         catch (Exception)
         {
             OpenDialog("Keine Strom-Daten vorhanden!", "60px", "380px", false);
         }
+        finally
+        {
+            // 5. Spinner sicher ausschalten (auch im Fehlerfall dank 'finally')
+            this.spinnerVisibleProperty = false;
 
-        // Spinner
-        await Task.Delay(200); // muss sein sonst Runtime fault
-        this.spinnerVisibleProperty = false;
+            StateHasChanged();
+        }
     }
     #endregion
 
     #region CalcChartData
     /// <summary>
-    /// Berechnen der Chart-Daten
+    /// Berechnung der Chart-Daten für Verbrauch, Kosten/kWh und Gesamtkosten
     /// </summary>
     /// <param name="suppliers"></param>
     /// <param name="payments"></param>
     /// <returns></returns>
     public async Task CalcChartData(List<Electric_SupplierModel>? suppliers, List<GWS_PaymentModel>? payments)
     {
-        double? cons_kWh = 0.0d;
-        double? cost_kWh = 0.0d;
-        double? cost_Total = 0.0d;
-
-        if (suppliers != null && suppliers.Any() && payments != null && payments.Any())
-        {
-            GetStartDateEndDate(suppliers);
-
-            counterChangeList = await gwsP!.LoadDataAsync<Electric_CounterChangeModel>(urlCounterChangeAllSuppliers); // Zählerwechsel aller Anbieter laden
-            List<IConsumption> consumptionsYearly = await Task.Run(() => GWS_Calculation.CalcConsumptionYearly(suppliers, counterChangeList));
-
-            if (consumptionsYearly == null || !consumptionsYearly.Any())
-            {
-                OpenDialog("Keine Strom-Verbräuche vorhanden!", "60px", "380px", false);
-                return;
-            }
-
-            foreach (var cons in consumptionsYearly) // Jahresverbrauch aller Anbieter berechnen (kWh)
-            {
-                cons_kWh = cons.Consumption;
-                cost_Total = payments?.Where(s => s.ID_Anbieter == cons.SupplierId).Select(x => x.Zahlungen).Sum(); // gesamte jährliche Zahlungen
-
-                if (cons_kWh > 0.0d)
-                {
-                    cost_kWh = cost_Total / cons_kWh * 100.0d; // Berechnung ct/kWh
-                }
-                else
-                {
-                    chart.ClearSeries();
-                    OpenDialog("Keine Strom-Kosten vorhanden!", "60px", "380px", false);
-                }
-
-                ChartPointList.Add(new ColumnChartData { Date = cons.Date, Cons_kWh = cons_kWh, Cost_kWh = cost_kWh, Cost_Total = cost_Total });
-            }
-            GetChartMinMaxRange(ChartPointList);
-        }
-        else
+        // 1. Defensiver Null- und Leer-Check vorab (O(1) statt LINQ .Any())
+        if (suppliers == null || suppliers.Count == 0 || payments == null || payments.Count == 0)
         {
             chart.ClearSeries();
             OpenDialog("Keine Strom-Vergleichskosten vorhanden!", "60px", "380px", false);
+            return;
         }
+
+        GetStartDateEndDate(suppliers);
+
+        // Externe Daten asynchron laden
+        counterChangeList = await gwsP!.LoadDataAsync<Electric_CounterChangeModel>(urlCounterChangeAllSuppliers);
+
+        List<IConsumption> consumptionsYearly = await Task.Run(() => GWS_Calculation.CalcConsumptionYearly(suppliers, counterChangeList));
+
+        if (consumptionsYearly == null || consumptionsYearly.Count == 0)
+        {
+            OpenDialog("Keine Strom-Verbräuche vorhanden!", "60px", "380px", false);
+            return;
+        }
+
+        // 2. Performance-Boost: Zahlungen vor der Schleife indizieren (O(1) statt Listen-Scan)
+        var paymentLookup = payments
+            .GroupBy(p => p.ID_Anbieter)
+            .ToDictionary(g => g.Key, g => g.Sum(p => p.Zahlungen));
+
+        double cons_kWh;
+        double cost_kWh = 0.0d;
+        double cost_Total;
+
+        // Flag, damit der Dialog bei fehlenden Kosten nur einmal aufpoppt
+        bool hasShownNoCostDialog = false;
+
+        // 3. Effiziente Schleife
+        foreach (var cons in consumptionsYearly)
+        {
+            // Sicheres Auslesen des Nullable double? aus IConsumption
+            cons_kWh = cons.Consumption.GetValueOrDefault();
+
+            // Blitzschneller O(1) Zugriff auf die summierten Kosten aus dem Dictionary
+            if (paymentLookup.TryGetValue(cons.SupplierId, out double? tempCost))
+            {
+                cost_Total = tempCost.GetValueOrDefault();
+            }
+            else
+            {
+                cost_Total = 0.0d;
+            }
+
+            // Berechnung & Dialog-Logik
+            if (cons_kWh > 0.0d)
+            {
+                cost_kWh = (cost_Total / cons_kWh) * 100.0d;
+            }
+            else
+            {
+                cost_kWh = 0.0d; // Definierten Standardwert setzen
+                chart.ClearSeries();
+
+                if (!hasShownNoCostDialog)
+                {
+                    OpenDialog("Keine Strom-Kosten vorhanden!", "60px", "380px", false);
+                    hasShownNoCostDialog = true; // Sperre für weitere Durchläufe aktivieren
+                }
+            }
+
+            ChartPointList.Add(new ColumnChartData
+            {
+                Date = cons.Date,
+                Cons_kWh = cons_kWh,
+                Cost_kWh = cost_kWh,
+                Cost_Total = cost_Total
+            });
+        }
+
+        GetChartMinMaxRange(ChartPointList);
     }
+
+
     #endregion
 
     #region GetStartDateEndDate
     /// <summary>
-    /// Auslesen Start/Ende-Datum
+    /// Auslesen des frühesten Startdatums und spätesten Enddatums aus der Liste der Anbieter
     /// </summary>
     /// <param name="suppliers"></param>
     public void GetStartDateEndDate(List<Electric_SupplierModel>? suppliers)
     {
-        DateTime? startDate = DateTime.MaxValue;
-        DateTime? endDate = DateTime.MinValue;
-
-        if (suppliers != null && suppliers.Any())
+        // 1. Früher Ausstieg bei leeren Daten + sauberes Fallback auf 'null'
+        if (suppliers == null || suppliers.Count == 0)
         {
-            foreach (var supplier in suppliers)
+            StartDate = null;
+            EndDate = null;
+            return;
+        }
+
+        DateTime? minStart = DateTime.MaxValue;
+        DateTime? maxEnd = DateTime.MinValue;
+        bool hasValidData = false;
+
+        // Cache für DateTime.Now, damit es nicht in jeder Schleifeniteration neu abgefragt werden muss
+        DateTime now = DateTime.Now;
+
+        // 2. Einmaliger, schneller Durchlauf
+        foreach (var supplier in suppliers)
+        {
+            // Lokale Variablen reduzieren mehrfache Property-Zugriffe
+            var start = supplier.Zeitraum_Start;
+            var end = supplier.Zeitraum_Ende;
+
+            // Kombinierter Check: Nur abgelaufene Zeiträume mit validen Daten betrachten
+            if (start.HasValue && end.HasValue && end.Value < now)
             {
-                if (supplier.Zeitraum_Start != null && supplier.Zeitraum_Ende != null)
-                {
-                    if (supplier.Zeitraum_Ende < DateTime.Now)
-                    {
-                        startDate = supplier.Zeitraum_Start < startDate ? supplier.Zeitraum_Start : startDate;
-                        endDate = supplier.Zeitraum_Ende > endDate ? supplier.Zeitraum_Ende : endDate;
-                    }
-                }
+                if (start.Value < minStart.Value) minStart = start;
+                if (end.Value > maxEnd.Value) maxEnd = end;
+                hasValidData = true;
             }
         }
-        StartDate = startDate;
-        EndDate = endDate;
+
+        // 3. Zuweisung nur, wenn tatsächlich passende Daten gefunden wurden
+        StartDate = hasValidData ? minStart : null;
+        EndDate = hasValidData ? maxEnd : null;
     }
     #endregion
 
     #region GetChartMinMaxRange
     /// <summary>
-    /// Berechnen Chart Min/Max-Range
+    /// Berechnung der Min/Max-Werte für die Y-Achsen der Chart-Darstellung
     /// </summary>
     public void GetChartMinMaxRange(List<ColumnChartData> chartList)
     {
-        if (chartList != null && chartList.Any())
+        // 1. Früher Abbruch
+        if (chartList == null || !chartList.Any())
         {
-            // Y-Achsen Verbrauch
-            MinRangeCons_kWh = 0.0d;
-            MaxRangeCons_kWh = Math.Round(ChartPointList.Max(v => v.Cons_kWh).GetValueOrDefault(), 0) + 300.0d;
-
-            MinRangeCost_kWh = 0.0d;
-            MaxRangeCost_kWh = Math.Round(ChartPointList.Max(v => v.Cost_kWh).GetValueOrDefault(), 0) + 5.0d;
-
-            MinRangeCost_Total = 0.0d;
-            MaxRangeCost_Total = Math.Round(ChartPointList.Max(v => v.Cost_Total).GetValueOrDefault(), 0) + 200.0d;
-
-            Interval_YAxis_kWh = 2000.0d;
-            Interval_YAxis_Cost_kWh = 20.0d;
-            Interval_YAxis_Cost_Total = 500.0d;
-
+            MinRangeCons_kWh = MaxRangeCons_kWh = 0.0d;
+            MinRangeCost_kWh = MaxRangeCost_kWh = 0.0d;
+            MinRangeCost_Total = MaxRangeCost_Total = 0.0d;
             return;
         }
 
+        // 2. Initialisierung der Min-Werte und Intervalle
         MinRangeCons_kWh = 0.0d;
-        MaxRangeCons_kWh = 0.0d;
         MinRangeCost_kWh = 0.0d;
-        MaxRangeCost_kWh = 0.0d;
         MinRangeCost_Total = 0.0d;
-        MaxRangeCost_Total = 0.0d;
+
+        Interval_YAxis_kWh = 1000.0d;
+        Interval_YAxis_Cost_kWh = 10.0d;
+        Interval_YAxis_Cost_Total = 100.0d;
+
+        // 3. Startwerte für die Maximum-Suche aus dem ersten Element lesen
+        // (Verhindert Probleme, falls alle Werte in der Liste 0 oder negativ sind)
+        var firstItem = chartList.FirstOrDefault(x => x != null);
+        if (firstItem == null) return;
+
+        double maxCons = firstItem.Cons_kWh;
+        double maxCostKwh = firstItem.Cost_kWh;
+        double maxCostTotal = firstItem.Cost_Total;
+
+        // Liste einmal komplett durchlaufen
+        foreach (var item in chartList)
+        {
+            if (item == null) continue;
+
+            if (item.Cons_kWh > maxCons) maxCons = item.Cons_kWh;
+            if (item.Cost_kWh > maxCostKwh) maxCostKwh = item.Cost_kWh;
+            if (item.Cost_Total > maxCostTotal) maxCostTotal = item.Cost_Total;
+        }
+
+        // 4. Werte runden und Offsets addieren
+        MaxRangeCons_kWh = Math.Round(maxCons, 0) * 1.05d; // 5% Puffer
+        MaxRangeCost_kWh = Math.Round(maxCostKwh, 0) * 1.05d; // 5% Puffer
+        MaxRangeCost_Total = Math.Round(maxCostTotal, 0) * 1.05d; // 5% Puffer
     }
     #endregion
 
     #region OpenDialog
     /// <summary>
-    /// OpenDialog
+    /// Dialog öffnen mit Header, Höhe, Breite und optionalen Buttons
     /// </summary>
-    private void OpenDialog(string header, string height, string width, bool showButtons)
+    private void OpenDialog(string header, string height="auto", string width="500px", bool showButtons=true)
     {
         Header = header;
         dialogHeight = height;
         dialogWidth = width;
         showDialogButtons = showButtons;
         this.DialogVisible = true;
+
+        // Erzwingt das Neu-Rendern der UI (wichtig in Blazor für Dialoge)
+        this.StateHasChanged();
     }
     #endregion
 
     #region LabelRender
     /// <summary>
-    /// LabelRender
+    /// LabelRender für Achsenbeschriftung, um Einheiten wie kWh, ct/kWh oder € anzuhängen
     /// </summary>
     /// <param name="args"></param>
     public void LabelRender(AxisLabelRenderEventArgs args)
     {
+        // Absicherung gegen Null-Werte beim Laden/ Rendern der Achsen
+        if (args?.Axis?.Name == null) return;
+
         // 1. Das passende Suffix anhand des Achsennamens ermitteln
         string? suffix = args.Axis.Name switch
         {
@@ -552,50 +643,40 @@
 
     #region ToolTipRenderEvent
     /// <summary>
-    /// Anzeige von 2 Nachkommastellen im Tooltip, immer 2 Nachkommastellen!
+    /// Anzeige von x Nachkommastellen im Tooltip!
     /// </summary>
     /// <param name="args"></param>
     public void ToolTipRenderEvent(SharedTooltipRenderEventArgs args)
     {
-        var displayCulture = new CultureInfo("de-DE");
+        if (args?.Data == null || args.Text == null) return;
 
         for (int i = 0; i < args.Data.Count; i++)
         {
             var di = args.Data[i];
-
             if (di?.PointY == null) continue;
 
-            double y;
-            // If it's already numeric, avoid string parsing
-            if (di.PointY is double dy) y = dy;
-            else if (di.PointY is float fy) y = fy;
-            else if (di.PointY is decimal dm) y = (double)dm;
-            else
-            {
-                // Fallback: try to parse string with Invariant first, then de-DE
-                var s = di.PointY.ToString();
+            // 1. Numerischen Wert direkt ermitteln ohne String-Fallback wo möglich
+            if (!TryGetDouble(di.PointY, out double y)) continue;
 
-                if (!double.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out y))
-                    double.TryParse(s, NumberStyles.Any, displayCulture, out y);
-            }
-
-            string seriesName = args.Data[i].SeriesName;
-
-            // 1. Einheit kompakt ermitteln
-            string? unit = seriesName switch
+            // 2. Einheit über Pattern Matching (C# 8+) ermitteln
+            string? unit = di.SeriesName switch
             {
                 "Kosten" => "ct/kWh",
                 "Verbrauch" => "kWh",
                 "Gesamtkosten" => "€",
-                _ => null // Fallback für unbekannte Serien
+                _ => null
             };
 
-            // 2. String zentral und ohne Redundanz zuweisen
-            if (unit != null)
+            // 3. String-Zuweisung absichern (Index-Check)
+            if (unit != null && i < args.Text.Count)
             {
-                args.Text[i] = $"{di.SeriesName}: {y.ToString("N2", displayCulture)} {unit}";
+                // Nachkommastellen
+                string decimalFormat = di.SeriesName == "Kosten" ? "N2" : "N0";
+
+                args.Text[i] = $"{di.SeriesName}: {y.ToString(decimalFormat, DisplayCulture)} {unit}";
             }
         }
     }
+
     #endregion
 }

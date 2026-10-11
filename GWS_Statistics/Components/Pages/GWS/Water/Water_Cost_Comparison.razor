@@ -1,6 +1,7 @@
 ﻿@page "/water_cost_comparison"
 
 @using GWS_Statistics.Helper
+@using static GWS_Statistics.Helper.HelperMethods
 @using GWS_Statistics.Calculation
 @using System.Globalization
 @using Syncfusion.Blazor
@@ -24,9 +25,9 @@
     </div>
 </div>
 
-<div class="card shadow-lg">
+<div class="card shadow-lg p-2 mb-1">
     @* Anzeigen alle Anbieter Start-Datum/Ende-Datum*@
-    <div class="container chartHeader bg-color-grey mb-1 mt-1 pb-2 border">
+    <div class="container-fluid bg-color-grey pb-2 border">
         <div class="row justify-content-center">
 
             @* Anbieter *@
@@ -57,145 +58,151 @@
 </div>
 
 @* Chart *@
-<div class="control-section" id="target" align="center">
-    <div class="card shadow-lg">
-        <SfChart @ref="chart" Title="Übersicht" Width="@Width" Height="@Height" Palettes="@palettes">
-            <ChartEvents 
+@if (ChartPointList != null && ChartPointList.Count > 0)
+{
+    <div class="control-section" id="target" align="center">
+        <div class="card shadow-lg">
+            <SfChart @ref="chart" Title="Übersicht" Width="@Width" Height="@Height" Palettes="@palettes">
+                <ChartEvents 
                 OnAxisLabelRender="LabelRender"
                 SharedTooltipRender="ToolTipRenderEvent">
-            </ChartEvents>
-            <ChartTitleStyle Size="24px"
-                             Color="black"
-                             FontFamily=@fontFamily
-                             FontWeight="normal"
-                             FontStyle="normal">
-            </ChartTitleStyle>
+                </ChartEvents>
+                <ChartTitleStyle Size="24px"
+                Color="black"
+                FontFamily=@fontFamily
+                FontWeight="normal"
+                FontStyle="normal">
+                </ChartTitleStyle>
 
-            <ChartArea Background="#8c8b87"
-                       Width="auto">
-                <ChartAreaBorder Color="black"
-                                 Width="1"></ChartAreaBorder>
-            </ChartArea>
+                <ChartArea Background="#8c8b87"
+                Width="auto">
+                    <ChartAreaBorder Color="black"
+                    Width="1"></ChartAreaBorder>
+                </ChartArea>
 
-            <ChartMargin Left="20" Right="20" Top="10" Bottom="0"></ChartMargin>
+                <ChartMargin Left="20" Right="20" Top="10" Bottom="0"></ChartMargin>
 
-            <ChartZoomSettings EnableMouseWheelZooming="true" EnablePinchZooming="true" EnableSelectionZooming="true"></ChartZoomSettings>
+                <ChartZoomSettings EnableMouseWheelZooming="true" EnablePinchZooming="true" EnableSelectionZooming="true"></ChartZoomSettings>
 
-            <ChartPrimaryXAxis RangePadding="ChartRangePadding.Additional"
-                               ValueType="Syncfusion.Blazor.Charts.ValueType.DateTimeCategory"
-                               EdgeLabelPlacement="EdgeLabelPlacement.None"
-                               Interval="@IntervalDuration"
-                               Format="@DateTimeFormat"
-                               IntervalType="@IntervalType">
+                <ChartPrimaryXAxis RangePadding="ChartRangePadding.Additional"
+                ValueType="Syncfusion.Blazor.Charts.ValueType.DateTimeCategory"
+                EdgeLabelPlacement="EdgeLabelPlacement.None"
+                Interval="@IntervalDuration"
+                Format="@DateTimeFormat"
+                IntervalType="@IntervalType">
 
-                <ChartAxisMajorGridLines Width="0"></ChartAxisMajorGridLines>
-                <ChartAxisLabelStyle FontFamily=@fontFamily></ChartAxisLabelStyle>
-                <ChartAxisTitleStyle FontFamily=@fontFamily></ChartAxisTitleStyle>
-                <ChartAxisCrosshairTooltip Fill="magenta" Enable="true"></ChartAxisCrosshairTooltip>
-            </ChartPrimaryXAxis>
-
-            <ChartPrimaryYAxis Title="Verbrauch (m3)"
-                               LabelFormat="{value}"
-                               RangePadding="ChartRangePadding.Normal">
-
-                <ChartAxisLineStyle Width="0"></ChartAxisLineStyle>
-                <ChartAxisLabelStyle FontFamily=@fontFamily></ChartAxisLabelStyle>
-                <ChartAxisTitleStyle FontFamily=@fontFamily></ChartAxisTitleStyle>
-                <ChartAxisMajorGridLines Width="0"></ChartAxisMajorGridLines>
-                <ChartAxisCrosshairTooltip Fill="magenta" Enable="false"></ChartAxisCrosshairTooltip>
-            </ChartPrimaryYAxis>
-
-            <ChartAxes>
-                <ChartAxis Name="yAxisCons_m3"
-                           Title="Verbrauch"
-                           RangePadding="ChartRangePadding.Auto"
-                           OpposedPosition="false"
-                           Interval="@Interval_YAxis_m3"
-                           Minimum="@MinRangeCons_m3"
-                           Maximum="@MaxRangeCons_m3"
-                           LabelFormat="N0">
-                    <ChartAxisMajorGridLines Width="1"></ChartAxisMajorGridLines>
-                </ChartAxis>
-
-                <ChartAxis Name="yAxisCost_m3"
-                           Title="Kosten"
-                           RangePadding="ChartRangePadding.Auto"
-                           OpposedPosition="false"
-                           Interval="@Interval_YAxis_Cost_m3"
-                           Minimum="@MinRangeCost_m3"
-                           Maximum="@MaxRangeCost_m3"
-                           LabelFormat="N0">
                     <ChartAxisMajorGridLines Width="0"></ChartAxisMajorGridLines>
-                </ChartAxis>
+                    <ChartAxisLabelStyle FontFamily=@fontFamily></ChartAxisLabelStyle>
+                    <ChartAxisTitleStyle FontFamily=@fontFamily></ChartAxisTitleStyle>
+                    <ChartAxisCrosshairTooltip Fill="magenta" Enable="true"></ChartAxisCrosshairTooltip>
+                </ChartPrimaryXAxis>
 
-                <ChartAxis Name="yAxisCost_Total"
-                           Title="Gesamtkosten"
-                           RangePadding="ChartRangePadding.Auto"
-                           OpposedPosition="true"
-                           Interval="@Interval_YAxis_Cost_Total"
-                           Minimum="@MinRangeCost_Total"
-                           Maximum="@MaxRangeCost_Total"
-                           LabelFormat="N0">
+                <ChartPrimaryYAxis Title="Verbrauch (m3)"
+                LabelFormat="{value}"
+                RangePadding="ChartRangePadding.Normal">
+
+                    <ChartAxisLineStyle Width="0"></ChartAxisLineStyle>
+                    <ChartAxisLabelStyle FontFamily=@fontFamily></ChartAxisLabelStyle>
+                    <ChartAxisTitleStyle FontFamily=@fontFamily></ChartAxisTitleStyle>
                     <ChartAxisMajorGridLines Width="0"></ChartAxisMajorGridLines>
-                </ChartAxis>
-            </ChartAxes>
+                    <ChartAxisCrosshairTooltip Fill="magenta" Enable="false"></ChartAxisCrosshairTooltip>
+                </ChartPrimaryYAxis>
 
-            <ChartSeriesCollection>
-                <ChartSeries Type="ChartSeriesType.Column"
-                             DataSource="@ChartPointList"
-                             YAxisName="yAxisCons_m3"
-                             XName="Date"
-                             YName="Cons_m3"
-                             Width="3"
-                             Name="Verbrauch"
-                             TooltipFormat="${series.name} : ${point.y} m³">
-                </ChartSeries>
+                <ChartAxes>
+                    <ChartAxis Name="yAxisCons_m3"
+                    Title="Verbrauch"
+                    RangePadding="ChartRangePadding.Auto"
+                    OpposedPosition="false"
+                    Interval="@Interval_YAxis_m3"
+                    Minimum="@MinRangeCons_m3"
+                    Maximum="@MaxRangeCons_m3"
+                    LabelFormat="N0">
+                        <ChartAxisMajorGridLines Width="1"></ChartAxisMajorGridLines>
+                    </ChartAxis>
 
-                <ChartSeries Type="ChartSeriesType.Column"
-                             DataSource="@ChartPointList"
-                             YAxisName="yAxisCost_m3"
-                             XName="Date"
-                             YName="Cost_m3"
-                             Width="3"
-                             Name="Kosten"
-                             TooltipFormat="${series.name} : ${point.y} €/m³">
-                </ChartSeries>
+                    <ChartAxis Name="yAxisCost_m3"
+                    Title="Kosten"
+                    RangePadding="ChartRangePadding.Auto"
+                    OpposedPosition="false"
+                    Interval="@Interval_YAxis_Cost_m3"
+                    Minimum="@MinRangeCost_m3"
+                    Maximum="@MaxRangeCost_m3"
+                    LabelFormat="N0">
+                        <ChartAxisMajorGridLines Width="0"></ChartAxisMajorGridLines>
+                    </ChartAxis>
 
-                <ChartSeries Type="ChartSeriesType.Column"
-                             DataSource="@ChartPointList"
-                             YAxisName="yAxisCost_Total"
-                             XName="Date"
-                             YName="Cost_Total"
-                             Width="3"
-                             Name="Gesamtkosten"
-                             TooltipFormat="${series.name} : ${point.y} €">
-                </ChartSeries>
+                    <ChartAxis Name="yAxisCost_Total"
+                    Title="Gesamtkosten"
+                    RangePadding="ChartRangePadding.Auto"
+                    OpposedPosition="true"
+                    Interval="@Interval_YAxis_Cost_Total"
+                    Minimum="@MinRangeCost_Total"
+                    Maximum="@MaxRangeCost_Total"
+                    LabelFormat="N0">
+                        <ChartAxisMajorGridLines Width="0"></ChartAxisMajorGridLines>
+                    </ChartAxis>
+                </ChartAxes>
 
-            </ChartSeriesCollection>
+                <ChartSeriesCollection>
+                    <ChartSeries Type="ChartSeriesType.Column"
+                    DataSource="@ChartPointList"
+                    YAxisName="yAxisCons_m3"
+                    XName="Date"
+                    YName="Cons_m3"
+                    Width="3"
+                    Name="Verbrauch"
+                    TooltipFormat="${series.name} : ${point.y} m³">
+                    </ChartSeries>
 
-            <ChartCrosshairSettings Enable="true" LineType="LineType.Both"></ChartCrosshairSettings>
+                    <ChartSeries Type="ChartSeriesType.Column"
+                    DataSource="@ChartPointList"
+                    YAxisName="yAxisCost_m3"
+                    XName="Date"
+                    YName="Cost_m3"
+                    Width="3"
+                    Name="Kosten"
+                    TooltipFormat="${series.name} : ${point.y} €/m³">
+                    </ChartSeries>
 
-            <ChartLegendSettings Visible="true"
-                                 EnableHighlight="true">
-            </ChartLegendSettings>
-            <ChartTooltipSettings Header="<b>${point.tooltip}</b>" Enable="true" Shared="true"></ChartTooltipSettings>
+                    <ChartSeries Type="ChartSeriesType.Column"
+                    DataSource="@ChartPointList"
+                    YAxisName="yAxisCost_Total"
+                    XName="Date"
+                    YName="Cost_Total"
+                    Width="3"
+                    Name="Gesamtkosten"
+                    TooltipFormat="${series.name} : ${point.y} €">
+                    </ChartSeries>
 
-            <SfSpinner @bind-Visible="@spinnerVisibleProperty" Type="SpinnerType.Tailwind" Size="40" CssClass="e-custom-color"></SfSpinner>
+                </ChartSeriesCollection>
 
-            @* Dialog*@
-            <div>
-                <SfDialog Target="#target" Width="320px" Height=@dialogHeight AllowDragging="true" ShowCloseIcon=" true" @bind-Visible="DialogVisible" AllowPrerender="true" IsModal="true">
-                    <DialogTemplates>
-                        <Header>@Header</Header>
-                    </DialogTemplates>
-                    <DialogPositionData X="@dialogXValue" Y="@dialogYValue"></DialogPositionData>
-                    <DialogAnimationSettings Effect="@animationEffect"></DialogAnimationSettings>
-                </SfDialog>
-            </div>
-        </SfChart>
+                <ChartCrosshairSettings Enable="true" LineType="LineType.Both"></ChartCrosshairSettings>
+
+                <ChartLegendSettings Visible="true"
+                EnableHighlight="true">
+                </ChartLegendSettings>
+                <ChartTooltipSettings Header="<b>${point.tooltip}</b>" Enable="true" Shared="true"></ChartTooltipSettings>
+
+                <SfSpinner @bind-Visible="@spinnerVisibleProperty" Type="SpinnerType.Tailwind" Size="40" CssClass="e-custom-color"></SfSpinner>
+
+                @* Dialog*@
+                <div>
+                    <SfDialog Target="#target" Width="320px" Height=@dialogHeight AllowDragging="true" ShowCloseIcon=" true" @bind-Visible="DialogVisible" AllowPrerender="true" IsModal="true">
+                        <DialogTemplates>
+                            <Header>@Header</Header>
+                        </DialogTemplates>
+                        <DialogPositionData X="@dialogXValue" Y="@dialogYValue"></DialogPositionData>
+                        <DialogAnimationSettings Effect="@animationEffect"></DialogAnimationSettings>
+                    </SfDialog>
+                </div>
+            </SfChart>
+        </div>
     </div>
-</div>
-
+}
+else
+{
+    <SfSpinner @bind-Visible="@spinnerVisibleProperty" Label="Lade Daten..." Size="40"></SfSpinner>
+}
 <style>
     .e-dlg-overlay {
         background-color: slategray;
@@ -311,9 +318,9 @@
     private double Interval_YAxis_Cost_m3 { get; set; } = 1.0d;
     private double Interval_YAxis_Cost_Total { get; set; } = 100.0d;
 
-    private double? MaxRangeCons_m3 { get; set; } = 200;
-    private double? MaxRangeCost_m3 { get; set; } = 10;
-    private double? MaxRangeCost_Total { get; set; } = 500;
+    private double MaxRangeCons_m3 { get; set; } = 200;
+    private double MaxRangeCost_m3 { get; set; } = 10;
+    private double MaxRangeCost_Total { get; set; } = 500;
 
     private double MinRangeCons_m3 { get; set; } = 0;
     private double MinRangeCost_m3 { get; set; } = 0;
@@ -324,259 +331,333 @@
     public class ColumnChartData
     {
         public DateTime Date { get; set; }
-        public double? Cons_m3 { get; set; }
-        public double? Cost_m3 { get; set; }
-        public double? Cost_Total { get; set; }
+        public double Cons_m3 { get; set; }
+        public double Cost_m3 { get; set; }
+        public double Cost_Total { get; set; }
     }
     #endregion
     #endregion
 
     #region OnInitializedAsync
     /// <summary>
-    /// OnInitializedAsync
+    /// Startet beim Laden der Seite automatisch und ruft die Daten parallel ab, berechnet die Chart-Daten und zeigt ggf. Dialoge an.
     /// </summary>
     /// <returns></returns>
     protected override async Task OnInitializedAsync()
     {
         this.spinnerVisibleProperty = true;
 
-        // MyAppSettings.json auslesen und letzten gespeicherten Anbieter auslesen
-        settings = GetSetMyAppConfig.GetMyAppSettings.ReadSettings(myAppSettings);
-
-        gwsP = new GWSProcessor(myHttpClient, settings!.GWSUri);
         try
         {
-            supplierList = await gwsP.LoadDataAsync<Water_SupplierModel>(urlSupplier);
+            // 1. Einstellungen auslesen
+            settings = GetSetMyAppConfig.GetMyAppSettings.ReadSettings(myAppSettings);
+            gwsP = new GWSProcessor(myHttpClient, settings!.GWSUri);
 
-            if (supplierList?.Count != 0)
-            {
-                supplierList?.Sort((x, y) => x.Id.CompareTo(y.Id));
+            // 2. Performance-Boost: Gas-Anbieter und Zahlungen PARALLEL über die API abrufen
+            Task<List<Water_SupplierModel>?> supplierTask = gwsP.LoadDataAsync<Water_SupplierModel>(urlSupplier);
+            Task<List<GWS_PaymentModel>?> paymentTask = gwsP.LoadDataAsync<GWS_PaymentModel>(urlPayments);
 
-                paymentList = await gwsP!.LoadDataAsync<GWS_PaymentModel>(urlPayments);
+            // Warten, bis beide HTTP-Anfragen parallel abgeschlossen sind
+            await Task.WhenAll(supplierTask, paymentTask);
 
-                if (paymentList?.Count != 0)
-                {
-                    paymentList?.Sort((x, y) => x.ID_Anbieter.CompareTo(y.ID_Anbieter));
-                    await CalcChartData(supplierList, paymentList);
-                }
-                else
-                {
-                    OpenDialog("Keine Wasser-Zahlungen vorhanden!", "60px", "380px", false);
-                }
-            }
-            else
+            supplierList = supplierTask.Result;
+            paymentList = paymentTask.Result;
+
+            // 3. Early Exits (Frühzeitiger Ausstieg) statt tiefer If-Verschachtelungen
+            if (supplierList == null || supplierList.Count == 0)
             {
                 OpenDialog("Keine Wasser-Anbieter vorhanden!", "60px", "380px", false);
+                return;
             }
+
+            if (paymentList == null || paymentList.Count == 0)
+            {
+                OpenDialog("Keine Wasser-Zahlungen vorhanden!", "60px", "380px", false);
+                return;
+            }
+
+            // HINWEIS: Das Sortieren der Listen entfällt komplett, da das Dictionary in
+            // CalcChartData die Zuordnung ohnehin in O(1) unabhängig von der Reihenfolge erledigt.
+
+            // 4. Daten verarbeiten und Chart berechnen
+            await CalcChartData(supplierList, paymentList);
         }
         catch (Exception)
         {
             OpenDialog("Keine Wasser-Daten vorhanden!", "60px", "380px", false);
         }
+        finally
+        {
+            // 5. Spinner im 'finally' garantiert ausschalten (greift auch bei Fehlern)
+            this.spinnerVisibleProperty = false;
 
-        // Spinner
-        await Task.Delay(200); // muss sein sonst Runtime fault
-        this.spinnerVisibleProperty = false;
+            StateHasChanged();
+        }
     }
     #endregion
 
     #region CalcChartData
     /// <summary>
-    /// Berechnen der Chart-Daten
+    /// Berechnung der Chart-Daten für Verbrauch, Kosten/m3 und Gesamtkosten
     /// </summary>
     /// <param name="suppliers"></param>
     /// <param name="payments"></param>
     /// <returns></returns>
     public async Task CalcChartData(List<Water_SupplierModel>? suppliers, List<GWS_PaymentModel>? payments)
     {
-        double? cons_kWh = 0.0d;
-        double? cost_kWh = 0.0d;
-        double? cost_Total = 0.0d;
-
-        if (suppliers?.Count != 0 && payments?.Count != 0)
-        {
-            GetStartDateEndDate(suppliers);
-
-
-            counterChangeList = await gwsP!.LoadDataAsync<Water_CounterChangeModel>(urlCounterChangeAllSuppliers); // Zählerwechsel aller Anbieter laden
-            List<IConsumption> consumptionsYearly = await Task.Run(() => GWS_Calculation.CalcConsumptionYearly(suppliers, counterChangeList));
-
-            if (consumptionsYearly.Count == 0)
-            {
-                OpenDialog("Keine Wassser-Verbräuche vorhanden!", "60px", "380px", false);
-                return;
-            }
-
-            foreach (var cons in consumptionsYearly) // Jahresverbrauch aller Anbieter berechnen (kWh)
-            {
-                cons_kWh = cons.Consumption;
-                cost_Total = payments?.Where(s => s.ID_Anbieter == cons.SupplierId).Select(x => x.Zahlungen).Sum(); // gesamte jährliche Zahlungen
-
-                if (cons_kWh > 0.0d)
-                {
-                    cost_kWh = cost_Total / cons_kWh; // Berechnung €/m3
-                }
-                else
-                {
-                    chart.ClearSeries();
-                    OpenDialog("Keine Wassser-Kosten vorhanden!", "60px", "380px", false);
-                }
-
-                ChartPointList.Add(new ColumnChartData { Date = cons.Date, Cons_m3 = cons_kWh, Cost_m3 = cost_kWh, Cost_Total = cost_Total });
-            }
-            GetChartMinMaxRange(ChartPointList);
-        }
-        else
+        // 1. Sicherer Null- und Leer-Check vorab (Verhindert Exceptions bei null)
+        if (suppliers == null || suppliers.Count == 0 || payments == null || payments.Count == 0)
         {
             chart.ClearSeries();
-            OpenDialog("Keine Wassser-Vergleichskosten vorhanden!", "60px", "380px", false);
+            OpenDialog("Keine Wasser-Vergleichskosten vorhanden!", "60px", "380px", false);
+            return;
         }
+
+        GetStartDateEndDate(suppliers);
+
+        // Externe Daten asynchron laden
+        counterChangeList = await gwsP!.LoadDataAsync<Water_CounterChangeModel>(urlCounterChangeAllSuppliers);
+
+        List<IConsumption> consumptionsYearly = await Task.Run(() => GWS_Calculation.CalcConsumptionYearly(suppliers, counterChangeList));
+
+        if (consumptionsYearly == null || consumptionsYearly.Count == 0)
+        {
+            OpenDialog("Keine Wasser-Verbräuche vorhanden!", "60px", "380px", false);
+            return;
+        }
+
+        // 2. Performance-Boost: Zahlungen vorab indizieren (O(1) statt Listen-Scan in der Schleife)
+        var paymentLookup = payments
+            .GroupBy(p => p.ID_Anbieter)
+            .ToDictionary(g => g.Key, g => g.Sum(p => p.Zahlungen));
+
+        double cons_m3;
+        double cost_m3 = 0.0d;
+        double cost_Total;
+
+        // Flag, damit der Dialog bei fehlenden Kosten nur einmal aufpoppt
+        bool hasShownNoCostDialog = false;
+
+        // 3. Effiziente Schleife
+        foreach (var cons in consumptionsYearly)
+        {
+            // Sicheres Auslesen des Nullable double? aus IConsumption
+            cons_m3 = cons.Consumption.GetValueOrDefault();
+
+            // Blitzschneller Zugriff auf die summierten Kosten aus dem Dictionary
+            if (paymentLookup.TryGetValue(cons.SupplierId, out double? tempCost))
+            {
+                cost_Total = tempCost.GetValueOrDefault();
+            }
+            else
+            {
+                cost_Total = 0.0d;
+            }
+
+            // Berechnung & Dialog-Logik
+            if (cons_m3 > 0.0d)
+            {
+                // Hinweis: Bleibt wie im Original reine Division (€/m³ statt ct/kWh)
+                cost_m3 = cost_Total / cons_m3;
+            }
+            else
+            {
+                cost_m3 = 0.0d; // Definierten Standardwert setzen
+                chart.ClearSeries();
+
+                if (!hasShownNoCostDialog)
+                {
+                    OpenDialog("Keine Wasser-Kosten vorhanden!", "60px", "380px", false);
+                    hasShownNoCostDialog = true; // Sperre für weitere Durchläufe aktivieren
+                }
+            }
+
+            // Zuweisung an Cons_m3 und Cost_m3 (passend zur GetChartMinMaxRange aus Schritt 1)
+            ChartPointList.Add(new ColumnChartData
+            {
+                Date = cons.Date,
+                Cons_m3 = cons_m3,
+                Cost_m3 = cost_m3,
+                Cost_Total = cost_Total
+            });
+        }
+
+        GetChartMinMaxRange(ChartPointList);
     }
+
     #endregion
 
     #region GetStartDateEndDate
     /// <summary>
-    /// Auslesen Start/Ende-Datum
+    /// Auslesen des frühesten Startdatums und spätesten Enddatums aus der Liste der Anbieter
     /// </summary>
     /// <param name="suppliers"></param>
     public void GetStartDateEndDate(List<Water_SupplierModel>? suppliers)
     {
-        DateTime? startDate = DateTime.MaxValue;
-        DateTime? endDate = DateTime.MinValue;
-
-        if (suppliers?.Count > 0)
+        // 1. Früher Ausstieg bei leeren Daten + sauberes Fallback auf 'null'
+        if (suppliers == null || suppliers.Count == 0)
         {
-            foreach (Water_SupplierModel supplier in suppliers)
+            StartDate = null;
+            EndDate = null;
+            return;
+        }
+
+        DateTime? minStart = DateTime.MaxValue;
+        DateTime? maxEnd = DateTime.MinValue;
+        bool hasValidData = false;
+
+        // Cache für DateTime.Now, damit es nicht in jeder Schleifeniteration neu abgefragt werden muss
+        DateTime now = DateTime.Now;
+
+        // 2. Einmaliger, schneller Durchlauf
+        foreach (var supplier in suppliers)
+        {
+            // Lokale Variablen reduzieren mehrfache Property-Zugriffe
+            var start = supplier.Zeitraum_Start;
+            var end = supplier.Zeitraum_Ende;
+
+            // Kombinierter Check: Nur abgelaufene Zeiträume mit validen Daten betrachten
+            if (start.HasValue && end.HasValue && end.Value < now)
             {
-                if (supplier.Zeitraum_Start != null && supplier.Zeitraum_Ende != null)
-                {
-                    if (supplier.Zeitraum_Ende < DateTime.Now)
-                    {
-                        startDate = supplier.Zeitraum_Start < startDate ? supplier.Zeitraum_Start : startDate;
-                        endDate = supplier.Zeitraum_Ende > endDate ? supplier.Zeitraum_Ende : endDate;
-                    }
-                }
+                if (start.Value < minStart.Value) minStart = start;
+                if (end.Value > maxEnd.Value) maxEnd = end;
+                hasValidData = true;
             }
         }
-        StartDate = startDate;
-        EndDate = endDate;
+
+        // 3. Zuweisung nur, wenn tatsächlich passende Daten gefunden wurden
+        StartDate = hasValidData ? minStart : null;
+        EndDate = hasValidData ? maxEnd : null;
     }
     #endregion
 
     #region GetChartMinMaxRange
     /// <summary>
-    /// Berechnen Chart Min/Max-Range
+    /// Berechnung der Min/Max-Werte für die Y-Achsen der Chart-Darstellung
     /// </summary>
     public void GetChartMinMaxRange(List<ColumnChartData> chartList)
     {
-        if (chartList.Count() > 0)
+        // 1. Früher Abbruch
+        if (chartList == null || !chartList.Any())
         {
-            // Y-Achsen Verbrauch
-            MinRangeCons_m3 = 0.0d;
-            MaxRangeCons_m3 = Math.Round(ChartPointList.Max(v => v.Cons_m3).GetValueOrDefault(), 0) + 5.0d;
-
-            MinRangeCost_m3 = 0.0d;
-            MaxRangeCost_m3 = Math.Round(ChartPointList.Max(v => v.Cost_m3).GetValueOrDefault(), 0) + 5.0d;
-
-            MinRangeCost_Total = 0.0d;
-            MaxRangeCost_Total = Math.Round(ChartPointList.Max(v => v.Cost_Total).GetValueOrDefault(), 0) + 20.0;
-
-            Interval_YAxis_m3 = 30.0d;
-            Interval_YAxis_Cost_m3 = 4.0d;
-            Interval_YAxis_Cost_Total = 200.0d;
-
+            MinRangeCons_m3 = MaxRangeCons_m3 = 0.0d;
+            MinRangeCost_m3 = MaxRangeCost_m3 = 0.0d;
+            MinRangeCost_Total = MaxRangeCost_Total = 0.0d;
             return;
         }
 
+        // 2. Initialisierung der Min-Werte und Intervalle
         MinRangeCons_m3 = 0.0d;
-        MaxRangeCons_m3 = 0.0d;
         MinRangeCost_m3 = 0.0d;
-        MaxRangeCost_m3 = 0.0d;
         MinRangeCost_Total = 0.0d;
-        MaxRangeCost_Total = 0.0d;
+
+        Interval_YAxis_m3 = 10.0d;
+        Interval_YAxis_Cost_m3 = 1.0d;
+        Interval_YAxis_Cost_Total = 50.0d;
+
+        // 3. Startwerte für die Maximum-Suche aus dem ersten Element lesen
+        // (Verhindert Probleme, falls alle Werte in der Liste 0 oder negativ sind)
+        var firstItem = chartList.FirstOrDefault(x => x != null);
+        if (firstItem == null) return;
+
+        double maxCons = firstItem.Cons_m3;
+        double maxCostM3 = firstItem.Cost_m3;
+        double maxCostTotal = firstItem.Cost_Total;
+
+        // Liste einmal komplett durchlaufen
+        foreach (var item in chartList)
+        {
+            if (item == null) continue;
+
+            if (item.Cons_m3 > maxCons) maxCons = item.Cons_m3;
+            if (item.Cost_m3 > maxCostM3) maxCostM3 = item.Cost_m3;
+            if (item.Cost_Total > maxCostTotal) maxCostTotal = item.Cost_Total;
+        }
+
+        // 4. Werte runden und Offsets addieren
+        MaxRangeCons_m3 = Math.Round(maxCons, 0) * 1.05d; // 5% Puffer
+        MaxRangeCost_m3 = Math.Round(maxCostM3, 0) * 1.05d; // 5% Puffer
+        MaxRangeCost_Total = Math.Round(maxCostTotal, 0) * 1.05d; // 5% Puffer
+
     }
     #endregion
 
     #region OpenDialog
     /// <summary>
-    /// OpenDialog
+    /// Dialog öffnen mit Header, Höhe, Breite und optionalen Buttons
     /// </summary>
-    private void OpenDialog(string header, string height, string width, bool showButtons)
+    private void OpenDialog(string header, string height="auto", string width="500px", bool showButtons=true)
     {
         Header = header;
         dialogHeight = height;
         dialogWidth = width;
         showDialogButtons = showButtons;
         this.DialogVisible = true;
+
+        // Erzwingt das Neu-Rendern der UI (wichtig in Blazor für Dialoge)
+        this.StateHasChanged();
     }
     #endregion
 
     #region LabelRender
     /// <summary>
-    /// LabelRender
+    /// LabelRender für Achsenbeschriftung, um Suffixe wie "m³", "€/m³" oder "€" hinzuzufügen.
     /// </summary>
     /// <param name="args"></param>
     public void LabelRender(AxisLabelRenderEventArgs args)
     {
-        switch (args.Axis.Name)
+        // Absicherung gegen Null-Werte beim Laden/ Rendern der Achsen
+        if (args?.Axis?.Name == null) return;
+
+        // 1. Das passende Suffix anhand des Achsennamens ermitteln
+        string? suffix = args.Axis.Name switch
         {
-            case "yAxisCons_m3":
-                args.Text = args.Text + " m³";
-                break;
+            "yAxisCons_m3" => " m³",
+            "yAxisCost_m3" => " €/m³",
+            "yAxisCost_Total" => " €",
+            _ => null // Fallback für andere Achsen
+        };
 
-            case "yAxisCost_m3":
-                args.Text = args.Text + " €/m³";
-                break;
-
-            case "yAxisCost_Total":
-                args.Text = args.Text + " €";
-                break;
+        // 2. String elegant anhängen, falls eine bekannte Achse getroffen wurde
+        if (suffix != null)
+        {
+            args.Text += suffix;
         }
     }
     #endregion
 
     #region ToolTipRenderEvent
     /// <summary>
-    /// Anzeige von 2 Nachkommastellen im Tooltip, immer 2 Nachkommastellen!
+    /// Anzeige von x Nachkommastellen im Tooltip!
     /// </summary>
     /// <param name="args"></param>
     public void ToolTipRenderEvent(SharedTooltipRenderEventArgs args)
     {
-        var displayCulture = new CultureInfo("de-DE");
+        if (args?.Data == null || args.Text == null) return;
 
         for (int i = 0; i < args.Data.Count; i++)
         {
             var di = args.Data[i];
-
             if (di?.PointY == null) continue;
 
-            double y;
-            // If it's already numeric, avoid string parsing
-            if (di.PointY is double dy) y = dy;
-            else if (di.PointY is float fy) y = fy;
-            else if (di.PointY is decimal dm) y = (double)dm;
-            else
+            // 1. Numerischen Wert direkt ermitteln ohne String-Fallback wo möglich
+            if (!TryGetDouble(di.PointY, out double y)) continue;
+
+            // 2. Einheit über Pattern Matching (C# 8+) ermitteln
+            string? unit = di.SeriesName switch
             {
-                // Fallback: try to parse string with Invariant first, then de-DE
-                var s = di.PointY.ToString();
+                "Kosten" => "€/m³",
+                "Verbrauch" => "m³",
+                "Gesamtkosten" => "€",
+                _ => null
+            };
 
-                if (!double.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out y))
-                    double.TryParse(s, NumberStyles.Any, displayCulture, out y);
-            }
-
-            switch (args.Data[i].SeriesName)
+            // 3. String-Zuweisung absichern (Index-Check)
+            if (unit != null && i < args.Text.Count)
             {
-                case "Verbrauch":
-                    args.Text[i] = $"{di.SeriesName}: {y.ToString("N0", displayCulture)} m³";
-                    break;
-
-                case "Kosten":
-                    args.Text[i] = $"{di.SeriesName}: {y.ToString("N0", displayCulture)} €/m³";
-                    break;
-
-                case "Gesamtkosten":
-                    args.Text[i] = $"{di.SeriesName}: {y.ToString("N2", displayCulture)} €";
-                    break;
+                // Nachkommastellen
+                string decimalFormat = di.SeriesName == "Kosten" ? "N2" : "N0";
+                args.Text[i] = $"{di.SeriesName}: {y.ToString(decimalFormat, DisplayCulture)} {unit}";
             }
         }
     }

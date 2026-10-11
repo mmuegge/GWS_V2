@@ -1,7 +1,11 @@
-﻿namespace GWS_Statistics.Helper
+﻿using System.Globalization;
+
+namespace GWS_Statistics.Helper
 {
     public static class HelperMethods
     {
+        public static readonly CultureInfo DisplayCulture = new ("de-DE");
+
         /// <summary>
         /// Prüfen zweiter Daten auf Gültigkeit
         /// </summary>
@@ -28,5 +32,37 @@
             }
             return true;
         }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="value"></param>
+        /// <param name="result"></param>
+        /// <returns></returns>
+        public static bool TryGetDouble(object value, out double result)
+        {
+            switch (value)
+            {
+                case double d: result = d; return true;
+                case float f: result = f; return true;
+                case decimal m: result = (double)m; return true;
+                case int i: result = i; return true; // Optional: Schützt vor Integer-Werten
+                case string str:
+                    if (double.TryParse(str, NumberStyles.Any, CultureInfo.InvariantCulture, out result)) return true;
+                    if (double.TryParse(str, NumberStyles.Any, DisplayCulture, out result)) return true;
+                    break;
+                default:
+                    // Fallback für sonstige Objekte (z.B. andere Zahlentypen)
+                    var s = value.ToString();
+                    if (double.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out result)) return true;
+                    if (double.TryParse(s, NumberStyles.Any, DisplayCulture, out result)) return true;
+                    break;
+            }
+
+            result = 0;
+            return false;
+        }
     }
+
+
 }

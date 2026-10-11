@@ -59,171 +59,178 @@
 </div>
 
 @* Chart *@
-<div class="control-section" id="target" align="center">
-    <div class="card shadow-lg">
-        <SfChart @ref="chart" Title="Übersicht" Width="@Width" Height="@Height" Palettes="@palettes">
-            <ChartEvents OnPointRender="PointRender"></ChartEvents>
-            <ChartTitleStyle Size="24px"
-                             Color="black"
-                             FontFamily=@fontFamily
-                             FontWeight="normal"
-                             FontStyle="normal">
-            </ChartTitleStyle>
+@if (efficiencyList != null && efficiencyList.Count > 0)
+{
+    <div class="control-section" id="target" align="center">
+        <div class="card shadow-lg">
+            <SfChart @ref="chart" Title="Übersicht" Width="@Width" Height="@Height" Palettes="@palettes">
+                <ChartEvents OnPointRender="PointRender"></ChartEvents>
+                <ChartTitleStyle Size="24px"
+                Color="black"
+                FontFamily=@fontFamily
+                FontWeight="normal"
+                FontStyle="normal">
+                </ChartTitleStyle>
 
-            <ChartArea Background="#8c8b87"
-                       Width="auto">
-                <ChartAreaBorder Color="black"
-                                 Width="1"></ChartAreaBorder>
-            </ChartArea>
+                <ChartArea Background="#8c8b87"
+                Width="auto">
+                    <ChartAreaBorder Color="black"
+                    Width="1"></ChartAreaBorder>
+                </ChartArea>
 
-            <ChartMargin Left="20" Right="20" Top="10" Bottom="0"></ChartMargin>
+                <ChartMargin Left="20" Right="20" Top="10" Bottom="0"></ChartMargin>
 
-            <ChartZoomSettings EnableMouseWheelZooming="true" EnablePinchZooming="true" EnableSelectionZooming="true"></ChartZoomSettings>
+                <ChartZoomSettings EnableMouseWheelZooming="true" EnablePinchZooming="true" EnableSelectionZooming="true"></ChartZoomSettings>
 
-            <ChartPrimaryXAxis RangePadding="ChartRangePadding.Additional"
-                               ValueType="Syncfusion.Blazor.Charts.ValueType.DateTimeCategory"
-                               EdgeLabelPlacement="EdgeLabelPlacement.None"
-                               Interval="@IntervalDuration"
-                               Format="@DateTimeFormat"
-                               IntervalType="@IntervalType">
+                <ChartPrimaryXAxis RangePadding="ChartRangePadding.Additional"
+                ValueType="Syncfusion.Blazor.Charts.ValueType.DateTimeCategory"
+                EdgeLabelPlacement="EdgeLabelPlacement.None"
+                Interval="@IntervalDuration"
+                Format="@DateTimeFormat"
+                IntervalType="@IntervalType">
 
-                <ChartAxisMajorGridLines Width="0"></ChartAxisMajorGridLines>
-                <ChartAxisLabelStyle FontFamily=@fontFamily></ChartAxisLabelStyle>
-                <ChartAxisTitleStyle FontFamily=@fontFamily></ChartAxisTitleStyle>
-                <ChartAxisCrosshairTooltip Fill="magenta" Enable="true"></ChartAxisCrosshairTooltip>
-            </ChartPrimaryXAxis>
+                    <ChartAxisMajorGridLines Width="0"></ChartAxisMajorGridLines>
+                    <ChartAxisLabelStyle FontFamily=@fontFamily></ChartAxisLabelStyle>
+                    <ChartAxisTitleStyle FontFamily=@fontFamily></ChartAxisTitleStyle>
+                    <ChartAxisCrosshairTooltip Fill="magenta" Enable="true"></ChartAxisCrosshairTooltip>
+                </ChartPrimaryXAxis>
 
-            <ChartPrimaryYAxis Title="Energie (kWh)"
-                               LabelFormat="{value}"
-                               RangePadding="ChartRangePadding.Normal"
-                               Interval="2000">
+                <ChartPrimaryYAxis Title="Energie (kWh)"
+                LabelFormat="{value}"
+                RangePadding="ChartRangePadding.Normal"
+                Interval="2000">
 
-                <ChartAxisLineStyle Width="0"></ChartAxisLineStyle>
-                <ChartAxisLabelStyle FontFamily=@fontFamily></ChartAxisLabelStyle>
-                <ChartAxisTitleStyle FontFamily=@fontFamily></ChartAxisTitleStyle>
-                <ChartAxisMajorGridLines Width="0"></ChartAxisMajorGridLines>
-                <ChartAxisCrosshairTooltip Fill="magenta" Enable="false"></ChartAxisCrosshairTooltip>
-            </ChartPrimaryYAxis>
+                    <ChartAxisLineStyle Width="0"></ChartAxisLineStyle>
+                    <ChartAxisLabelStyle FontFamily=@fontFamily></ChartAxisLabelStyle>
+                    <ChartAxisTitleStyle FontFamily=@fontFamily></ChartAxisTitleStyle>
+                    <ChartAxisMajorGridLines Width="0"></ChartAxisMajorGridLines>
+                    <ChartAxisCrosshairTooltip Fill="magenta" Enable="false"></ChartAxisCrosshairTooltip>
+                </ChartPrimaryYAxis>
 
-            <ChartAxes>
-                <ChartAxis Name="yAxisCons_Total"
-                           Title="Gesamt-Verbrauch"
-                           RangePadding="ChartRangePadding.Auto"
-                           OpposedPosition="false"
-                           Interval="@Interval_YAxis"
-                           LabelFormat="{value}">
-                    <ChartAxisMajorGridLines Width="1"></ChartAxisMajorGridLines>
-                </ChartAxis>
+                <ChartAxes>
+                    <ChartAxis Name="yAxisCons_Total"
+                    Title="Gesamt-Verbrauch"
+                    RangePadding="ChartRangePadding.Auto"
+                    OpposedPosition="false"
+                    Interval="@Interval_YAxis"
+                    LabelFormat="{value}">
+                        <ChartAxisMajorGridLines Width="1"></ChartAxisMajorGridLines>
+                    </ChartAxis>
 
-                <ChartAxis Name="yAxisCons_Heating"
-                           Title="Heizung-Verbrauch"
-                           RangePadding="ChartRangePadding.Auto"
-                           OpposedPosition="false"
-                           Interval="@Interval_YAxis"
-                           LabelFormat="{value}">
-                    <ChartAxisMajorGridLines Width="1"></ChartAxisMajorGridLines>
-                </ChartAxis>
+                    <ChartAxis Name="yAxisCons_Heating"
+                    Title="Heizung-Verbrauch"
+                    RangePadding="ChartRangePadding.Auto"
+                    OpposedPosition="false"
+                    Interval="@Interval_YAxis"
+                    LabelFormat="{value}">
+                        <ChartAxisMajorGridLines Width="1"></ChartAxisMajorGridLines>
+                    </ChartAxis>
 
-                <ChartAxis Name="yAxisCons_Water"
-                           Title="Wasser-Verbrauch"
-                           RangePadding="ChartRangePadding.Auto"
-                           OpposedPosition="true"
-                           Interval="@Interval_YAxis"
-                           LabelFormat="{value}">
-                    <ChartAxisMajorGridLines Width="1"></ChartAxisMajorGridLines>
-                </ChartAxis>
-            </ChartAxes>
+                    <ChartAxis Name="yAxisCons_Water"
+                    Title="Wasser-Verbrauch"
+                    RangePadding="ChartRangePadding.Auto"
+                    OpposedPosition="true"
+                    Interval="@Interval_YAxis"
+                    LabelFormat="{value}">
+                        <ChartAxisMajorGridLines Width="1"></ChartAxisMajorGridLines>
+                    </ChartAxis>
+                </ChartAxes>
 
-            <ChartAnnotations>
-                @foreach (var annotation in Annotations)
-                {
-                    <ChartAnnotation X="@annotation.xVal" Y="@annotation.yVal.ToString()" Region="Regions.Series" CoordinateUnits="Units.Point">
-                        <ContentTemplate>
-                            <div style="color: black; font-size: 24px; font-weight:600">
-                                @annotation.ClassText
-                            </div>
-                            <div style="color: black; font-size: 10px; font-weight:400">
-                                @annotation.ClassValue
-                            </div>
-                        </ContentTemplate>
-                    </ChartAnnotation>
-                }
-            </ChartAnnotations>
+                <ChartAnnotations>
+                    @foreach (var annotation in Annotations)
+                    {
+                        <ChartAnnotation X="@annotation.xVal" Y="@annotation.yVal.ToString()" Region="Regions.Series" CoordinateUnits="Units.Point">
+                            <ContentTemplate>
+                                <div style="color: black; font-size: 24px; font-weight:600">
+                                    @annotation.ClassText
+                                </div>
+                                <div style="color: black; font-size: 10px; font-weight:400">
+                                    @annotation.ClassValue
+                                </div>
+                            </ContentTemplate>
+                        </ChartAnnotation>
+                    }
+                </ChartAnnotations>
 
-            <ChartSeriesCollection>
-                <ChartSeries ColumnWidth="0.5"
-                             ColumnSpacing="0.1"
-                             DataSource="@ChartPointList"
-                             XName="Date"
-                             YName="EnergyTotal"
-                             Name="Gesamt-Verbrauch"
-                             GroupName="Energy"
-                             Type="ChartSeriesType.Column">
+                <ChartSeriesCollection>
+                    <ChartSeries ColumnWidth="0.5"
+                    ColumnSpacing="0.1"
+                    DataSource="@ChartPointList"
+                    XName="Date"
+                    YName="EnergyTotal"
+                    Name="Gesamt-Verbrauch"
+                    GroupName="Energy"
+                    Type="ChartSeriesType.Column">
 
-                    <ChartMarker>
-                        <ChartDataLabel Visible="true" Position="Syncfusion.Blazor.Charts.LabelPosition.Top">
-                            <ChartDataLabelFont Color="#ffffff" FontWeight="600" FontStyle="normal" Size="12px"></ChartDataLabelFont>
-                        </ChartDataLabel>
-                    </ChartMarker>
-                </ChartSeries>
+                        <ChartMarker>
+                            <ChartDataLabel Visible="true" Position="Syncfusion.Blazor.Charts.LabelPosition.Top">
+                                <ChartDataLabelFont Color="#ffffff" FontWeight="600" FontStyle="normal" Size="12px"></ChartDataLabelFont>
+                            </ChartDataLabel>
+                        </ChartMarker>
+                    </ChartSeries>
 
-                <ChartSeries ColumnWidth="0.5"
-                             ColumnSpacing="0.1"
-                             DataSource="@ChartPointList"
-                             XName="Date"
-                             YName="EnergyHeating"
-                             Name="Heizung-Verbrauch"
-                             GroupName="Energy"
-                             Type="ChartSeriesType.Column">
+                    <ChartSeries ColumnWidth="0.5"
+                    ColumnSpacing="0.1"
+                    DataSource="@ChartPointList"
+                    XName="Date"
+                    YName="EnergyHeating"
+                    Name="Heizung-Verbrauch"
+                    GroupName="Energy"
+                    Type="ChartSeriesType.Column">
 
-                    <ChartMarker>
-                        <ChartDataLabel Visible="true" Position="Syncfusion.Blazor.Charts.LabelPosition.Top">
-                            <ChartDataLabelFont Color="#ffffff" FontWeight="600" FontStyle="normal" Size="12px"></ChartDataLabelFont>
-                        </ChartDataLabel>
-                    </ChartMarker>
+                        <ChartMarker>
+                            <ChartDataLabel Visible="true" Position="Syncfusion.Blazor.Charts.LabelPosition.Top">
+                                <ChartDataLabelFont Color="#ffffff" FontWeight="600" FontStyle="normal" Size="12px"></ChartDataLabelFont>
+                            </ChartDataLabel>
+                        </ChartMarker>
 
-                </ChartSeries>
+                    </ChartSeries>
 
-                <ChartSeries ColumnWidth="0.5"
-                             ColumnSpacing="0.1"
-                             DataSource="@ChartPointList"
-                             XName="Date"
-                             YName="EnergyWater"
-                             Name="Wasser-Verbrauch"
-                             GroupName="Energy"
-                             Type="ChartSeriesType.Column">
+                    <ChartSeries ColumnWidth="0.5"
+                    ColumnSpacing="0.1"
+                    DataSource="@ChartPointList"
+                    XName="Date"
+                    YName="EnergyWater"
+                    Name="Wasser-Verbrauch"
+                    GroupName="Energy"
+                    Type="ChartSeriesType.Column">
 
-                    <ChartMarker>
-                        <ChartDataLabel Visible="true" Position="Syncfusion.Blazor.Charts.LabelPosition.Top">
-                            <ChartDataLabelFont Color="#ffffff" FontWeight="600" FontStyle="normal" Size="12px"></ChartDataLabelFont>
-                        </ChartDataLabel>
-                    </ChartMarker>
-                </ChartSeries>
-            </ChartSeriesCollection>
+                        <ChartMarker>
+                            <ChartDataLabel Visible="true" Position="Syncfusion.Blazor.Charts.LabelPosition.Top">
+                                <ChartDataLabelFont Color="#ffffff" FontWeight="600" FontStyle="normal" Size="12px"></ChartDataLabelFont>
+                            </ChartDataLabel>
+                        </ChartMarker>
+                    </ChartSeries>
+                </ChartSeriesCollection>
 
-            <ChartCrosshairSettings Enable="true" LineType="LineType.Both"></ChartCrosshairSettings>
+                <ChartCrosshairSettings Enable="true" LineType="LineType.Both"></ChartCrosshairSettings>
 
-            <ChartLegendSettings Visible="true"
-                                 EnableHighlight="true">
-            </ChartLegendSettings>
-            <ChartTooltipSettings Header="<b>${point.tooltip} kWh // kWh/m²a</b>" Enable="true" Shared="true" EnableHighlight="true"></ChartTooltipSettings>
-        </SfChart>
+                <ChartLegendSettings Visible="true"
+                EnableHighlight="true">
+                </ChartLegendSettings>
+                <ChartTooltipSettings Header="<b>${point.tooltip} kWh // kWh/m²a</b>" Enable="true" Shared="true" EnableHighlight="true"></ChartTooltipSettings>
+            </SfChart>
+        </div>
+
+        <SfSpinner @bind-Visible="@SpinnerVisibleProperty" Type="SpinnerType.Tailwind" Size="40" CssClass="e-custom-color"></SfSpinner>
+
+        @* Dialog*@
+        <div>
+            <SfDialog Target="#target" Width="@dialogWidth" Height="@dialogHeight" AllowDragging="true" ShowCloseIcon="true" @bind-Visible="@DialogVisible" AllowPrerender="true" IsModal="true">
+                <DialogTemplates>
+                    <Header>@Header</Header>
+                </DialogTemplates>
+                <DialogPositionData X="@dialogXValue" Y="@dialogYValue"></DialogPositionData>
+                <DialogAnimationSettings Effect="@animationEffect"></DialogAnimationSettings>
+            </SfDialog>
+        </div>
+
     </div>
-
-    <SfSpinner @bind-Visible="@SpinnerVisibleProperty" Type="SpinnerType.Tailwind" Size="40" CssClass="e-custom-color"></SfSpinner>
-
-    @* Dialog*@
-    <div>
-        <SfDialog Target="#target" Width="@dialogWidth" Height="@dialogHeight" AllowDragging="true" ShowCloseIcon="true" @bind-Visible="@DialogVisible" AllowPrerender="true" IsModal="true">
-            <DialogTemplates>
-                <Header>@Header</Header>
-            </DialogTemplates>
-            <DialogPositionData X="@dialogXValue" Y="@dialogYValue"></DialogPositionData>
-            <DialogAnimationSettings Effect="@animationEffect"></DialogAnimationSettings>
-        </SfDialog>
-    </div>
-
-</div>
+}
+else
+{
+    <SfSpinner @bind-Visible="@SpinnerVisibleProperty" Label="Lade Daten..." Size="40"></SfSpinner>
+}
 
 <style>
     .e-dlg-overlay {
@@ -296,7 +303,6 @@
     string? Content { get; set; }
 
     GWSProcessor? gwsP;
-
     MyAppConfigModel? settings;
 
     private List<Gas_SupplierModel>? supplierList = new();
@@ -306,6 +312,7 @@
 
     private EfficiencyModel? efficiencyData = new();
     private List<EfficiencyModel>? efficiencyList = null;
+    private Dictionary<int, string> yearColorLookup = new();
 
     private ParameterModel? parameterData = new();
     private List<ParameterModel>? parameterList = null;
@@ -373,149 +380,172 @@
     }
     #endregion
 
+    #region OnInitializedAsync
+    /// <summary>
+    /// OnInitializedAsync: Lädt die Effizienzklassen, Energiedaten und Parameter aus der GWS-API und bereitet die Daten für die Anzeige im Chart vor.
+    /// </summary>
+    /// <returns></returns>
+    /// <exception cref="Exception"></exception>
     protected override async Task OnInitializedAsync()
     {
-        // Spinner
         this.SpinnerVisibleProperty = true;
 
-        // MyAppSettings.json auslesen und letzten gespeicherten Anbieter auslesen
-        settings = GetSetMyAppConfig.GetMyAppSettings.ReadSettings(myAppSettings);
-
-        gwsP = new GWSProcessor(myHttpClient, settings!.GWSUri);
         try
         {
-            efficiencyList = await gwsP!.LoadDataAsync<EfficiencyModel>(urlEfficiency);
+            // 1. Einstellungen laden
+            settings = GetSetMyAppConfig.GetMyAppSettings.ReadSettings(myAppSettings);
+            gwsP = new GWSProcessor(myHttpClient, settings!.GWSUri);
 
-            if (efficiencyList?.Count == 0)
+            // 2. Performance-Boost: Alle drei API-Aufrufe PARALLEL starten
+            var efficiencyTask = gwsP.LoadDataAsync<EfficiencyModel>(urlEfficiency);
+            var energyTask = gwsP.LoadDataAsync<Energydata>(urlBoiler);
+            var parameterTask = gwsP.LoadDataAsync<ParameterModel>(urlParameter);
+
+            await Task.WhenAll(efficiencyTask, energyTask, parameterTask); // Wartet gleichzeitig
+
+            efficiencyList = efficiencyTask.Result;
+            energyList = energyTask.Result;
+            parameterList = parameterTask.Result;
+
+            // 3. Validierung der Daten (Early Exits)
+            if (efficiencyList == null || efficiencyList.Count == 0)
             {
-                OpenDialog("Keine Effizienzklassen vorhanden!", "50px", false);
+                OpenDialog("Keine Effizienzklassen vorhanden!", "60px", "130px", false);
             }
 
-            // Thermedaten auslesen
-            energyList = await gwsP.LoadDataAsync<Energydata>(urlBoiler);
-
-            // Parameter auslesen
-            parameterList = await gwsP!.LoadDataAsync<ParameterModel>(urlParameter);
-            if (parameterList?.Count == 0)
+            if (parameterList == null || parameterList.Count == 0)
             {
-                OpenDialog("Keine Parameter vorhanden!", "50px", false);
+                OpenDialog("Keine Parameter vorhanden!", "60px", "130px", false);
             }
             else
             {
-                var lastParameter = parameterList?.LastOrDefault();
+                var lastParameter = parameterList.LastOrDefault();
                 if (lastParameter != null)
                 {
                     wohnflaeche = lastParameter.Wohnflaeche.GetValueOrDefault(149.18d);
                 }
             }
 
-            if (energyList?.Count != 0)
+            if (energyList == null || energyList.Count == 0)
             {
-                energyList?.Sort((x, y) => x.Verbrauchsjahr.GetValueOrDefault().CompareTo(y.Verbrauchsjahr.GetValueOrDefault()));
-                await GetChartData(energyList);
+                OpenDialog("Keine Energiedaten vorhanden!", "60px", "130px", false);
+                return; // Ohne Energiedaten macht die Annotation-Schleife keinen Sinn
             }
-            else
-            {
-                OpenDialog("Keine Energiedaten vorhanden!", "60px", false);
 
-            }
-        }
-        catch (Exception)
-        {
-            throw new Exception("Es konnten keine Energiedaten geladen werden");
-        }
+            // Sortierung nach Verbrauchsjahr
+            energyList.Sort((x, y) => x.Verbrauchsjahr.GetValueOrDefault().CompareTo(y.Verbrauchsjahr.GetValueOrDefault()));
+            GetChartData(energyList);
 
-        // Zusätzlichen Text anzeigen (A++ (35))
-        Annotations.Clear();
-        for (int i = 0; i < energyList!.Count; i++)
-        {
-            //double consumption = energyList[i].Heizung_Verbrauch.GetValueOrDefault() / wohnflaeche;
-            energyHeatingList?.Add(new EnergieHeating
-            {
-                HeatingYear = energyList[i].Verbrauchsjahr.GetValueOrDefault(),
-                HeatingConsumption = energyList[i].Heizung_Verbrauch.GetValueOrDefault() / wohnflaeche
-            });
-            double? yVal = Math.Round(energyList[i].Heizung_Verbrauch.GetValueOrDefault() - ((energyList[i].Heizung_Verbrauch.GetValueOrDefault() - energyList[i].Warmwasser_Verbrauch.GetValueOrDefault()) / 2), 0);
-            EfficiencyValues effClass = GetEfficiencyClassValues(efficiencyList, energyHeatingList?[i].HeatingConsumption);
+            // 4. Listen-Initialisierung fixen gegen Abstürze!
+            energyHeatingList = new List<EnergieHeating>();
+            Annotations.Clear();
 
-            if (energyList[i].Gesamt_Verbrauch >= 1500.0)  // Bargraph muss bestimmte Höhe haben zum Anzeigen der Texte
+            // 5. Schleifen-Optimierung
+            foreach (var energy in energyList)
             {
-                Annotations.Add(new ChartAnnotationData
+
+                double heizungVerbrauch = energy.Heizung_Verbrauch.GetValueOrDefault();
+                double heatingConsumption = heizungVerbrauch / wohnflaeche;
+
+                // Lokales Objekt hinzufügen statt Index-Gefahr
+                var currentHeating = new EnergieHeating
                 {
-                    xVal = energyList[i].Verbrauchsjahr,
-                    yVal = yVal,
-                    ClassText = effClass.EfficiencyClass,
-                    //ClassValue = $"({Convert.ToString(Math.Round(consumption))} kWh/m2a)"
-                    ClassValue = $"({Convert.ToString(Math.Round(Convert.ToDecimal(energyHeatingList?[i].HeatingConsumption)))})"
-                });
-            }
-            else
-            {
-                Annotations.Add(new ChartAnnotationData
+                    HeatingYear = energy.Verbrauchsjahr.GetValueOrDefault(),
+                    HeatingConsumption = heatingConsumption
+                };
+                energyHeatingList.Add(currentHeating);
+
+                double? yVal = Math.Round(heizungVerbrauch - ((heizungVerbrauch - energy.Warmwasser_Verbrauch.GetValueOrDefault()) / 2.0d), 0);
+                EfficiencyValues effClass = GetEfficiencyClassValues(efficiencyList, heatingConsumption);
+
+                string pointColor = effClass.EfficiencyColor ?? "Transparent";
+                yearColorLookup[energy.Verbrauchsjahr.GetValueOrDefault().Year] = pointColor;
+
+                if (energy.Gesamt_Verbrauch >= 1500.0d)
                 {
-                    xVal = energyList[i].Verbrauchsjahr,
-                    yVal = 0.0,
-                    ClassText = "",
-                    ClassValue =""
-                });
+                    Annotations.Add(new ChartAnnotationData
+                    {
+                        xVal = energy.Verbrauchsjahr,
+                        yVal = yVal,
+                        ClassText = effClass.EfficiencyClass,
+                        // Schnelleres Runden und sauber formatierte String-Interpolation statt Convert.ToDecimal
+                        ClassValue = $"({Math.Round(heatingConsumption)})"
+                    });
+                }
+                else
+                {
+                    Annotations.Add(new ChartAnnotationData
+                    {
+                        xVal = energy.Verbrauchsjahr,
+                        yVal = 0.0d,
+                        ClassText = "",
+                        ClassValue = ""
+                    });
+                }
+            }
+
+            // 6. Max/Min Bestimmung (Sicher, da Liste oben garantiert instanziiert wurde)
+            if (energyHeatingList.Count > 0)
+            {
+                EnergyHeatingMax = energyHeatingList.Max(x => x.HeatingConsumption);
+                EnergyHeatingMin = energyHeatingList.Min(x => x.HeatingConsumption);
             }
         }
-
-        // Max/Min Energieverbrauch
-        EnergyHeatingMax = energyHeatingList?.Max(x => x.HeatingConsumption);
-        EnergyHeatingMin = energyHeatingList?.Min(x => x.HeatingConsumption);
-
-        // Spinner
-        await Task.Delay(200);
-        this.SpinnerVisibleProperty = false;
-    }
-
-    #region OpenDialog
-    /// <summary>
-    /// CloseDialog
-    /// </summary>
-    private void OpenDialog(string header, string height, bool showButtons)
-    {
-        Header = header;
-        dialogHeight = height;
-        showDialogButtons = showButtons;
-        this.DialogVisible = true;
+        catch (Exception ex)
+        {
+            // UI-Fehlermeldung statt App-Crash via "throw new Exception"
+            OpenDialog($"Fehler beim Laden der Energiedaten: {ex.Message}", "60px", "130px", false);
+        }
+        finally
+        {
+            // 7. Spinner sicher ausschalten ohne künstliches Delay
+            this.SpinnerVisibleProperty = false;
+            await Task.Yield();
+        }
     }
     #endregion
 
     #region GetChartData
     /// <summary>
-    /// GetChartData
+    /// Holt die Chart-Daten aus der Energiedatenliste und bereitet sie für die Anzeige vor.
     /// </summary>
     /// <param name="energyList"></param>
     /// <returns></returns>
-    public async Task GetChartData(List<Energydata>? energyList)
+    public void GetChartData(List<Energydata>? energyList)
     {
         IntervalDuration = 1;
         IntervalType = IntervalType.Years;
         DateTimeFormat = "yyyy";
         ChartPointList.Clear();
 
-        if (energyList?.Count == 0)
+        // 1. Sicherer Null-Check (Verhindert eine NullReferenceException bei 'energyList?.Count')
+        if (energyList == null || energyList.Count == 0)
         {
             OpenDialog("Energiedaten nicht vorhanden", "60px", "380px", false);
             return;
         }
 
-        foreach (var energy in energyList!)
+        // 2. Schleife optimieren
+        foreach (var energy in energyList)
         {
+            double heizungVerbrauch = energy.Heizung_Verbrauch.GetValueOrDefault();
+            double consumption = heizungVerbrauch / wohnflaeche;
+
+            // Effizienzklasse einmalig für diesen Durchlauf holen
+            var effClassValues = GetEfficiencyClassValues(efficiencyList, consumption);
+
             ChartPointList.Add(new ColumnChartData
             {
                 Date = energy.Verbrauchsjahr.GetValueOrDefault(),
                 EnergyTotal = energy.Gesamt_Verbrauch,
                 EnergyHeating = energy.Heizung_Verbrauch,
                 EnergyWater = energy.Warmwasser_Verbrauch,
-                Eff_Class = GetEfficiencyClassValues(efficiencyList, energy.Heizung_Verbrauch / wohnflaeche).EfficiencyClass,
+                // Null-Coalescing fängt eventuelle Null-Werte aus der Klasse ab
+                Eff_Class = effClassValues.EfficiencyClass ?? "N/A"
             });
         }
-
-        await Task.Delay(200);
     }
+
     #endregion
 
     #region PointRender: Verändert die Barfarbe in Abhängigkeit des Wertes (pos/negativ)
@@ -525,66 +555,86 @@
     /// <param name="args"></param>
     public void PointRender(PointRenderEventArgs args)
     {
-        if (args.Series.Name == "Heizung-Verbrauch")
+        // 1. Schneller und sicherer String-Vergleich
+        if (args.Point == null || args.Series?.Name != "Heizung-Verbrauch")
         {
-            double consumption = args.Point.YValue / wohnflaeche;
+            return;
+        }
 
-            if (args.Point.YValue > 0)
-            {
-                args.Fill = GetEfficiencyClassValues(efficiencyList, consumption).EfficiencyColor;
-            }
+        double yValue = args.Point.YValue;
+
+        // 2. Nur berechnen und aufrufen, wenn der Wert größer 0 ist
+        if (yValue > 0.0d)
+        {
+            double consumption = yValue / wohnflaeche;
+
+            // 3. Holt die Farbe direkt aus der optimierten GetEfficiencyClassValues-Methode
+            args.Fill = GetEfficiencyClassValues(efficiencyList, consumption).EfficiencyColor ?? "Transparent";
         }
     }
     #endregion
 
     #region GetEfficiencyClassValues: Liest die Effizienzklasse/Effizienzfarbe aus anhand des Verbrauches
     /// <summary>
-    /// GetEfficiencyClass: Get Efficiency class text by consumption
+    /// Effizienzklasse und Farbe anhand des Verbrauches ermitteln
     /// </summary>
     /// <param name="effClassification"></param>
     /// <param name="consumption"></param>
     /// <returns></returns>
     public EfficiencyValues GetEfficiencyClassValues(List<EfficiencyModel>? effClassification, double? consumption)
     {
-        bool effClassFound;
-        //string? effClass = string.Empty;
-        EfficiencyValues efficiencyValues = new();
-
-        if (effClassification?.Count > 0)
+        // 1. Fallback-Objekt bereitstellen, falls keine Daten vorhanden sind
+        EfficiencyValues efficiencyValues = new()
         {
-            effClassFound = false;
-            for (int i = 0; i < effClassification.Count - 1; i++)
+            EfficiencyClass = "N/A",
+            EfficiencyColor = palettes != null && palettes.Length > 0 ? palettes[0] : "#FFFFFF"
+        };
+
+        if (effClassification == null || effClassification.Count == 0)
+        {
+            return efficiencyValues;
+        }
+
+        // Sicherstellen, dass ein Verbrauchswert da ist (falls null, unterste Klasse wählen)
+        double currentConsumption = consumption.GetValueOrDefault(0.0d);
+
+        // 2. Schleife korrigiert: Läuft jetzt über alle Elemente außer dem letzten
+        // (da das letzte Element das "Fallback" für extrem hohe Verbräuche ist)
+        for (int i = 0; i < effClassification.Count - 1; i++)
+        {
+            if (currentConsumption < effClassification[i].Energiebedarf)
             {
-                if (consumption < effClassification[i].Energiebedarf)
-                {
-                    efficiencyValues.EfficiencyClass = Convert.ToString(effClassification[i].Energieklasse);
-                    efficiencyValues.EfficiencyColor = effClassification[i].Farbcode;
-                    effClassFound = true;
-                    break;
-                }
-            }
-            if (!effClassFound)
-            {
-                efficiencyValues.EfficiencyClass = effClassification[^1].Energieklasse;
-                efficiencyValues.EfficiencyColor = palettes[0];
+                efficiencyValues.EfficiencyClass = effClassification[i].Energieklasse?.ToString() ?? string.Empty;
+                efficiencyValues.EfficiencyColor = effClassification[i].Farbcode;
+                return efficiencyValues; // Sofortiger Ausstieg spart das Flag und das 'break'
             }
         }
 
+        // 3. Wenn kein Bereich darunter lag, greift das letzte Element der Klassifizierung
+        var lastEff = effClassification[^1];
+        efficiencyValues.EfficiencyClass = lastEff.Energieklasse?.ToString() ?? string.Empty;
+        // Falls im letzten Element kein Farbcode hinterlegt ist, Paletten-Fallback nutzen
+        efficiencyValues.EfficiencyColor = !string.IsNullOrEmpty(lastEff.Farbcode) ? lastEff.Farbcode : palettes?[0];
+
         return efficiencyValues;
     }
+
     #endregion
 
     #region OpenDialog
     /// <summary>
-    /// OpenDialog
+    /// Dialog öffnen mit Header, Höhe, Breite und optionalen Buttons
     /// </summary>
-    private void OpenDialog(string header, string height, string width, bool showButtons)
+    private void OpenDialog(string header, string height = "auto", string width = "500px", bool showButtons = true)
     {
         Header = header;
         dialogHeight = height;
         dialogWidth = width;
         showDialogButtons = showButtons;
         this.DialogVisible = true;
+
+        // Erzwingt das Neu-Rendern der UI (wichtig in Blazor für Dialoge)
+        this.StateHasChanged();
     }
     #endregion
 }

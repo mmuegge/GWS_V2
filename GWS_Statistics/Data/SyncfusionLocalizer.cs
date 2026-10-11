@@ -6,10 +6,10 @@ namespace GWS_Statistics.Data
     {
         public string GetText(string key)
         {
-            return ResourceManager!.GetString(key)!;
+            return ResourceManager.GetString(key)!;
         }
 
-        public System.Resources.ResourceManager? ResourceManager
+        public System.Resources.ResourceManager ResourceManager
         {
             get
             {
