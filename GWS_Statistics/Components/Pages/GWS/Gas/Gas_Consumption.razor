@@ -1040,10 +1040,10 @@ else
         // 3. JETZT erst das Switch-Statement ausführen (da MaxRangeCons_TW_m3 nun bekannt ist!)
         (string label, int decimalPlaces, int interval) = DdlInterval switch
         {
-            Interval.täglich => ("N0", 0, 6),
-            Interval.monatlich => ("N0", 0, 6),
+            Interval.täglich => ("N0", 0, 4),
+            Interval.monatlich => ("N0", 0, 5),
             Interval.jährlich => ("N0", 0, 6),
-            _ => ("N0", 1, 6)
+            _ => ("N0", 0, 4)
         };
 
         // Globale Format-Variable für das Razor-Markup füllen
@@ -1067,11 +1067,11 @@ else
         }
 
         // 5. Werte runden und Offsets addieren
-        MaxRangeCons_kWh = Math.Round(maxCons_kWh * 1.1d, 0); // 5% Puffer
-        MaxRangeCons_m3 = Math.Round(maxCons_m3 * 1.1d, 0); // 5% Puffer
+        MaxRangeCons_kWh = Math.Round(maxCons_kWh * 1.05d, decimalPlaces); // 5% Puffer
+        MaxRangeCons_m3 = Math.Round(maxCons_m3 * 1.5d, decimalPlaces); // 5% Puffer 1.5d --> Vergrößerung der Y-Achse für bessere Sichtbarkeit
 
         Interval_YAxis_kWh = Math.Round(MaxRangeCons_kWh / interval, decimalPlaces);
-        Interval_YAxis_m3 = Math.Round(MaxRangeCons_m3 / interval, decimalPlaces);
+        Interval_YAxis_m3 = Math.Round(MaxRangeCons_m3 / (interval), decimalPlaces);
     }
     #endregion
 

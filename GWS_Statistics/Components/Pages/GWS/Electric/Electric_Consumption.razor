@@ -925,9 +925,9 @@ else
         (string label, int decimalPlaces, int interval) = DdlInterval switch
         {
             Interval.täglich => ("N2", 1, 4),
-            Interval.monatlich => ("N1", 1, 6),
-            Interval.jährlich => ("N0", 0, 6),
-            _ => ("N0", 1, 6)
+            Interval.monatlich => ("N1", 1, 4),
+            Interval.jährlich => ("N0", 0, 3),
+            _ => ("N0", 1, 4)
         };
 
         // Globale Format-Variable für das Razor-Markup füllen
@@ -949,7 +949,7 @@ else
         }
 
         // 5. Werte runden und Offsets addieren
-        MaxRangeCons = Math.Round(maxCons_kWh * 1.1d, 1); // 5% Puffer
+        MaxRangeCons = Math.Round(maxCons_kWh * 1.10d, decimalPlaces); // 10% Puffer
 
         Interval_YAxis = Math.Round(MaxRangeCons / interval, decimalPlaces);
     }

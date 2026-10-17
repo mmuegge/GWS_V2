@@ -815,7 +815,7 @@ else
 
         CalcAverageSum();
         GetChartMinMaxRange(ChartPointList);
-        StateHasChanged();
+        //StateHasChanged();
     }
     #endregion
 
@@ -952,10 +952,10 @@ else
         // 3. JETZT erst das Switch-Statement ausführen (da MaxRangeCons_TW_m3 nun bekannt ist!)
         (string label, int decimalPlaces, int interval) = DdlInterval switch
         {
-            Interval.täglich => ("N2", 1, 5),
-            Interval.monatlich => ("N1", 0, 5),
-            Interval.jährlich => ("N0", 0, 5),
-            _ => ("N1", 1, 4)
+            Interval.täglich => ("N2", 1, 4),
+            Interval.monatlich => ("N1", 1, 4),
+            Interval.jährlich => ("N0", 0, 3),
+            _ => ("N0", 1, 4)
         };
 
         // Globale Format-Variable für das Razor-Markup füllen
@@ -979,8 +979,8 @@ else
         }
 
         // 5. Werte runden und Offsets addieren
-        MaxRangeCons_TW_m3 = Math.Round(maxCons_TW_m3 * 1.1d, decimalPlaces); // 5% Puffer
-        MaxRangeCons_AW_m3 = Math.Round(maxCons_AW_m3 * 1.1d, decimalPlaces); // 5% Puffer
+        MaxRangeCons_TW_m3 = Math.Round(maxCons_TW_m3 * 1.05d, decimalPlaces); // 5% Puffer
+        MaxRangeCons_AW_m3 = Math.Round(maxCons_AW_m3 * 1.05d, decimalPlaces); // 5% Puffer
 
         // 6. Intervall berechnen
         Interval_YAxis = Math.Round(MaxRangeCons_TW_m3 / interval, decimalPlaces);
