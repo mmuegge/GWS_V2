@@ -5,13 +5,10 @@ namespace GWS_Statistics
     public class MyAppConfigModel
     {
         [JsonIgnore]
-        private const string _myAppConfigFile = "myAppSettings.json";
-        public string MyAppSettingFile
-        {
-            get { return _myAppConfigFile; }
-        }
+        public string MyAppSettingFile => "myAppSettings.json";
+
         public String GWSUri { get; set; } = string.Empty;
-        public GWS_Supplier? Supplier_Id;
+        public GWS_Supplier? Supplier_Id { get; set; }
         public GWS_Interval? Display_Interval { get; set; }
         public LoxoneModel? Loxone { get; set; }
     }

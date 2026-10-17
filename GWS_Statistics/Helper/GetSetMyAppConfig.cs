@@ -1,151 +1,141 @@
-﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
-using System.Dynamic;
+﻿using System.Text.Json;
+using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
+using GWS_Statistics;
 
 namespace GWS_Statistics.Helper
-{
-    public static class GetSetMyAppConfig
     {
-            enum DisplayPeriod
+        public static class GetSetMyAppConfig
+        {
+            // Lokales Enum für die Standardwerte im Code belassen
+            private enum DisplayPeriod
             {
-                daily =1,
+                daily = 1,
                 monthly,
                 yearly
             }
 
-        public static class GetMyAppSettings
-        {
-            /// <summary>
-            /// Lesen der App-Settings
-            /// </summary>
-            /// <param name="myConfig"></param>
-            /// <returns></returns>
-            public static MyAppConfigModel? ReadSettings(MyAppConfigModel myConfig)
+            // Gemeinsame, statische Optionen sparen CPU-Zyklen und RAM bei jedem Aufruf
+            private static readonly JsonSerializerOptions JsonOptions = new()
             {
-                string appSettingsPath = "";
-                MyAppConfigModel? config;
+                WriteIndented = true,
+                PropertyNameCaseInsensitive = true,
+                Converters = { new JsonStringEnumConverter() }
+            };
 
-                try
+            public static class GetMyAppSettings
+            {
+                public static async Task<MyAppConfigModel?> ReadSettingsAsync(MyAppConfigModel myConfig)
                 {
-                    appSettingsPath = Path.Combine(System.IO.Directory.GetCurrentDirectory(), myConfig.MyAppSettingFile);
+                    // Fallback auf den Standardnamen, falls myConfig oder die Eigenschaft null ist
+                    string fileName = myConfig?.MyAppSettingFile ?? "myAppSettings.json";
 
-                    var json = File.ReadAllText(appSettingsPath);
-                    var jsonSettings = new JsonSerializerSettings();
-                    jsonSettings.Converters.Add(new ExpandoObjectConverter());
-                    jsonSettings.Converters.Add(new StringEnumConverter());
+                    try
+                    {
+                        string appSettingsPath = Path.Combine(Directory.GetCurrentDirectory(), fileName);
 
-                    config = JsonConvert.DeserializeObject<MyAppConfigModel>(json);
-                    return config;
-                }
-                catch (FileNotFoundException)
-                {
-                    config = SetMyAppSettings.CreateNewSettingFile(appSettingsPath);
-                    return config;
-                }
+                        if (!File.Exists(appSettingsPath))
+                        {
+                            return await SetMyAppSettings.CreateNewSettingFileAsync(appSettingsPath);
+                        }
 
-                catch (Exception)
-                {
-                    throw;
+                        using FileStream openStream = File.OpenRead(appSettingsPath);
+                        return await JsonSerializer.DeserializeAsync<MyAppConfigModel>(openStream, JsonOptions);
+                    }
+                    catch (JsonException)
+                    {
+                        return null;
+                    }
+                    catch (Exception)
+                    {
+                        throw;
+                    }
                 }
             }
-        }
 
-        public static class SetMyAppSettings
-        {
-            /// <summary>
-            /// WriteSettings
-            /// </summary>
-            /// <param name="myConfig"></param>
-            /// <param name="key"></param>
-            /// <param name="value"></param>
-            /// <returns></returns>
-            public static bool WriteSettings(MyAppConfigModel myConfig, string key, string value)
+            public static class SetMyAppSettings
             {
-                try
+                public static async Task<bool> WriteSettingsAsync(MyAppConfigModel myConfig, string key, string value)
                 {
-                    var appSettingsPath = Path.Combine(System.IO.Directory.GetCurrentDirectory(), myConfig.MyAppSettingFile);
-                    if (File.Exists(appSettingsPath))
+                    string fileName = myConfig?.MyAppSettingFile ?? "myAppSettings.json";
+                    if (string.IsNullOrWhiteSpace(key)) return false;
+
+                    try
                     {
-                        var json = File.ReadAllText(appSettingsPath);
-                        var jsonSettings = new JsonSerializerSettings();
-                        jsonSettings.Converters.Add(new ExpandoObjectConverter());
-                        jsonSettings.Converters.Add(new StringEnumConverter());
+                        string appSettingsPath = Path.Combine(Directory.GetCurrentDirectory(), fileName);
+                        if (!File.Exists(appSettingsPath)) return false;
 
-                        dynamic? config = JsonConvert.DeserializeObject<ExpandoObject>(json, jsonSettings);
+                        string json = await File.ReadAllTextAsync(appSettingsPath);
+                        JsonNode? rootNode = JsonNode.Parse(json);
+                        if (rootNode == null) return false;
 
-                        if (config != null)
+                        string safeValue = value ?? "0";
+                        string safeInterval = value ?? nameof(DisplayPeriod.daily);
+
+                        // Korrekte und sichere Erstellung von Unterknoten für das JsonNode-Framework
+                        switch (key.ToLowerInvariant())
                         {
-                            switch (key.ToLower())
-                            {
-                                case "supplier_id.gas":
-                                    config.Supplier_Id.Gas = value ?? "0";
-                                    break;
+                            case "supplier_id.gas":
+                                if (rootNode["Supplier_Id"] == null) rootNode["Supplier_Id"] = new JsonObject();
+                                rootNode["Supplier_Id"]!["Gas"] = safeValue;
+                                break;
 
-                                case "supplier_id.water":
-                                    config.Supplier_Id.Water = value ?? "0";
-                                    break;
+                            case "supplier_id.water":
+                                if (rootNode["Supplier_Id"] == null) rootNode["Supplier_Id"] = new JsonObject();
+                                rootNode["Supplier_Id"]!["Water"] = safeValue;
+                                break;
 
-                                case "supplier_id.electric":
-                                    config.Supplier_Id.Electric = value ?? "0";
-                                    break;
+                            case "supplier_id.electric":
+                                if (rootNode["Supplier_Id"] == null) rootNode["Supplier_Id"] = new JsonObject();
+                                rootNode["Supplier_Id"]!["Electric"] = safeValue;
+                                break;
 
-                                case "display_interval.gas":
-                                    config.Display_Interval.Gas = value ?? nameof(DisplayPeriod.daily);
-                                    break;
+                            case "display_interval.gas":
+                                if (rootNode["Display_Interval"] == null) rootNode["Display_Interval"] = new JsonObject();
+                                rootNode["Display_Interval"]!["Gas"] = safeInterval;
+                                break;
 
-                                case "display_interval.water":
-                                    config.Display_Interval.Water = value ?? nameof(DisplayPeriod.daily);
-                                    break;
+                            case "display_interval.water":
+                                if (rootNode["Display_Interval"] == null) rootNode["Display_Interval"] = new JsonObject();
+                                rootNode["Display_Interval"]!["Water"] = safeInterval;
+                                break;
 
-                                case "display_interval.electric":
-                                    config.Display_Interval.Electric = value ?? nameof(DisplayPeriod.daily);
-                                    break;
-                            }
+                            case "display_interval.electric":
+                                if (rootNode["Display_Interval"] == null) rootNode["Display_Interval"] = new JsonObject();
+                                rootNode["Display_Interval"]!["Electric"] = safeInterval;
+                                break;
 
-                            var newJson = JsonConvert.SerializeObject(config, Formatting.Indented, jsonSettings);
-
-                            File.WriteAllText(appSettingsPath, newJson);
-
-                            return true;
+                            default:
+                                return false;
                         }
-                        else
-                        { 
-                            return false; 
-                        }
+
+                        await using FileStream writeStream = File.Create(appSettingsPath);
+                        await JsonSerializer.SerializeAsync(writeStream, rootNode, JsonOptions);
+
+                        return true;
                     }
-                    else
+                    catch (Exception)
                     {
                         return false;
                     }
                 }
-                catch (Exception)
+
+                public static async Task<MyAppConfigModel> CreateNewSettingFileAsync(string fileName)
                 {
-                    return false;
+                    MyAppConfigModel config = new()
+                    {
+                        GWSUri = "http://192.168.178",
+                        Supplier_Id = new GWS_Supplier { Gas = "0", Electric = "0", Water = "0" },
+                        Display_Interval = new GWS_Interval { Gas = nameof(DisplayPeriod.daily), Electric = nameof(DisplayPeriod.daily), Water = nameof(DisplayPeriod.daily) },
+                    };
+
+                    await using FileStream createStream = File.Create(fileName);
+                    await JsonSerializer.SerializeAsync(createStream, config, JsonOptions);
+
+                    return config;
                 }
-            }
-
-            /// <summary>
-            /// Erzeugen einer neuen Datei "MyAppSettings"
-            /// </summary>
-            /// <param name="fileName"></param>
-            /// <returns></returns>
-            public static MyAppConfigModel CreateNewSettingFile(string fileName)
-            {
-                MyAppConfigModel config = new()
-                {
-                    GWSUri = "http://192.168.178.156:5850/api/",
-                    Supplier_Id = new GWS_Supplier { Gas = "0", Electric = "0", Water = "0" },
-                    Display_Interval = new GWS_Interval {  Gas = nameof(DisplayPeriod.daily), Electric= nameof(DisplayPeriod.daily), Water= nameof(DisplayPeriod.daily) },
-                };
-
-                var jsonSettings = new JsonSerializerSettings();
-                jsonSettings.Converters.Add(new ExpandoObjectConverter());
-                jsonSettings.Converters.Add(new StringEnumConverter());
-                var jsonString = JsonConvert.SerializeObject(config, Formatting.Indented, jsonSettings);
-                File.WriteAllText(fileName, jsonString);
-
-                return config;
             }
         }
     }
-}
+
+

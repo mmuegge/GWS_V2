@@ -3,7 +3,6 @@
 @using GWS_Statistics.Components.Services
 @using GWS_Statistics.Helper
 @using System.Globalization
-@using System.Net
 
 @inject MyAppConfigModel myAppSettings
 @inject HttpClient myHttpClient
@@ -54,145 +53,151 @@
 </div>
 
 @* Chart *@
-<div class="control-section" id="target" align="center">
-    <div class="card shadow-lg">
-        <SfChart @ref="chart" Title="Übersicht" Width="@Width" Height="@Height" Palettes="@palettes">
-            <ChartEvents OnAxisLabelRender="LabelRender"
-                         SharedTooltipRender="ToolTipRenderEvent">
-            </ChartEvents>
+@if (ChartPointList != null && ChartPointList.Count > 0)
+{
+    <div class="control-section" id="target" align="center">
+        <div class="card shadow-lg">
+            <SfChart @ref="chart" Title="Übersicht" Width="@Width" Height="@Height" Palettes="@palettes">
+                <ChartEvents OnAxisLabelRender="LabelRender"
+                SharedTooltipRender="ToolTipRenderEvent">
+                </ChartEvents>
 
-            <ChartTitleStyle Size="24px" Color="black" FontFamily=@fontFamily FontWeight="normal" FontStyle="normal">
-            </ChartTitleStyle>
+                <ChartTitleStyle Size="24px" Color="black" FontFamily=@fontFamily FontWeight="normal" FontStyle="normal">
+                </ChartTitleStyle>
 
-            <ChartArea Background="#8c8b87" Width="auto">
-                <ChartAreaBorder Color="black" Width="1"></ChartAreaBorder>
-            </ChartArea>
+                <ChartArea Background="#8c8b87" Width="auto">
+                    <ChartAreaBorder Color="black" Width="1"></ChartAreaBorder>
+                </ChartArea>
 
-            <ChartMargin Left="10" Right="10" Top="10" Bottom="10"></ChartMargin>
+                <ChartMargin Left="10" Right="10" Top="10" Bottom="10"></ChartMargin>
 
-            <ChartZoomSettings EnableMouseWheelZooming="true" EnablePinchZooming="true" EnableSelectionZooming="true"></ChartZoomSettings>
+                <ChartZoomSettings EnableMouseWheelZooming="true" EnablePinchZooming="true" EnableSelectionZooming="true"></ChartZoomSettings>
 
-            <ChartPrimaryXAxis RangePadding="ChartRangePadding.Additional"
-                               ValueType="Syncfusion.Blazor.Charts.ValueType.DateTimeCategory"
-                               EdgeLabelPlacement="EdgeLabelPlacement.None"
-                               Interval="@IntervalDuration"
-                               Format="@DateTimeFormat"
-                               IntervalType="@IntervalType">
+                <ChartPrimaryXAxis RangePadding="ChartRangePadding.Additional"
+                ValueType="Syncfusion.Blazor.Charts.ValueType.DateTimeCategory"
+                EdgeLabelPlacement="EdgeLabelPlacement.None"
+                Interval="@IntervalDuration"
+                Format="@DateTimeFormat"
+                IntervalType="@IntervalType">
 
-                <ChartAxisMajorGridLines Width="0"></ChartAxisMajorGridLines>
-                <ChartAxisLabelStyle FontFamily=@fontFamily></ChartAxisLabelStyle>
-                <ChartAxisTitleStyle FontFamily=@fontFamily></ChartAxisTitleStyle>
-                <ChartAxisCrosshairTooltip Fill="magenta" Enable="true"></ChartAxisCrosshairTooltip>
-            </ChartPrimaryXAxis>
+                    <ChartAxisMajorGridLines Width="0"></ChartAxisMajorGridLines>
+                    <ChartAxisLabelStyle FontFamily=@fontFamily></ChartAxisLabelStyle>
+                    <ChartAxisTitleStyle FontFamily=@fontFamily></ChartAxisTitleStyle>
+                    <ChartAxisCrosshairTooltip Fill="magenta" Enable="true"></ChartAxisCrosshairTooltip>
+                </ChartPrimaryXAxis>
 
-            <ChartPrimaryYAxis Title="Grundpreis"
-                               LabelFormat="{value} €"
-                               RangePadding="ChartRangePadding.Normal"
-                               Format="C2">
+                <ChartPrimaryYAxis Title="Grundpreis"
+                LabelFormat="{value} €"
+                RangePadding="ChartRangePadding.Normal"
+                Format="C2">
 
-                <ChartAxisLineStyle Width="0"></ChartAxisLineStyle>
-                <ChartAxisLabelStyle FontFamily=@fontFamily></ChartAxisLabelStyle>
-                <ChartAxisTitleStyle FontFamily=@fontFamily></ChartAxisTitleStyle>
-                <ChartAxisMajorGridLines Width="1"></ChartAxisMajorGridLines>
-                <ChartAxisCrosshairTooltip Fill="magenta" Enable="false"></ChartAxisCrosshairTooltip>
-            </ChartPrimaryYAxis>
-
-            <ChartAxes>
-                <ChartAxis Name="yAxisTariff"
-                           Title="Arbeitspreis"
-                           RangePadding="ChartRangePadding.Auto"
-                           OpposedPosition="false"
-                           Interval="@Interval_YAxis_Tariff"
-                           Minimum="0"
-                           Maximum="@MaxRangeTariff"
-                           LabelFormat="N0">
+                    <ChartAxisLineStyle Width="0"></ChartAxisLineStyle>
+                    <ChartAxisLabelStyle FontFamily=@fontFamily></ChartAxisLabelStyle>
+                    <ChartAxisTitleStyle FontFamily=@fontFamily></ChartAxisTitleStyle>
                     <ChartAxisMajorGridLines Width="1"></ChartAxisMajorGridLines>
-                </ChartAxis>
+                    <ChartAxisCrosshairTooltip Fill="magenta" Enable="false"></ChartAxisCrosshairTooltip>
+                </ChartPrimaryYAxis>
 
-                <ChartAxis Name="yAxisBasic"
-                           Title="Grundpreis"
-                           RangePadding="ChartRangePadding.Auto"
-                           OpposedPosition="false"
-                           Interval="@Interval_YAxis_Basic"
-                           Minimum="0"
-                           Maximum="@MaxRangeBasic"
-                           LabelFormat="N0">
-                    <ChartAxisMajorGridLines Width="0"></ChartAxisMajorGridLines>
-                </ChartAxis>
+                <ChartAxes>
+                    <ChartAxis Name="yAxisTariff"
+                    Title="Arbeitspreis"
+                    RangePadding="ChartRangePadding.Auto"
+                    OpposedPosition="false"
+                    Interval="@Interval_YAxis_Tariff"
+                    Minimum="0"
+                    Maximum="@MaxRangeTariff"
+                    LabelFormat="N0">
+                        <ChartAxisMajorGridLines Width="1"></ChartAxisMajorGridLines>
+                    </ChartAxis>
 
-                <ChartAxis Name="yAxisMeterRental"
-                           Title="Zählermiete"
-                           RangePadding="ChartRangePadding.Auto"
-                           OpposedPosition="true"
-                           Interval="@Interval_YAxis_MeterRental"
-                           Minimum="0"
-                           Maximum="@MaxRangeMeterRental"
-                           LabelFormat="N0">
-                    <ChartAxisMajorGridLines Width="0"></ChartAxisMajorGridLines>
-                </ChartAxis>
-            </ChartAxes>
+                    <ChartAxis Name="yAxisBasic"
+                    Title="Grundpreis"
+                    RangePadding="ChartRangePadding.Auto"
+                    OpposedPosition="false"
+                    Interval="@Interval_YAxis_Basic"
+                    Minimum="0"
+                    Maximum="@MaxRangeBasic"
+                    LabelFormat="N0">
+                        <ChartAxisMajorGridLines Width="0"></ChartAxisMajorGridLines>
+                    </ChartAxis>
 
-            <ChartSeriesCollection>
-                <ChartSeries DataSource="@ChartPointList"
-                             YAxisName="yAxisTariff"
-                             XName="Date"
-                             YName="TariffPrice"
-                             Name="Arbeitspreis"
-                             Type="ChartSeriesType.Line"
-                             Width="2"
-                             TooltipFormat="${series.name} : ${point.y} ct/kWh">
-                </ChartSeries>
+                    <ChartAxis Name="yAxisMeterRental"
+                    Title="Zählermiete"
+                    RangePadding="ChartRangePadding.Auto"
+                    OpposedPosition="true"
+                    Interval="@Interval_YAxis_MeterRental"
+                    Minimum="0"
+                    Maximum="@MaxRangeMeterRental"
+                    LabelFormat="N0">
+                        <ChartAxisMajorGridLines Width="0"></ChartAxisMajorGridLines>
+                    </ChartAxis>
+                </ChartAxes>
 
-                <ChartSeries DataSource="@ChartPointList"
-                             YAxisName="yAxisBasic"
-                             XName="Date"
-                             YName="BasicPrice"
-                             Name="Grundpreis"
-                             Type="ChartSeriesType.Line"
-                             Width="2"
-                             TooltipFormat="${series.name} : ${point.y} €/Monat">
-                </ChartSeries>
+                <ChartSeriesCollection>
+                    <ChartSeries DataSource="@ChartPointList"
+                    YAxisName="yAxisTariff"
+                    XName="Date"
+                    YName="TariffPrice"
+                    Name="Arbeitspreis"
+                    Type="ChartSeriesType.Line"
+                    Width="2"
+                    TooltipFormat="${series.name} : ${point.y} ct/kWh">
+                    </ChartSeries>
 
-                <ChartSeries DataSource="@ChartPointList"
-                             YAxisName="yAxisMeterRental"
-                             XName="Date"
-                             YName="MeterRentalPrice"
-                             Name="Zählermiete"
-                             Type="ChartSeriesType.Line"
-                             Width="2"
-                             TooltipFormat="${series.name} : ${point.y} €/Monat">
-                </ChartSeries>
-            </ChartSeriesCollection>
+                    <ChartSeries DataSource="@ChartPointList"
+                    YAxisName="yAxisBasic"
+                    XName="Date"
+                    YName="BasicPrice"
+                    Name="Grundpreis"
+                    Type="ChartSeriesType.Line"
+                    Width="2"
+                    TooltipFormat="${series.name} : ${point.y} €/Monat">
+                    </ChartSeries>
 
-            <ChartLegendSettings Visible="true" EnableHighlight="true"></ChartLegendSettings>
-            <ChartTooltipSettings Header="<b>${point.tooltip}</b>" Enable="true" Shared="true"></ChartTooltipSettings>
+                    <ChartSeries DataSource="@ChartPointList"
+                    YAxisName="yAxisMeterRental"
+                    XName="Date"
+                    YName="MeterRentalPrice"
+                    Name="Zählermiete"
+                    Type="ChartSeriesType.Line"
+                    Width="2"
+                    TooltipFormat="${series.name} : ${point.y} €/Monat">
+                    </ChartSeries>
+                </ChartSeriesCollection>
 
-            <ChartCrosshairSettings Enable="true" LineType="LineType.Both"></ChartCrosshairSettings>
-        </SfChart>
+                <ChartLegendSettings Visible="true" EnableHighlight="true"></ChartLegendSettings>
+                <ChartTooltipSettings Header="<b>${point.tooltip}</b>" Enable="true" Shared="true"></ChartTooltipSettings>
 
-        <SfSpinner @bind-Visible="@spinnerVisibleProperty" Type="SpinnerType.Tailwind" Size="40" CssClass="e-custom-color"></SfSpinner>
+                <ChartCrosshairSettings Enable="true" LineType="LineType.Both"></ChartCrosshairSettings>
+            </SfChart>
 
-        @* Dialog*@
-        <div>
-            <SfDialog Target="#target"
-                      Width="@dialogWidth"
-                      Height=@dialogHeight
-                      AllowDragging="true"
-                      ShowCloseIcon=" true"
-                      @bind-Visible="DialogVisible"
-                      AllowPrerender="true"
-                      IsModal="true">
+            <SfSpinner @bind-Visible="@spinnerVisibleProperty" Type="SpinnerType.Tailwind" Size="40" CssClass="e-custom-color"></SfSpinner>
 
-                <DialogTemplates>
-                    <Header>@Header</Header>
-                </DialogTemplates>
-                <DialogPositionData X="@dialogXValue" Y="@dialogYValue"></DialogPositionData>
-                <DialogAnimationSettings Effect="@animationEffect"></DialogAnimationSettings>
-            </SfDialog>
+            @* Dialog*@
+            <div>
+                <SfDialog Target="#target"
+                Width="@dialogWidth"
+                Height=@dialogHeight
+                AllowDragging="true"
+                ShowCloseIcon=" true"
+                @bind-Visible="DialogVisible"
+                AllowPrerender="true"
+                IsModal="true">
+
+                    <DialogTemplates>
+                        <Header>@Header</Header>
+                    </DialogTemplates>
+                    <DialogPositionData X="@dialogXValue" Y="@dialogYValue"></DialogPositionData>
+                    <DialogAnimationSettings Effect="@animationEffect"></DialogAnimationSettings>
+                </SfDialog>
+            </div>
         </div>
     </div>
-</div>
-
+}
+else
+{
+    <SfSpinner @bind-Visible="@spinnerVisibleProperty" Label="Lade Daten..." Size="40"></SfSpinner>
+}
 <style>
     .e-dlg-overlay {
         background-color: slategray;
@@ -344,52 +349,60 @@
 
     #region OnInitializedAsync
     /// <summary>
-    /// OnInitializedAsync
+    /// Startet beim Laden der Seite automatisch und ruft die Daten parallel ab, berechnet die Chart-Daten und zeigt ggf. Dialoge an.
     /// </summary>
     /// <returns></returns>
     /// <exception cref="Exception"></exception>
     protected override async Task OnInitializedAsync()
     {
-        //int lastSupplierId;
-
         this.spinnerVisibleProperty = true;
 
-        // MyAppSettings.json auslesen und letzten gespeicherten Anbieter auslesen
-        settings = GetSetMyAppConfig.GetMyAppSettings.ReadSettings(myAppSettings);
-
-        gwsP = new GWSProcessor(myHttpClient, settings!.GWSUri);
         try
         {
-            // Anbieterdaten auslesen (nur Anbieter und Id => durch ElectricSupplierDataModel)
+            // 1. Einstellungen asynchron laden (falls I/O-gebunden, sonst synchron belassen)
+            settings = await GetSetMyAppConfig.GetMyAppSettings.ReadSettingsAsync(myAppSettings);
+            if (settings == null) return;
+
+            gwsP = new GWSProcessor(myHttpClient, settings.GWSUri);
+
+            // 2. Anbieterdaten laden
             supplierList = await gwsP.LoadDataAsync<Electric_SupplierModel>(urlSupplier);
 
-            if (supplierList != null && supplierList.Any()) // prüfen ob es Anbieterdaten gibt
+            // Schneller Abbruch (Guard Clause), wenn keine Daten vorhanden sind
+            if (supplierList == null || !supplierList.Any())
             {
-                costsList = await gwsP.LoadDataAsync<Electric_CostModel>(urlCostSupplier + Convert.ToString(supplierData!.Id));  // Kosten anbieterabhängig auslesen
+                if (supplierData != null) supplierData.Id = 0;
+                return;
+            }
+
+            // 3. Kosten anbieterabhängig auslesen (Null-Check für supplierData hinzugefügt)
+            if (supplierData != null)
+            {
+                costsList = await gwsP.LoadDataAsync<Electric_CostModel>($"{urlCostSupplier}{supplierData.Id}");
+
                 if (costsList != null && costsList.Any())
                 {
-                    costsList?.Sort((x, y) => x.Gueltig_Ab.CompareTo(y.Gueltig_Ab)); // nach "gueltig_ab" sortieren
+                    // LINQ-Sortierung ist oft sauberer oder direkt In-Place über die Liste
+                    costsList.Sort((x, y) => x.Gueltig_Ab.CompareTo(y.Gueltig_Ab));
                 }
-                CalcChartData(supplierList, costsList);
-            }
-            else
-            {
-                // es gibt keine gültigen Daten der Anbieter
-                supplierData!.Id = 0;
             }
 
-
-
+            // 4. Diagrammdaten berechnen
+            CalcChartData(supplierList, costsList);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            // Tipp: Loggen Sie die Exception 'ex' hier (z.B. ILogger)
             OpenDialog("Keine Strom-Kosten vorhanden!", "60px", "380px", false);
         }
-
-        // Spinner
-        await Task.Delay(200); // muss sein sonst Runtime fault
-        this.spinnerVisibleProperty = false;
+        finally
+        {
+            // Spinner wird IMMER deaktiviert, auch im Fehlerfall
+            this.spinnerVisibleProperty = false;
+            this.StateHasChanged(); // Erzwingt das Neuzeichnen der UI ohne künstliches Delay
+        }
     }
+
     #endregion
 
     #region ValueSelectHandler
@@ -397,35 +410,81 @@
     /// Ablesetage des ausgewählten Anbieters auslesen
     /// </summary>
     /// <param name="args"></param>
+    // private async Task ValueSelectHandler(SelectEventArgs<Electric_SupplierModel> args)
+    // {
+    //     this.spinnerVisibleProperty = true;
+    //     //Anbieterdaten laden abhängig vom Dropdown "Anbieter"
+    //     supplierData = supplierList!
+    //                        .Where(s => s.Id == args.ItemData.Id)
+    //                        .Select(s => s).FirstOrDefault();
+
+    //     if (supplierData != null && supplierData.Id > 0)
+    //     {
+    //         StartDate = supplierData.Zeitraum_Start ?? DateTime.Now;
+    //         EndDate = supplierData.Zeitraum_Ende ?? DateTime.Now;
+
+    //         success = GetSetMyAppConfig.SetMyAppSettings.WriteSettings(myAppSettings, "Supplier_Id.Electric", supplierData.Id.ToString()); // ausgewählten Anbieter in MyAppConfig speichern
+    //         if (!success)
+    //         {
+    //             OpenDialog("Strom-Anbieter nicht gespeichert!", "60px", "380px", false);
+    //         }
+    //     }
+    //     else
+    //     {
+    //         ChartPointList.Clear();
+    //         OpenDialog("Keine Daten vorhanden!", "60px", "380px", false);
+    //     }
+
+    //     // Spinner
+    //     await Task.Delay(200);
+    //     this.spinnerVisibleProperty = false;
+    // }
+
     private async Task ValueSelectHandler(SelectEventArgs<Electric_SupplierModel> args)
     {
+        // Falls args oder ItemData null sein können, fangen wir das hier ab
+        if (args?.ItemData == null) return;
+
         this.spinnerVisibleProperty = true;
-        //Anbieterdaten laden abhängig vom Dropdown "Anbieter"
-        supplierData = supplierList!
-                           .Where(s => s.Id == args.ItemData.Id)
-                           .Select(s => s).FirstOrDefault();
 
-        if (supplierData != null && supplierData.Id > 0)
+        try
         {
-            StartDate = supplierData.Zeitraum_Start ?? DateTime.Now;
-            EndDate = supplierData.Zeitraum_Ende ?? DateTime.Now;
+            // LINQ-Optimierung: Direkt FirstOrDefault mit Prädikat nutzen (ohne Where und Select)
+            supplierData = supplierList?.FirstOrDefault(s => s.Id == args.ItemData.Id);
 
-            success = GetSetMyAppConfig.SetMyAppSettings.WriteSettings(myAppSettings, "Supplier_Id.Electric", supplierData.Id.ToString()); // ausgewählten Anbieter in MyAppConfig speichern
-            if (!success)
+            if (supplierData != null && supplierData.Id > 0)
             {
-                OpenDialog("Strom-Anbieter nicht gespeichert!", "60px", "380px", false);
+                StartDate = supplierData.Zeitraum_Start ?? DateTime.Now;
+                EndDate = supplierData.Zeitraum_Ende ?? DateTime.Now;
+
+                // Da die Methode asynchron deklariert ist, prüfen Sie, ob WriteSettings eine Async-Variante anbietet:
+                // z.B. await GetSetMyAppConfig.SetMyAppSettings.WriteSettingsAsync(...)
+                success = await GetSetMyAppConfig.SetMyAppSettings.WriteSettingsAsync(myAppSettings, "Supplier_Id.Electric", supplierData.Id.ToString());
+
+                if (!success)
+                {
+                    OpenDialog("Strom-Anbieter nicht gespeichert!", "60px", "380px", false);
+                }
+            }
+            else
+            {
+                ChartPointList?.Clear();
+                OpenDialog("Keine Daten vorhanden!", "60px", "380px", false);
             }
         }
-        else
+        catch (Exception ex)
         {
-            ChartPointList.Clear();
-            OpenDialog("Keine Daten vorhanden!", "60px", "380px", false);
+            // Optional: Hier Fehler protokollieren (z.B. Logger.LogError(ex, "..."))
+            OpenDialog("Fehler beim Verarbeiten der Anbieterdaten!", "60px", "380px", false);
         }
-
-        // Spinner
-        await Task.Delay(200);
-        this.spinnerVisibleProperty = false;
+        finally
+        {
+            // Der Spinner wird in jedem Fall sicher deaktiviert
+            this.spinnerVisibleProperty = false;
+            this.StateHasChanged(); // Erzwingt das Neuzeichnen der Blazor UI
+        }
     }
+
     #endregion
 
     #region CalcChartData

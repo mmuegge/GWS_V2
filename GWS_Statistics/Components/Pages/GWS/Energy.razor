@@ -393,7 +393,7 @@ else
         try
         {
             // 1. Einstellungen laden
-            settings = GetSetMyAppConfig.GetMyAppSettings.ReadSettings(myAppSettings);
+            settings = await GetSetMyAppConfig.GetMyAppSettings.ReadSettingsAsync(myAppSettings);
             gwsP = new GWSProcessor(myHttpClient, settings!.GWSUri);
 
             // 2. Performance-Boost: Alle drei API-Aufrufe PARALLEL starten

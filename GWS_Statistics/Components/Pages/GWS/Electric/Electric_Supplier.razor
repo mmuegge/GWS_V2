@@ -14,6 +14,7 @@
 
 <PageTitle>Strom- Anbieter</PageTitle>
 
+@* Seiten-Überschrift *@
 <div class="container">
     <div class="text-center fs-3 fw-bold">
         <span class="fa-solid fa-plug fa-3xs" aria-hidden="true"> </span>
@@ -21,7 +22,10 @@
     </div>
 </div>
 
-<div class="control-section" id="target" align="center">
+@* Grid *@
+@if(supplierList != null && supplierList.Count > 0)
+{
+    <div class="control-section" id="target" align="center">
     <SfGrid ID="Grid" @ref="SfDataGrid" 
             DataSource="@supplierList"
             AllowPaging="true"
@@ -383,13 +387,11 @@
         </GridColumns>
     </SfGrid>
 </div>
-
-@* Spinner *@
-<SfSpinner @bind-Visible="@spinnerVisibleProperty" 
-           Type="SpinnerType.Tailwind" 
-           Size="40" 
-           CssClass="e-custom-color">
-</SfSpinner>
+}
+else
+{
+    <SfSpinner @bind-Visible="@spinnerVisibleProperty" Label="Lade Daten..." Size="40"></SfSpinner>
+}
 
 @* Dialog*@
 <div>
@@ -540,35 +542,51 @@
 
     #region OnInitializedAsync
     /// <summary>
-    /// OnInitializedAsync
+    /// Startet die asynchrone Initialisierung der Komponente, lädt die Konfiguration und die Strom-Anbieter-Daten.
     /// </summary>
     /// <returns></returns>
     /// <exception cref="Exception"></exception>
     protected override async Task OnInitializedAsync()
     {
-        // Spinner anzeigen bis Daten ausgelesen wurden
+        // 1. Spinner sofort aktivieren
         this.spinnerVisibleProperty = true;
 
-        settings = GetSetMyAppConfig.GetMyAppSettings.ReadSettings(myAppSettings);
-
-        gwsP = new GWSProcessor(myHttpClient, settings!.GWSUri);
         try
         {
-            supplierList = await gwsP.LoadDataAsync<Electric_SupplierModel>(urlSupplier);
+            // 2. Konfiguration laden
+            settings = await GetSetMyAppConfig.GetMyAppSettings.ReadSettingsAsync(myAppSettings);
 
-            if (supplierList == null || !supplierList.Any())
+            // 3. Fehlervermeidung: Falls Settings null sind, direkt abbrechen
+            if (settings?.GWSUri == null)
+            {
+                throw new InvalidOperationException("Konfiguration oder GWS-URI konnte nicht geladen werden.");
+            }
+
+            gwsP = new GWSProcessor(myHttpClient, settings.GWSUri);
+
+            // 4. Daten asynchron laden
+            var data = await gwsP.LoadDataAsync<Electric_SupplierModel>(urlSupplier);
+            supplierList = data?.ToList() ?? new List<Electric_SupplierModel>();
+
+            // 5. Prüfung auf leere Daten
+            if (!supplierList.Any())
             {
                 OpenDialog("Keine Strom-Anbieter vorhanden!", "60px", "380px", false);
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw new Exception("Es konnten keine Strom-Anbieter geladen werden");
+            // 6. Protokollierung/Echte Exception-Weiterleitung
+            // (Ersetzt 'throw new Exception', um den Stack-Trace nicht zu zerstören)
+            throw new InvalidOperationException("Es konnten keine Strom-Anbieter geladen werden.", ex);
         }
-
-        await Task.Delay(200);
-        this.spinnerVisibleProperty = false;
+        finally
+        {
+            // 7. Garantiert, dass der Spinner IMMER ausgeblendet wird, auch im Fehlerfall
+            this.spinnerVisibleProperty = false;
+        }
     }
+
     #endregion
 
     #region ToolbarBtnClickHandler
@@ -808,15 +826,18 @@
 
     #region OpenDialog
     /// <summary>
-    /// OpenDialog
+    /// Dialog öffnen mit Header, Höhe, Breite und optionalen Buttons
     /// </summary>
-    private void OpenDialog(string header, string height, string width, bool showButtons)
+    private void OpenDialog(string header, string height = "auto", string width = "500px", bool showButtons = true)
     {
         Header = header;
         dialogHeight = height;
         dialogWidth = width;
         showDialogButtons = showButtons;
         this.DialogVisible = true;
+
+        // Erzwingt das Neu-Rendern der UI (wichtig in Blazor für Dialoge)
+        this.StateHasChanged();
     }
     #endregion
 

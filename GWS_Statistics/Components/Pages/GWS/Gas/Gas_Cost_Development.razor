@@ -12,6 +12,7 @@
 
 <PageTitle>Gas- Kostenentwicklung</PageTitle>
 
+@* Seiten-Überschrift *@
 <div class="container">
     <div class="row">
         <div class="text-center fs-3 fw-bold">
@@ -358,7 +359,7 @@
         this.spinnerVisibleProperty = true;
 
         // MyAppSettings.json auslesen und letzten gespeicherten Anbieter auslesen
-        settings = GetSetMyAppConfig.GetMyAppSettings.ReadSettings(myAppSettings);
+        settings = await GetSetMyAppConfig.GetMyAppSettings.ReadSettingsAsync(myAppSettings);
 
         gwsP = new GWSProcessor(myHttpClient, settings!.GWSUri);
         try
@@ -417,7 +418,7 @@
             StartDate = supplierData.Zeitraum_Start ?? DateTime.Now;
             EndDate = supplierData.Zeitraum_Ende ?? DateTime.Now;
 
-            success = GetSetMyAppConfig.SetMyAppSettings.WriteSettings(myAppSettings, "Supplier_Id.Gas", supplierData.Id.ToString()); // ausgewählten Anbieter in MyAppConfig speichern
+            success = await GetSetMyAppConfig.SetMyAppSettings.WriteSettingsAsync(myAppSettings, "Supplier_Id.Gas", supplierData.Id.ToString()); // ausgewählten Anbieter in MyAppConfig speichern
             if (!success)
             {
                 OpenDialog("Gas-Anbieter nicht gespeichert!", "60px", "380px", false);

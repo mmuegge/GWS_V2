@@ -2,7 +2,6 @@
 
 @using GWS_Statistics.Components.Services
 @using GWS_Statistics.Helper
-@using System.Globalization
 @using System.Net
 
 @inject MyAppConfigModel myAppSettings
@@ -370,7 +369,7 @@
         this.SpinnerVisibleProperty = true;
 
         // MyAppSettings.json auslesen und letzten gespeicherten Anbieter auslesen
-        settings = GetSetMyAppConfig.GetMyAppSettings.ReadSettings(myAppSettings);
+        settings = await GetSetMyAppConfig.GetMyAppSettings.ReadSettingsAsync(myAppSettings);
 
         gwsP = new GWSProcessor(myHttpClient, settings!.GWSUri);
         try

@@ -16,6 +16,7 @@
 
 <PageTitle>Wasser- Kosten-Vergleich</PageTitle>
 
+@* Seiten-Überschrift *@
 <div class="container">
     <div class="row">
         <div class="text-center fs-3 fw-bold">
@@ -185,16 +186,6 @@
 
                 <SfSpinner @bind-Visible="@spinnerVisibleProperty" Type="SpinnerType.Tailwind" Size="40" CssClass="e-custom-color"></SfSpinner>
 
-                @* Dialog*@
-                <div>
-                    <SfDialog Target="#target" Width="320px" Height=@dialogHeight AllowDragging="true" ShowCloseIcon=" true" @bind-Visible="DialogVisible" AllowPrerender="true" IsModal="true">
-                        <DialogTemplates>
-                            <Header>@Header</Header>
-                        </DialogTemplates>
-                        <DialogPositionData X="@dialogXValue" Y="@dialogYValue"></DialogPositionData>
-                        <DialogAnimationSettings Effect="@animationEffect"></DialogAnimationSettings>
-                    </SfDialog>
-                </div>
             </SfChart>
         </div>
     </div>
@@ -203,6 +194,18 @@ else
 {
     <SfSpinner @bind-Visible="@spinnerVisibleProperty" Label="Lade Daten..." Size="40"></SfSpinner>
 }
+
+@* Dialog*@
+<div>
+    <SfDialog Target="#target" Width="320px" Height=@dialogHeight AllowDragging="true" ShowCloseIcon=" true" @bind-Visible="DialogVisible" AllowPrerender="true" IsModal="true">
+        <DialogTemplates>
+            <Header>@Header</Header>
+        </DialogTemplates>
+        <DialogPositionData X="@dialogXValue" Y="@dialogYValue"></DialogPositionData>
+        <DialogAnimationSettings Effect="@animationEffect"></DialogAnimationSettings>
+    </SfDialog>
+</div>
+
 <style>
     .e-dlg-overlay {
         background-color: slategray;
@@ -350,7 +353,7 @@ else
         try
         {
             // 1. Einstellungen auslesen
-            settings = GetSetMyAppConfig.GetMyAppSettings.ReadSettings(myAppSettings);
+            settings = await GetSetMyAppConfig.GetMyAppSettings.ReadSettingsAsync(myAppSettings);
             gwsP = new GWSProcessor(myHttpClient, settings!.GWSUri);
 
             // 2. Performance-Boost: Gas-Anbieter und Zahlungen PARALLEL über die API abrufen

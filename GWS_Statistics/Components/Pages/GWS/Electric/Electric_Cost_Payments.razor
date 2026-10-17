@@ -376,7 +376,7 @@
         this.spinnerVisibleProperty = true;
 
         // MyAppSettings.json auslesen und letzten gespeicherten Anbieter auslesen
-        settings = GetSetMyAppConfig.GetMyAppSettings.ReadSettings(myAppSettings);
+        settings = await GetSetMyAppConfig.GetMyAppSettings.ReadSettingsAsync(myAppSettings);
 
         gwsP = new GWSProcessor(myHttpClient, settings!.GWSUri);
         try
@@ -499,7 +499,7 @@
                 OpenDialog("Keine Strom-Verbräuche vorhanden!", "60px", "380px", false);
             }
 
-            success = GetSetMyAppConfig.SetMyAppSettings.WriteSettings(myAppSettings, "Supplier_Id.Electric", supplierData.Id.ToString()); // ausgewählten Anbieter in MyAppConfig speichern
+            success = await GetSetMyAppConfig.SetMyAppSettings.WriteSettingsAsync(myAppSettings, "Supplier_Id.Electric", supplierData.Id.ToString()); // ausgewählten Anbieter in MyAppConfig speichern
             if (!success)
             {
                 OpenDialog("Strom-Anbieter nicht gespeichert!", "60px", "380px", false);

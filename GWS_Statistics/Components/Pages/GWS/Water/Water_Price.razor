@@ -456,7 +456,7 @@
         this.spinnerVisibleProperty = true;
 
         // MyAppSettings.json auslesen und letzten gespeicherten Anbieter auslesen
-        settings = GetSetMyAppConfig.GetMyAppSettings.ReadSettings(myAppSettings);
+        settings = await GetSetMyAppConfig.GetMyAppSettings.ReadSettingsAsync(myAppSettings);
 
         gwsP = new GWSProcessor(myHttpClient, settings!.GWSUri);
         try
@@ -520,7 +520,7 @@
         {
             // Spinner
             this.spinnerVisibleProperty = true;
-            success = GetSetMyAppConfig.SetMyAppSettings.WriteSettings(myAppSettings, "Supplier_Id.Water", supplierData.Id.ToString());
+            success = await GetSetMyAppConfig.SetMyAppSettings.WriteSettingsAsync(myAppSettings, "Supplier_Id.Water", supplierData.Id.ToString());
 
             // Start-Zeitpunkt/Ende-Zeitpunkt auslesen
             startDate = args.ItemData.Zeitraum_Start;

@@ -4,7 +4,6 @@
 @using GWS_Statistics.Helper
 @using GWS_Statistics.Calculation
 @using System.Globalization
-@using System.ComponentModel.DataAnnotations
 @using Syncfusion.Blazor
 @using Syncfusion.Blazor.Charts
 @using Syncfusion.Blazor.Data
@@ -17,6 +16,7 @@
 
 <PageTitle>Wasser- Verbräuche</PageTitle>
 
+@* Seiten-Überschrift *@
 <div class="container">
     <div class="row">
         <div class="text-center fs-3 fw-bold">
@@ -169,8 +169,8 @@
                 </ChartPrimaryXAxis>
 
                 <ChartPrimaryYAxis  Title="Verbrauch"
-                LabelFormat="{value} m³"
-                RangePadding="ChartRangePadding.Normal">
+                    LabelFormat="{value} m³"
+                    RangePadding="ChartRangePadding.Normal">
 
                     <ChartAxisLineStyle Width="0"></ChartAxisLineStyle>
                     <ChartAxisLabelStyle FontFamily=@fontFamily></ChartAxisLabelStyle>
@@ -180,15 +180,15 @@
                 </ChartPrimaryYAxis>
 
                 <ChartAxes>
-                    <ChartAxis  Name="yAxisCons"
-                    Title="Verbrauch"
-                    RangePadding="ChartRangePadding.Auto"
-                    OpposedPosition="false"
-                    Interval="@Interval_YAxis"
-                    Minimum="0"
-                    Maximum="@MaxRangeCons"
-                    LabelFormat="@labelFormat">
-                        <ChartAxisMajorGridLines Width="1"></ChartAxisMajorGridLines>
+                    <ChartAxis Name="yAxisCons"
+                               Title="Verbrauch"
+                               RangePadding="ChartRangePadding.Auto"
+                               OpposedPosition="false"
+                               Interval="@Interval_YAxis"
+                               Minimum="0"
+                               Maximum="@MaxRangeCons_TW_m3"
+                               LabelFormat="@labelFormat">
+                               <ChartAxisMajorGridLines Width="1"></ChartAxisMajorGridLines>
                     </ChartAxis>
 
                     <ChartAxis  Name="yAxisTemp"
@@ -204,16 +204,17 @@
                 </ChartAxes>
 
                 <ChartSeriesCollection>
-                    <ChartSeries    Type="ChartSeriesType.Column"
-                    DataSource="@ChartPointList"
-                    Visible="@serieConsm3_TW_Visible"
-                    YAxisName="yAxisCons"
-                    XName="Date"
-                    YName="Cons_TW_m3"
-                    Width="3"
-                    GroupName="Consumption"
-                    Name="Verbrauch-TW"
-                    TooltipFormat="${series.name} : ${point.y}  m³">
+                    <ChartSeries    
+                        Type="ChartSeriesType.Column"
+                        DataSource="@ChartPointList"
+                        Visible="@serieConsm3_TW_Visible"
+                        YAxisName="yAxisCons"
+                        XName="Date"
+                        YName="Cons_TW_m3"
+                        Width="3"
+                        GroupName="Consumption"
+                        Name="Verbrauch-TW"
+                        TooltipFormat="${series.name} : ${point.y}  m³">
                     </ChartSeries>
 
                     @if (DdlInterval != Interval.jährlich)
@@ -240,16 +241,6 @@
 
             <SfSpinner @bind-Visible="@spinnerVisibleProperty" Type="SpinnerType.Tailwind" Size="40" CssClass="e-custom-color"></SfSpinner>
 
-            @* Dialog*@
-            <div>
-                <SfDialog Target="#target" Width="@dialogWidth" Height="@dialogHeight" AllowDragging="true" ShowCloseIcon="true" @bind-Visible="@DialogVisible" AllowPrerender="true" IsModal="true">
-                    <DialogTemplates>
-                        <Header>@Header</Header>
-                    </DialogTemplates>
-                    <DialogPositionData X="@dialogXValue" Y="@dialogYValue"></DialogPositionData>
-                    <DialogAnimationSettings Effect="@animationEffect"></DialogAnimationSettings>
-                </SfDialog>
-            </div>
         </div>
     </div>
 }
@@ -257,6 +248,18 @@ else
 {
     <SfSpinner @bind-Visible="@spinnerVisibleProperty" Label="Lade Daten..." Size="40"></SfSpinner>
 }
+
+@* Dialog*@
+<div>
+    <SfDialog Target="#target" Width="@dialogWidth" Height="@dialogHeight" AllowDragging="true" ShowCloseIcon="true" @bind-Visible="@DialogVisible" AllowPrerender="false" IsModal="true">
+        <DialogTemplates>
+            <Header>@Header</Header>
+        </DialogTemplates>
+        <DialogPositionData X="@dialogXValue" Y="@dialogYValue"></DialogPositionData>
+        <DialogAnimationSettings Effect="@animationEffect"></DialogAnimationSettings>
+    </SfDialog>
+</div>
+
 <style>
     .e-dlg-overlay {
     background-color: slategray;
@@ -399,8 +402,9 @@ else
     public double Rotation { get; set; } = 0;
     public LabelIntersectAction Label { get; set; } = LabelIntersectAction.Trim;
     public String[] palettes = new String[] { "#03fcb6", "#0634bd" };  // Farben Serie: Verbrauch TW m3, Verbrauch AW m3, Temperatur
-    public double Interval_YAxis { get; set; } = 0.5;
-    public double MaxRangeCons { get; set; } = 2;
+    public double Interval_YAxis { get; set; } = 4;
+    public double MaxRangeCons_TW_m3 { get; set; } = 2;
+    public double MaxRangeCons_AW_m3 { get; set; } = 2;
     public double MinRangeCons { get; set; } = 0;
     public double MaxRangeTemp { get; set; } = 40;
     public double MinRangeTemp { get; set; } = -10;
@@ -413,7 +417,7 @@ else
     public double? ConsMax_TW_m3 { get; set; } = 0.0d; // Trinkwasser
     public double? TempAverage { get; set; } = 0.0d;
 
-    private string labelFormat = "N2";
+    public string labelFormat = "N0";
 
     public List<ColumnChartData> ChartPointList { get; set; } = new List<ColumnChartData>();
 
@@ -441,7 +445,7 @@ else
         try
         {
             // 1. Einstellungen asynchron laden & parsen
-            settings = await Task.Run(() => GetSetMyAppConfig.GetMyAppSettings.ReadSettings(myAppSettings));
+            settings = await GetSetMyAppConfig.GetMyAppSettings.ReadSettingsAsync(myAppSettings);
 
             if (settings?.Display_Interval?.Water != null && int.TryParse(settings.Display_Interval.Water, out int enumValue) && Enum.IsDefined(typeof(Interval), enumValue))
             {
@@ -515,10 +519,9 @@ else
         }
         finally
         {
-            // Das Delay bleibt hier, um einen Runtime-Fault zu verhindern.
-            // Durch das 'finally' wird der Spinner jetzt auch bei Abstürzen sicher abgeschaltet.
-            //await Task.Delay(100);
+            // Spinner sicher ausschalten (auch im Fehlerfall dank 'finally')
             this.spinnerVisibleProperty = false;
+
             StateHasChanged();
         }
     }
@@ -539,44 +542,70 @@ else
     /// <param name="args"></param>
     private async Task ValueSelectHandler(SelectEventArgs<Water_SupplierModel> args)
     {
+        // 1. Früher Abbruch bei ungültigen Argumenten
+        if (args?.ItemData == null) return;
+
         this.spinnerVisibleProperty = true;
-        //Anbieterdaten laden abhängig vom Dropdown "Anbieter"
-        supplierData = supplierList!
-                           .Where(s => s.Id == args.ItemData.Id)
-                           .Select(s => s).FirstOrDefault();
 
-        if (supplierData != null && supplierData.Id > 0)
+        // Erzwingt das sofortige Zeichnen des Spinners in der Blazor-UI
+        StateHasChanged();
+
+        try
         {
-            StartDate = supplierData.Zeitraum_Start ?? DateTime.Now;
-            EndDate = supplierData.Zeitraum_Ende ?? DateTime.Now;
+            // 2. LINQ optimiert
+            supplierData = supplierList?.FirstOrDefault(s => s.Id == args.ItemData.Id);
 
-            counterList = await gwsP!.LoadDataAsync<Water_CounterModel>(urlMeter + Convert.ToString(supplierData.Id)); // Daten des neu ausgewählten Anbieter laden
-
-            counterChangeList = await gwsP!.LoadDataAsync<Water_CounterChangeModel>(urlCounterChange + Convert.ToString(supplierData.Id)); // Zählerwechsel des Anbieter laden
-
-            if (counterList?.Any() == true)
+            if (gwsP != null && supplierData != null && supplierData.Id > 0)
             {
-                counterList?.Sort((x, y) => x.Ablesetag.CompareTo(y.Ablesetag));
+                StartDate = supplierData.Zeitraum_Start ?? DateTime.Now;
+                EndDate = supplierData.Zeitraum_Ende ?? DateTime.Now;
+
+                // 3. API-Aufruf mit sauberer String-Interpolation
+                var rawCounterList = await gwsP.LoadDataAsync<Water_CounterModel>($"{urlMeter}{supplierData.Id}");
+
+                // 4. In-Memory Sortierung absichern oder auf LINQ umstellen
+                if (rawCounterList != null && rawCounterList.Any())
+                {
+                    counterList = rawCounterList.OrderBy(c => c.Ablesetag).ToList();
+                }
+                else
+                {
+                    counterList = new List<Water_CounterModel>();
+                    OpenDialog("Keine Wasser-Verbräuche vorhanden!", "60px", "380px", false);
+                }
+
+                // 5. FEHLERBEHEBUNG: Direkt asynchron aufrufen (KEIN Task.Run wegen Thread-Sicherheit in Blazor)
+                // Und mit 'await' versehen, damit der Compiler-Fehler CS4014 nicht auftritt!
+                await SelectChartData(DdlInterval);
+
+                // 6. Einstellungen asynchron speichern
+                bool writeSuccess = await GetSetMyAppConfig.SetMyAppSettings.WriteSettingsAsync(
+                    myAppSettings,
+                    "Supplier_Id.Water",
+                    supplierData.Id.ToString()
+                );
+
+                if (!writeSuccess)
+                {
+                    OpenDialog("Wasser-Anbieter nicht gespeichert!", "60px", "380px", false);
+                }
             }
-
-            await Task.Run(() => SelectChartData(DdlInterval));
-
-            success = await Task.Run(() => GetSetMyAppConfig.SetMyAppSettings.WriteSettings(myAppSettings, "Supplier_Id.Water", supplierData.Id.ToString())); // ausgewählten Anbieter in MyAppConfig speichern
-            if (!success)
+            else
             {
-                OpenDialog("Wasser-Anbieter nicht gespeichert!", "60px", "380px", false);
+                ClearSumAverage();
+                OpenDialog("Keine Wasser-Verbräuche vorhanden!", "60px", "380px", false);
             }
         }
-        else
+        catch (Exception ex)
         {
-            ClearSumAverage();
-
-            OpenDialog("Keine Wasser-Verbräuche vorhanden!", "60px", "380px", false);
+            // 7. Fehlermeldung mit Details (optional, aber hilfreich für das Debugging)
+            OpenDialog($"Ein Fehler ist aufgetreten: {ex.Message}", "60px", "380px", false);
         }
-
-        // Spinner
-        await Task.Delay(200);
-        this.spinnerVisibleProperty = false;
+        finally
+        {
+            // 8. Künstliches Delay entfernt und Spinner-Garantie
+            this.spinnerVisibleProperty = false;
+        }
     }
     #endregion
 
@@ -590,23 +619,48 @@ else
     /// <exception cref="Exception"></exception>
     private async Task OnValueChangeInterval(ChangeEventArgs<Interval, string> args)
     {
+        // 1. Früher Abbruch bei ungültigen Argumenten
+        if (args == null) return;
+
         this.spinnerVisibleProperty = true;
 
-        DdlInterval = (Interval)args.Value;
-        supplierSelectEnabled = DdlInterval == Interval.jährlich ? false : true;
-        int enumValue = (int)DdlInterval;
+        // Erzwingt das sofortige Zeichnen des Spinners in der Blazor-UI
+        StateHasChanged();
 
-        await Task.Run(() => SelectChartData(DdlInterval));
-
-        success = await Task.Run(() => GetSetMyAppConfig.SetMyAppSettings.WriteSettings(myAppSettings, "Display_Interval.Water", enumValue.ToString())); // ausgewähltes Intervall in MyAppConfig speichern
-        if (!success)
+        try
         {
-            OpenDialog("Wasser-Anbieter nicht gespeichert!", "60px", "380px", false);
-        }
+            // 2. Werte zuweisen und parsen
+            DdlInterval = args.Value;
+            supplierSelectEnabled = DdlInterval != Interval.jährlich;
+            int enumValue = (int)DdlInterval;
 
-        // Spinner
-        await Task.Delay(200);
-        this.spinnerVisibleProperty = false;
+            // 3. FEHLERBEHEBUNG & THREAD-SICHERHEIT:
+            // Direkt asynchron abwarten (KEIN Task.Run), verhindert Compiler-Fehler CS4014
+            await SelectChartData(DdlInterval);
+
+            // 4. Einstellungen asynchron speichern
+            // Hinweis: Der Text im Dialog wurde von "Gas-Anbieter" zu "Intervall" korrigiert
+            success = await GetSetMyAppConfig.SetMyAppSettings.WriteSettingsAsync(
+                myAppSettings,
+                "Display_Interval.Water",
+                enumValue.ToString()
+            );
+
+            if (!success)
+            {
+                OpenDialog("Wasser-Intervall nicht gespeichert!", "60px", "380px", false);
+            }
+        }
+        catch (Exception ex)
+        {
+            // 5. Fehler abfangen, damit die UI stabil bleibt und der Spinner ausgeht
+            OpenDialog($"Fehler beim Ändern des Intervalls: {ex.Message}", "60px", "380px", false);
+        }
+        finally
+        {
+            // 6. Künstliches Delay entfernt und Spinner-Garantie
+            this.spinnerVisibleProperty = false;
+        }
     }
     #endregion
 
@@ -619,10 +673,12 @@ else
     public async Task GetChartDataDaily(Water_SupplierModel? supplier, List<Water_CounterModel>? counters)
     {
         DateTimeFormat = "dd.MM.yy";
-        if (counters != null && counters.Any())
+
+        // 1. Logik-Korrektur: Doppelte Zuweisungen im ternären Operator entfernt
+        if (counters != null && counters.Count > 0)
         {
-            IntervalDuration = counters.Count > 10 && counters.Count <= 30 ? IntervalDuration = 7 : IntervalDuration = 1;
-            IntervalType = counters.Count > 30 ? IntervalType = IntervalType.Months : IntervalType = IntervalType.Days;
+            IntervalDuration = (counters.Count > 10 && counters.Count <= 30) ? 7 : 1;
+            IntervalType = counters.Count > 30 ? IntervalType.Months : IntervalType.Days;
         }
         else
         {
@@ -632,19 +688,37 @@ else
 
         ChartPointList.Clear();
 
-        List<IConsumption> consumptions = await Task.Run(() => GWS_Calculation.CalcConsumptionDaily(supplier, counterChangeList, counters));
+        // 2. CPU-intensive Berechnung im Hintergrundthread belassen (das ist hier korrekt!)
+        // Aber direkt prüfen, ob das Ergebnis null oder leer ist.
+        var consumptions = await Task.Run(() => GWS_Calculation.CalcConsumptionDaily(supplier, counterChangeList, counters));
 
-        if (consumptions == null || !consumptions.Any())
+        if (consumptions == null || consumptions.Count == 0)
         {
+            ClearSumAverage();
             OpenDialog("Keine Wasser-Verbräuche vorhanden!", "60px", "380px", false);
             return;
         }
-        foreach (var cons in consumptions)
+
+        // 3. Performance-Optimierung: Kapazität der Liste vorab reservieren,
+        // um internes Kopieren/Vergrößern im Speicher zu verhindern.
+        if (ChartPointList is List<ColumnChartData> list)
         {
-            ChartPointList.Add(new ColumnChartData { Date = cons.Date, Cons_TW_m3 = cons.Consumption, Temp = cons.Temperature });   //lulli: hier fehlt noch die Berechnung vom Abwasser 0.55
+            list.EnsureCapacity(consumptions.Count);
         }
 
+        foreach (var cons in consumptions)
+        {
+            ChartPointList.Add(new ColumnChartData
+            {
+                Date = cons.Date,
+                Cons_TW_m3 = cons.Consumption,
+                Temp = cons.Temperature
+            });
+        }
+
+        // 5. Abschließende Berechnungen
         CalcAverageSum();
+
         GetChartMinMaxRange(ChartPointList);
     }
     #endregion
@@ -660,23 +734,36 @@ else
         IntervalDuration = 1;
         IntervalType = IntervalType.Months;
         DateTimeFormat = "MMM yy";
+
         ChartPointList.Clear();
 
-        List<IConsumption> consumptionsMonthly = await Task.Run(() => GWS_Calculation.CalcConsumptionMonthly(supplier, counterChangeList, counters)); // dann monatlichen Verbrauch berechnen
+        // 1. CPU-intensive Berechnung im Hintergrundthread belassen
+        var consumptionsMonthly = await Task.Run(() => GWS_Calculation.CalcConsumptionMonthly(supplier, counterChangeList, counters));
 
-        if (consumptionsMonthly == null || !consumptionsMonthly.Any())
+        // 2. Schnelle und sichere Null- sowie Leerprüfung (Count ist bei Listen performanter als .Any())
+        if (consumptionsMonthly == null || consumptionsMonthly.Count == 0)
         {
             OpenDialog("Keine Wasser-Verbräuche vorhanden!", "60px", "380px", false);
             return;
         }
-        else
+
+        // 3. Performance-Optimierung: Kapazität der Zielliste vorab reservieren
+        if (ChartPointList is List<ColumnChartData> list)
         {
-            foreach (var cons in consumptionsMonthly!)
-            {
-                ChartPointList.Add(new ColumnChartData { Date = cons.Date, Cons_TW_m3 = cons.Consumption, Temp = cons.Temperature });
-            }
+            list.EnsureCapacity(consumptionsMonthly.Count);
         }
 
+        foreach (var cons in consumptionsMonthly)
+        {
+            ChartPointList.Add(new ColumnChartData
+            {
+                Date = cons.Date,
+                Cons_TW_m3 = cons.Consumption,
+                Temp = cons.Temperature
+            });
+        }
+
+        // 5. Berechnungen und UI-Vorbereitung finalisieren
         CalcAverageSum();
         GetChartMinMaxRange(ChartPointList);
     }
@@ -728,6 +815,7 @@ else
 
         CalcAverageSum();
         GetChartMinMaxRange(ChartPointList);
+        StateHasChanged();
     }
     #endregion
 
@@ -738,7 +826,7 @@ else
     /// <param name="interval"></param>
     public async Task SelectChartData(Interval interval)
     {
-        
+
         // Vorab-Abfrage für das Laden der Zählerwechsel-Daten (nur bei jährlich)
         if (interval == Interval.jährlich)
         {
@@ -807,29 +895,38 @@ else
     public void GetMockChartData(DateTime? startPeriod, DateTime? endPeriod)
     {
         const int days = 364;
-        double? consumption = 0.0d;
-        double? temperature = 0.0d;
-        Random randomConsumption = new Random();
-        Random randomTemperature = new Random();
-        DateTime dayToday = DateTime.Now;
+        DateTime dayToday = DateTime.Today; // .Today statt .Now, da Uhrzeit für den Tagesvergleich meist irrelevant ist
+        DateTime startDate = startPeriod ?? new DateTime(1970, 1, 1);
 
-        DateTime newDate = startPeriod ?? new DateTime(1970, 1, 1);
-
-        ChartPointList.Clear();
+        // Kapazität direkt zuweisen verhindert Speicher-Reallozierungen
+        var temporaryList = new List<ColumnChartData>(days);
 
         for (int i = 0; i < days; i++)
         {
-            consumption = randomConsumption.Next(0, 10);
-            temperature = randomTemperature.Next(-10, 30);
-
-            ChartPointList.Add(new ColumnChartData { Date = newDate, Cons_TW_m3 = consumption, Temp = temperature });
-
-            newDate = newDate.AddDays(1);
-            if (newDate > dayToday)
+            DateTime currentDate = startDate.AddDays(i);
+            if (currentDate > dayToday)
             {
                 break;
             }
+
+            // Random.Shared ist thread-safe und performanter (ab .NET 6)
+            double consumption = Random.Shared.Next(0, 10);
+            double temperature = Random.Shared.Next(-10, 30);
+
+            temporaryList.Add(new ColumnChartData
+            {
+                Date = currentDate,
+                Cons_TW_m3 = consumption,
+                Temp = temperature,
+            });
         }
+
+        // Thread-Sicherheit erhöhen: Erst am Ende der UI/Klasse zuweisen
+        ChartPointList = temporaryList;
+
+        // Künstliche Verzögerung (falls für UI-Effekte gewollt), sonst Zeile komplett löschen
+        //await Task.Delay(200);
+
         GetChartMinMaxRange(ChartPointList);
     }
     #endregion
@@ -838,48 +935,57 @@ else
     /// <summary>
     /// Berechnen Chart Min/Max-Range
     /// </summary>
-    public void GetChartMinMaxRange(List<ColumnChartData> chartList)
+    public  void GetChartMinMaxRange(List<ColumnChartData> chartList)
     {
-        double maxValue = 0;
-
-        if (chartList != null && chartList.Any())
+        // 1. Früher Abbruch
+        if (chartList == null || !chartList.Any())
         {
-            // Y-Achse Verbrauch
-            maxValue = ChartPointList.Max(x => x.Cons_TW_m3).GetValueOrDefault();
-            MaxRangeCons = maxValue + maxValue / 20; // + 5%
-            Interval_YAxis = MaxRangeCons / 4;
-
-            switch (DdlInterval)
-            {
-                case Interval.jährlich:
-                    labelFormat = "N0";
-                    break;
-
-                case Interval.monatlich:
-                    labelFormat = "N1";
-                    break;
-
-                default:
-                    labelFormat = "N1";
-                    break;
-            }
-
-            // Y-Achse Temperatur
-            if (DdlInterval != Interval.jährlich)
-            {
-                MinRangeTemp = Math.Round(ChartPointList.Min(t => t.Temp).GetValueOrDefault(), 0);
-                MaxRangeTemp = Math.Round(ChartPointList.Max(t => t.Temp).GetValueOrDefault(), 0) + 2;
-            }
-           
-
+            MinRangeCons = 0.0d;
+            MaxRangeCons_TW_m3 = 0.0d;
+            MaxRangeCons_AW_m3 = 0.0d;
             return;
         }
 
-        MinRangeCons = 0;
-        MaxRangeCons = 0;
-        MinRangeTemp = 0;
-        MaxRangeTemp = 0;
+        // 2. Initialisierung der Min-Werte und Intervalle
+        MinRangeCons = 0.0d;
+
+        // 3. JETZT erst das Switch-Statement ausführen (da MaxRangeCons_TW_m3 nun bekannt ist!)
+        (string label, int decimalPlaces, int interval) = DdlInterval switch
+        {
+            Interval.täglich => ("N2", 1, 5),
+            Interval.monatlich => ("N1", 0, 5),
+            Interval.jährlich => ("N0", 0, 5),
+            _ => ("N1", 1, 4)
+        };
+
+        // Globale Format-Variable für das Razor-Markup füllen
+        labelFormat = label;
+
+        // 4. Startwerte für die Maximum-Suche aus dem ersten Element lesen
+        // (Verhindert Probleme, falls alle Werte in der Liste 0 oder negativ sind)
+        var firstItem = chartList.FirstOrDefault(x => x != null);
+        if (firstItem == null) return;
+
+        double maxCons_TW_m3 = firstItem.Cons_TW_m3 ?? 0.0d;
+        double maxCons_AW_m3 = firstItem.Cons_AW_m3 ?? 0.0d;
+
+        // Liste einmal komplett durchlaufen
+        foreach (var item in chartList)
+        {
+            if (item == null) continue;
+
+            if (item.Cons_TW_m3 > maxCons_TW_m3) maxCons_TW_m3 = item.Cons_TW_m3 ?? 0.0d;
+            if (item.Cons_AW_m3 > maxCons_AW_m3) maxCons_AW_m3 = item.Cons_AW_m3 ?? 0.0d;
+        }
+
+        // 5. Werte runden und Offsets addieren
+        MaxRangeCons_TW_m3 = Math.Round(maxCons_TW_m3 * 1.1d, decimalPlaces); // 5% Puffer
+        MaxRangeCons_AW_m3 = Math.Round(maxCons_AW_m3 * 1.1d, decimalPlaces); // 5% Puffer
+
+        // 6. Intervall berechnen
+        Interval_YAxis = Math.Round(MaxRangeCons_TW_m3 / interval, decimalPlaces);
     }
+
     #endregion
 
     #region OpenDialog

@@ -331,7 +331,7 @@ else
 
         try
         {
-            settings = GetSetMyAppConfig.GetMyAppSettings.ReadSettings(myAppSettings);
+            settings = await GetSetMyAppConfig.GetMyAppSettings.ReadSettingsAsync(myAppSettings);
             gwsP = new GWSProcessor(myHttpClient, settings!.GWSUri);
 
             // Parameter auslesen (Erster asynchroner Halt, UI zeichnet den Spinner)

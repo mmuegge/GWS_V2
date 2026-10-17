@@ -435,7 +435,7 @@
         try
         {
             // Settings und API-Prozessor initialisieren
-            settings = GetSetMyAppConfig.GetMyAppSettings.ReadSettings(myAppSettings);
+            settings = await GetSetMyAppConfig.GetMyAppSettings.ReadSettingsAsync(myAppSettings);
             if (settings == null) return;
 
             gwsP = new GWSProcessor(myHttpClient, settings.GWSUri);
@@ -514,7 +514,7 @@
             try
             {
                 // Einstellungen schreiben
-                success = GetSetMyAppConfig.SetMyAppSettings.WriteSettings(myAppSettings, "Supplier_Id.Water", supplierData.Id.ToString());
+                success = await GetSetMyAppConfig.SetMyAppSettings.WriteSettingsAsync(myAppSettings, "Supplier_Id.Water", supplierData.Id.ToString());
 
                 // Zeiträume zuweisen
                 startDate = supplierData.Zeitraum_Start;
