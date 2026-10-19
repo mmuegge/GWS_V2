@@ -874,15 +874,13 @@ else
 
     #region GetDialogHeader
     /// <summary>
-    /// GetDialogHeader
+    /// Dialog-Header basierend auf dem aktuellen Wasser-Anbieter-Datensatz abrufen
     /// </summary>
     /// <param name="supplier"></param>
     /// <returns></returns>
-    public string GetDialogHeader(Gas_SupplierModel supplier)
-    {
-        return supplier.Id == 0
+    public string GetDialogHeader(Gas_SupplierModel? supplier) =>
+        supplier is not { Id: > 0 }
             ? "Anbieter: neuer Anbieter"
-            : "Anbieter: " + supplier.Anbieter;
-    }
+            : $"Anbieter: {supplier.Anbieter}";
     #endregion
 }

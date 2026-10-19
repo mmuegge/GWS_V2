@@ -921,22 +921,13 @@ else
 
     #region GetDialogHeader
     /// <summary>
-    /// GetDialogHeader
+    /// Dialog-Header basierend auf dem aktuellen Wasser-Anbieter-Datensatz abrufen
     /// </summary>
     /// <param name="supplier"></param>
     /// <returns></returns>
-    public string GetDialogHeader(Electric_SupplierModel? supplier)
-    {
-        if (supplier != null)
-        {
-            return supplier.Id == 0
-                ? "Anbieter: neuer Anbieter"
-                : "Anbieter: " + supplier.Anbieter;
-        }
-        else
-        {
-            return "Kein Anbieter vorhanden!";
-        }
-    }
+    public string GetDialogHeader(Electric_SupplierModel? supplier) =>
+        supplier is not { Id: > 0 }
+            ? "Anbieter: neuer Anbieter"
+            : $"Anbieter: {supplier.Anbieter}";
     #endregion
 }
