@@ -468,15 +468,39 @@ namespace GWS_Api.Controllers
         [HttpDelete("anbieter/{id:int}")]
         public async Task<ActionResult> DeleteSupplier(int id)
         {
-            var tarifModelFromRepo = await _repo.GetSupplierByIdAsync(id);
+            //var tarifModelFromRepo = await _repo.GetSupplierByIdAsync(id);
 
-            if (tarifModelFromRepo == null)
+            //if (tarifModelFromRepo == null)
+            //{
+            //    return NotFound($"Anbieter mit Id= {id} nicht gefunden");
+            //}
+            //await _repo.DeleteSupplierAsync(tarifModelFromRepo);
+            //await _repo.SaveChangesAsync();
+            //return Ok(tarifModelFromRepo);
+
+            // 1. Existenzprüfung im Repository
+            var supplierFromRepo = await _repo.GetSupplierByIdAsync(id);
+
+            if (supplierFromRepo == null)
             {
-                return NotFound($"Anbieter mit Id= {id} nicht gefunden");
+                // Gibt 404 mit dem Text aus, den Blazor in 'MyResponseString' anzeigt
+                return NotFound($"Anbieter mit Id = {id} nicht gefunden");
             }
-            await _repo.DeleteSupplierAsync(tarifModelFromRepo);
-            await _repo.SaveChangesAsync();
-            return Ok(tarifModelFromRepo);
+
+            try
+            {
+                // 2. Löschen und Speichern
+                await _repo.DeleteSupplierAsync(supplierFromRepo);
+                await _repo.SaveChangesAsync();
+
+                // 3. REST-Konvention: Entweder 204 NoContent oder 200 Ok mit dem gelöschten Objekt
+                return Ok(supplierFromRepo);
+            }
+            catch (Exception)
+            {
+                // Schützt die API vor unhandled 500-Exceptions (z.B. wegen DB-Datenintegrität/Foreign Keys)
+                return StatusCode(StatusCodes.Status500InternalServerError, "Fehler beim Löschen des Datensatzes in der Datenbank.");
+            }
         }
 
         /// <summary>

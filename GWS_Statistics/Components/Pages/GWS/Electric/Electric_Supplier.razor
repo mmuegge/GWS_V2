@@ -25,372 +25,385 @@
 @* Grid *@
 @if(supplierList != null && supplierList.Count > 0)
 {
-    <div class="control-section" id="target" align="center">
-    <SfGrid ID="Grid" @ref="SfDataGrid" 
-            DataSource="@supplierList"
-            AllowPaging="true"
-            AllowFiltering="true"
-            AllowReordering="true"
-            AllowResizing="true"
-            AllowExcelExport="true"
-            AllowPdfExport="true"
-            EnableHover="true"
-            AllowTextWrap="true"
-            AllowSelection="true"
-            AllowSorting="true"
-            Height="100%" 
-            Width="100%"
-            Toolbar=@toolbar
-            EnableStickyHeader="true">
+    <div class="control-section" id="target" align="center" style="position: relative; min-height: 200px;">
+        <SfGrid ID="Grid" @ref="SfDataGrid" 
+                DataSource="@supplierList"
+                AllowPaging="true"
+                AllowFiltering="true"
+                AllowReordering="true"
+                AllowResizing="true"
+                AllowExcelExport="true"
+                AllowPdfExport="true"
+                EnableHover="true"
+                AllowTextWrap="true"
+                AllowSelection="true"
+                AllowSorting="true"
+                Height="100%" 
+                Width="100%"
+                Toolbar=@toolbar
+                EnableStickyHeader="true">
 
-        <GridEditSettings AllowAdding="true"
-                          AllowEditing="true"
-                          AllowDeleting="true"
-                          ShowDeleteConfirmDialog="true"
-                          Mode="EditMode.Dialog"
-                          Dialog="DialogParams">
-
-            <HeaderTemplate>
-                @{
-                    var DialogHeader = GetDialogHeader((context as Electric_SupplierModel));
-                    <span>@DialogHeader</span>
-                }
-            </HeaderTemplate>
-        </GridEditSettings>
-
-        <GridEvents OnToolbarClick="ToolbarBtnClickHandler"
-                    OnActionComplete="ActionCompleteHandler"
-                    TValue="Electric_SupplierModel">
-        </GridEvents>
-
-        <GridPageSettings PageSize="20" PageSizes="true"></GridPageSettings>
-        <GridFilterSettings Type="Syncfusion.Blazor.Grids.FilterType.CheckBox"></GridFilterSettings>
-
-        <GridSortSettings>
-            <GridSortColumns>
-                <GridSortColumn 
-                    Field="Zeitraum_Start" 
-                    Direction="SortDirection.Descending">
-                </GridSortColumn>
-            </GridSortColumns>
-        </GridSortSettings>
-
-        <GridColumns>
-            <GridColumn IsPrimaryKey="true" 
-                        Field="@nameof(Electric_SupplierModel.Id)" Visible="false"
-                        AllowAdding="false"
-                        AllowEditing="false"
-                        AllowSorting="false"
-                        AllowFiltering="false"
-                        Width="35">
-            </GridColumn>
-
-            <GridColumn Field=@nameof(Electric_SupplierModel.Anbieter)
-                        Width="150"
-                        ValidationRules="@(new ValidationRules{ Required= true })"
-            HeaderText="Anbieter">
+            <GridEditSettings AllowAdding="true"
+                              AllowEditing="true"
+                              AllowDeleting="true"
+                              ShowDeleteConfirmDialog="true"
+                              Mode="EditMode.Dialog"
+                              Dialog="DialogParams">
 
                 <HeaderTemplate>
-                    <SfTooltip Content="@GetTooltipContent("Anbieter")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
-                        <span><b>Anbieter</b></span>
-                    </SfTooltip>
+                    @{
+                        var DialogHeader = GetDialogHeader((context as Electric_SupplierModel));
+                        <span>@DialogHeader</span>
+                    }
                 </HeaderTemplate>
-            </GridColumn>
+            </GridEditSettings>
 
-            <GridColumn Field=@nameof(Electric_SupplierModel.Tarif)
-                        Width="150"
-                        HeaderText="Tarif">
+            <GridEvents OnToolbarClick="ToolbarBtnClickHandler"
+                        OnActionComplete="ActionCompleteHandler"
+                        TValue="Electric_SupplierModel">
+            </GridEvents>
 
-                <HeaderTemplate>
-                    <SfTooltip Content="@GetTooltipContent("Tarif")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
-                        <span><b>Tarif</b></span>
-                    </SfTooltip>
-                </HeaderTemplate>
-            </GridColumn>
+            <GridPageSettings PageSize="20" PageSizes="true"></GridPageSettings>
+            <GridFilterSettings Type="Syncfusion.Blazor.Grids.FilterType.CheckBox"></GridFilterSettings>
 
-            <GridColumn Field=@nameof(Electric_SupplierModel.Zaehlernummer)
-                        Width="125"
-                        HeaderText="Zählernummer">
+            <GridSortSettings>
+                <GridSortColumns>
+                    <GridSortColumn 
+                        Field="Zeitraum_Start" 
+                        Direction="SortDirection.Descending">
+                    </GridSortColumn>
+                </GridSortColumns>
+            </GridSortSettings>
 
-                <HeaderTemplate>
-                    <SfTooltip Content="@GetTooltipContent("Z-Nr")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
-                        <span><b>Z-Nr</b></span>
-                    </SfTooltip>
-                </HeaderTemplate>
-            </GridColumn>
+            <GridColumns>
+                <GridColumn IsPrimaryKey="true" 
+                            Field="@nameof(Electric_SupplierModel.Id)" Visible="false"
+                            AllowAdding="false"
+                            AllowEditing="false"
+                            AllowSorting="false"
+                            AllowFiltering="false"
+                            Width="35">
+                </GridColumn>
 
-            <GridColumn Field=@nameof(Electric_SupplierModel.Kuendigungsfrist)
-                        Width="140"
-                        HeaderText="Kündigungsfrist">
+                <GridColumn Field=@nameof(Electric_SupplierModel.Anbieter)
+                            Width="150"
+                            ValidationRules="@(new ValidationRules{ Required= true })"
+                HeaderText="Anbieter">
 
-                <HeaderTemplate>
-                    <SfTooltip Content="@GetTooltipContent("Kuendigung")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
-                        <span><b>Kündigung</b></span>
-                    </SfTooltip>
-                </HeaderTemplate>
-            </GridColumn>
+                    <HeaderTemplate>
+                        <SfTooltip Content="@GetTooltipHeaderText("Anbieter")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                            <span><b>Anbieter</b></span>
+                        </SfTooltip>
+                    </HeaderTemplate>
+                </GridColumn>
 
-            <GridColumn Field=@nameof(Electric_SupplierModel.Zeitraum_Start)
-                        Format="d"
-                        EditType="EditType.DatePickerEdit"
-                        Width="110"
-                        HeaderText="Zeitraum-Start">
+                <GridColumn Field=@nameof(Electric_SupplierModel.Tarif)
+                            Width="150"
+                            HeaderText="Tarif">
 
-                <HeaderTemplate>
-                    <SfTooltip Content="@GetTooltipContent("Abr-Start")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
-                        <span><b>Abr-Start</b></span>
-                    </SfTooltip>
-                </HeaderTemplate>
-            </GridColumn>
+                    <HeaderTemplate>
+                        <SfTooltip Content="@GetTooltipHeaderText("Tarif")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                            <span><b>Tarif</b></span>
+                        </SfTooltip>
+                    </HeaderTemplate>
+                </GridColumn>
 
-            <GridColumn Field=@nameof(Electric_SupplierModel.Zeitraum_Ende)
-                        Format="d"
-                        EditType="EditType.DatePickerEdit"
-                        Width="110"
-                        HeaderText="Zeitraum-Ende">
+                <GridColumn Field=@nameof(Electric_SupplierModel.Zaehlernummer)
+                            Width="125"
+                            HeaderText="Zählernummer">
 
-                <HeaderTemplate>
-                    <SfTooltip Content="@GetTooltipContent("Abr-Ende")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
-                        <span><b>Abr-Ende</b></span>
-                    </SfTooltip>
-                </HeaderTemplate>
-            </GridColumn>
+                    <HeaderTemplate>
+                        <SfTooltip Content="@GetTooltipHeaderText("Z-Nr")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                            <span><b>Z-Nr</b></span>
+                        </SfTooltip>
+                    </HeaderTemplate>
+                </GridColumn>
 
-            <GridColumn Field=@nameof(Electric_SupplierModel.Start_Zaehlerstand)
-                        Format="#####.00 kWh"
-                        Width="110"
-                        HeaderText="Start-Zählerstand 1.8.0">
+                <GridColumn Field=@nameof(Electric_SupplierModel.Kuendigungsfrist)
+                            Width="140"
+                            HeaderText="Kündigungsfrist">
 
-                <EditTemplate>
-                    <SfNumericTextBox Placeholder="Start-Zählerstand"
-                                      FloatLabelType="FloatLabelType.Always"
-                                      TValue="double?"
-                                      @bind-Value="@((context as Electric_SupplierModel)!.Start_Zaehlerstand)"
-                                      Format="####0.00 kWh">
-                    </SfNumericTextBox>
-                </EditTemplate>
+                    <HeaderTemplate>
+                        <SfTooltip Content="@GetTooltipHeaderText("Kuendigung")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                            <span><b>Kündigung</b></span>
+                        </SfTooltip>
+                    </HeaderTemplate>
+                </GridColumn>
 
-                <HeaderTemplate>
-                    <SfTooltip Content="@GetTooltipContent("Z-Start-180")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
-                        <span><b>Z-Start 1.8.0</b></span>
-                    </SfTooltip>
-                </HeaderTemplate>
-            </GridColumn>
+                <GridColumn Field=@nameof(Electric_SupplierModel.Zeitraum_Start)
+                            Format="d"
+                            EditType="EditType.DatePickerEdit"
+                            Width="110"
+                            HeaderText="Zeitraum-Start">
 
-            <GridColumn Field=@nameof(Electric_SupplierModel.Ende_Zaehlerstand)
-                        Format="#####.00 kWh"
-                        Width="110"
-                        HeaderText="Ende-Zählerstand 1.8.0">
+                    <HeaderTemplate>
+                        <SfTooltip Content="@GetTooltipHeaderText("Abr-Start")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                            <span><b>Abr-Start</b></span>
+                        </SfTooltip>
+                    </HeaderTemplate>
+                </GridColumn>
 
-                <EditTemplate>
-                    <SfNumericTextBox Placeholder="Ende-Zählerstand"
-                                      FloatLabelType="FloatLabelType.Always"
-                                      TValue="double?"
-                                      @bind-Value="@((context as Electric_SupplierModel)!.Ende_Zaehlerstand)"
-                                      Format="####0.00 kWh">
-                    </SfNumericTextBox>
-                </EditTemplate>
+                <GridColumn Field=@nameof(Electric_SupplierModel.Zeitraum_Ende)
+                            Format="d"
+                            EditType="EditType.DatePickerEdit"
+                            Width="110"
+                            HeaderText="Zeitraum-Ende">
 
-                <HeaderTemplate>
-                    <SfTooltip Content="@GetTooltipContent("Z-Ende-180")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
-                        <span><b>Z-Ende 1.8.0</b></span>
-                    </SfTooltip>
-                </HeaderTemplate>
-            </GridColumn>
+                    <HeaderTemplate>
+                        <SfTooltip Content="@GetTooltipHeaderText("Abr-Ende")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                            <span><b>Abr-Ende</b></span>
+                        </SfTooltip>
+                    </HeaderTemplate>
+                </GridColumn>
 
-            <GridColumn Field=@nameof(Electric_SupplierModel.Start_Zaehlerstand_280)
-                        Format="#####.00 kWh"
-                        Width="110"
-                        HeaderText="Start-Zählerstand 2.8.0">
+                <GridColumn Field=@nameof(Electric_SupplierModel.Start_Zaehlerstand)
+                            Format="#####.00 kWh"
+                            Width="110"
+                            HeaderText="Start-Zählerstand 1.8.0">
 
-                <EditTemplate>
-                    <SfNumericTextBox Placeholder="Start-Zählerstand-280"
-                                      FloatLabelType="FloatLabelType.Always"
-                                      TValue="double?"
-                                      @bind-Value="@((context as Electric_SupplierModel)!.Start_Zaehlerstand_280)"
-                                      Format="####0.00 kWh">
-                    </SfNumericTextBox>
-                </EditTemplate>
+                    <EditTemplate>
+                        <SfNumericTextBox Placeholder="Start-Zählerstand"
+                                          FloatLabelType="FloatLabelType.Always"
+                                          TValue="double?"
+                                          @bind-Value="@((context as Electric_SupplierModel)!.Start_Zaehlerstand)"
+                                          Format="####0.00 kWh">
+                        </SfNumericTextBox>
+                    </EditTemplate>
 
-                <HeaderTemplate>
-                    <SfTooltip Content="@GetTooltipContent("Z-Start-280")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
-                        <span><b>Z-Start 2.8.0</b></span>
-                    </SfTooltip>
-                </HeaderTemplate>
-            </GridColumn>
+                    <HeaderTemplate>
+                        <SfTooltip Content="@GetTooltipHeaderText("Z-Start-180")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                            <span><b>Z-Start 1.8.0</b></span>
+                        </SfTooltip>
+                    </HeaderTemplate>
+                </GridColumn>
 
-             <GridColumn Field=@nameof(Electric_SupplierModel.Ende_Zaehlerstand_280)
-                        Format="#####.00 kWh"
-                        Width="110"
-                        HeaderText="Ende-Zählerstand 2.8.0">
+                <GridColumn Field=@nameof(Electric_SupplierModel.Ende_Zaehlerstand)
+                            Format="#####.00 kWh"
+                            Width="110"
+                            HeaderText="Ende-Zählerstand 1.8.0">
 
-                <EditTemplate>
-                    <SfNumericTextBox Placeholder="Ende-Zählerstand-280"
-                                      FloatLabelType="FloatLabelType.Always"
-                                      TValue="double?"
-                                      @bind-Value="@((context as Electric_SupplierModel)!.Ende_Zaehlerstand_280)"
-                                      Format="####0.00 kWh">
-                    </SfNumericTextBox>
-                </EditTemplate>
+                    <EditTemplate>
+                        <SfNumericTextBox Placeholder="Ende-Zählerstand"
+                                          FloatLabelType="FloatLabelType.Always"
+                                          TValue="double?"
+                                          @bind-Value="@((context as Electric_SupplierModel)!.Ende_Zaehlerstand)"
+                                          Format="####0.00 kWh">
+                        </SfNumericTextBox>
+                    </EditTemplate>
 
-                <HeaderTemplate>
-                    <SfTooltip Content="@GetTooltipContent("Z-Ende-280")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
-                        <span><b>Z-Ende 2.8.0</b></span>
-                    </SfTooltip>
-                </HeaderTemplate>
-            </GridColumn>
+                    <HeaderTemplate>
+                        <SfTooltip Content="@GetTooltipHeaderText("Z-Ende-180")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                            <span><b>Z-Ende 1.8.0</b></span>
+                        </SfTooltip>
+                    </HeaderTemplate>
+                </GridColumn>
 
-            <GridColumn Field=@nameof(Electric_SupplierModel.Start_Zaehlerstand_Enfluri)
-                        Format="#####.00 kWh"
-                        Width="110"
-                        HeaderText="Start-Zählerstand Enfluri">
+                <GridColumn Field=@nameof(Electric_SupplierModel.Start_Zaehlerstand_280)
+                            Format="#####.00 kWh"
+                            Width="110"
+                            HeaderText="Start-Zählerstand 2.8.0">
 
-                <EditTemplate>
-                    <SfNumericTextBox Placeholder="Start-Zählerstand-Enfluri"
-                                      FloatLabelType="FloatLabelType.Always"
-                                      TValue="double?"
-                                      @bind-Value="@((context as Electric_SupplierModel)!.Start_Zaehlerstand_Enfluri)"
-                                      Format="####0.00 kWh">
-                    </SfNumericTextBox>
-                </EditTemplate>
+                    <EditTemplate>
+                        <SfNumericTextBox Placeholder="Start-Zählerstand-280"
+                                          FloatLabelType="FloatLabelType.Always"
+                                          TValue="double?"
+                                          @bind-Value="@((context as Electric_SupplierModel)!.Start_Zaehlerstand_280)"
+                                          Format="####0.00 kWh">
+                        </SfNumericTextBox>
+                    </EditTemplate>
 
-                <HeaderTemplate>
-                    <SfTooltip Content="@GetTooltipContent("Z-Start-Enfluri")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
-                        <span><b>Z-Start Enfluri</b></span>
-                    </SfTooltip>
-                </HeaderTemplate>
-            </GridColumn>
+                    <HeaderTemplate>
+                        <SfTooltip Content="@GetTooltipHeaderText("Z-Start-280")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                            <span><b>Z-Start 2.8.0</b></span>
+                        </SfTooltip>
+                    </HeaderTemplate>
+                </GridColumn>
 
-             <GridColumn Field=@nameof(Electric_SupplierModel.Ende_Zaehlerstand_Enfluri)
-                         Format="#####.00 kWh"
-                         Width="110"
-                         HeaderText="Ende-Zählerstand Enfluri">
+                 <GridColumn Field=@nameof(Electric_SupplierModel.Ende_Zaehlerstand_280)
+                            Format="#####.00 kWh"
+                            Width="110"
+                            HeaderText="Ende-Zählerstand 2.8.0">
 
-                <EditTemplate>
-                    <SfNumericTextBox Placeholder="Ende-Zählerstand-Enfluri"
-                                      FloatLabelType="FloatLabelType.Always"
-                                      TValue="double?"
-                                      @bind-Value="@((context as Electric_SupplierModel)!.Ende_Zaehlerstand_Enfluri)"
-                                      Format="####0.00 kWh">
-                    </SfNumericTextBox>
-                </EditTemplate>
+                    <EditTemplate>
+                        <SfNumericTextBox Placeholder="Ende-Zählerstand-280"
+                                          FloatLabelType="FloatLabelType.Always"
+                                          TValue="double?"
+                                          @bind-Value="@((context as Electric_SupplierModel)!.Ende_Zaehlerstand_280)"
+                                          Format="####0.00 kWh">
+                        </SfNumericTextBox>
+                    </EditTemplate>
 
-                <HeaderTemplate>
-                    <SfTooltip Content="@GetTooltipContent("Z-Ende-Enfluri")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
-                        <span><b>Z-Ende Enfluri</b></span>
-                    </SfTooltip>
-                </HeaderTemplate>
-            </GridColumn>
+                    <HeaderTemplate>
+                        <SfTooltip Content="@GetTooltipHeaderText("Z-Ende-280")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                            <span><b>Z-Ende 2.8.0</b></span>
+                        </SfTooltip>
+                    </HeaderTemplate>
+                </GridColumn>
 
-            <GridColumn Field=@nameof(Electric_SupplierModel.Arbeitspreis)
-                        Format="0.00 ct/kWh"
-                        Width="90"
-                        HeaderText="Arbeitspreis">
+                <GridColumn Field=@nameof(Electric_SupplierModel.Start_Zaehlerstand_Enfluri)
+                            Format="#####.00 kWh"
+                            Width="110"
+                            HeaderText="Start-Zählerstand Enfluri">
 
-                <EditTemplate>
-                    <SfNumericTextBox Placeholder="Arbeitspreis"
-                                      FloatLabelType="FloatLabelType.Always"
-                                      TValue="double?"
-                                      @bind-Value="@((context as Electric_SupplierModel)!.Arbeitspreis)"
-                                      Format="0.00 ct/kWh">
-                    </SfNumericTextBox>
-                </EditTemplate>
+                    <EditTemplate>
+                        <SfNumericTextBox Placeholder="Start-Zählerstand-Enfluri"
+                                          FloatLabelType="FloatLabelType.Always"
+                                          TValue="double?"
+                                          @bind-Value="@((context as Electric_SupplierModel)!.Start_Zaehlerstand_Enfluri)"
+                                          Format="####0.00 kWh">
+                        </SfNumericTextBox>
+                    </EditTemplate>
 
-                <HeaderTemplate>
-                    <SfTooltip Content="@GetTooltipContent("AP")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
-                        <span><b>AP</b></span>
-                    </SfTooltip>
-                </HeaderTemplate>
-            </GridColumn>
+                    <HeaderTemplate>
+                        <SfTooltip Content="@GetTooltipHeaderText("Z-Start-Enfluri")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                            <span><b>Z-Start Enfluri</b></span>
+                        </SfTooltip>
+                    </HeaderTemplate>
+                </GridColumn>
 
-            <GridColumn Field=@nameof(Electric_SupplierModel.Grundpreis)
-                        Format="0.00 €/Monat"
-                        Width="100"
-                        HeaderText="Grundpreis">
+                 <GridColumn Field=@nameof(Electric_SupplierModel.Ende_Zaehlerstand_Enfluri)
+                             Format="#####.00 kWh"
+                             Width="110"
+                             HeaderText="Ende-Zählerstand Enfluri">
 
-                <EditTemplate>
-                    <SfNumericTextBox Placeholder="Grundpreis"
-                                      FloatLabelType="FloatLabelType.Always"
-                                      TValue="double?"
-                                      @bind-Value="@((context as Electric_SupplierModel)!.Grundpreis)"
-                                      Format="0.00 €/Monat">
-                    </SfNumericTextBox>
-                </EditTemplate>
+                    <EditTemplate>
+                        <SfNumericTextBox Placeholder="Ende-Zählerstand-Enfluri"
+                                          FloatLabelType="FloatLabelType.Always"
+                                          TValue="double?"
+                                          @bind-Value="@((context as Electric_SupplierModel)!.Ende_Zaehlerstand_Enfluri)"
+                                          Format="####0.00 kWh">
+                        </SfNumericTextBox>
+                    </EditTemplate>
 
-                <HeaderTemplate>
-                    <SfTooltip Content="@GetTooltipContent("GP")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
-                        <span><b>GP</b></span>
-                    </SfTooltip>
-                </HeaderTemplate>
-            </GridColumn>
+                    <HeaderTemplate>
+                        <SfTooltip Content="@GetTooltipHeaderText("Z-Ende-Enfluri")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                            <span><b>Z-Ende Enfluri</b></span>
+                        </SfTooltip>
+                    </HeaderTemplate>
+                </GridColumn>
 
-            <GridColumn Field=@nameof(Electric_SupplierModel.Zaehlermiete)
-                        Format="0.0 €/Monat"
-                        Width="90"
-                        HeaderText="Zählermiete">
+                <GridColumn Field=@nameof(Electric_SupplierModel.Arbeitspreis)
+                            Format="0.00 ct/kWh"
+                            Width="90"
+                            HeaderText="Arbeitspreis">
 
-                <EditTemplate>
-                    <SfNumericTextBox Placeholder="Zählermiete"
-                                      FloatLabelType="FloatLabelType.Always"
-                                      TValue="double?"
-                                      @bind-Value="@((context as Electric_SupplierModel)!.Zaehlermiete)"
-                                      Format="0.0 €/Monat">
-                    </SfNumericTextBox>
-                </EditTemplate>
+                    <EditTemplate>
+                        <SfNumericTextBox Placeholder="Arbeitspreis"
+                                          FloatLabelType="FloatLabelType.Always"
+                                          TValue="double?"
+                                          @bind-Value="@((context as Electric_SupplierModel)!.Arbeitspreis)"
+                                          Format="0.00 ct/kWh">
+                        </SfNumericTextBox>
+                    </EditTemplate>
 
-                <HeaderTemplate>
-                    <SfTooltip Content="@GetTooltipContent("ZM")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
-                        <span><b>ZM</b></span>
-                    </SfTooltip>
-                </HeaderTemplate>
-            </GridColumn>
+                    <HeaderTemplate>
+                        <SfTooltip Content="@GetTooltipHeaderText("AP")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                            <span><b>AP</b></span>
+                        </SfTooltip>
+                    </HeaderTemplate>
+                </GridColumn>
 
-            <GridColumn Field=@nameof(Electric_SupplierModel.Bemerkung)
-                        Width="300"
-                        HeaderText="Bemerkung">
+                <GridColumn Field=@nameof(Electric_SupplierModel.Grundpreis)
+                            Format="0.00 €/Monat"
+                            Width="100"
+                            HeaderText="Grundpreis">
 
-                <HeaderTemplate>
-                    <SfTooltip Content="@GetTooltipContent("Bemerkung")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
-                        <span><b>Bemerkung</b></span>
-                    </SfTooltip>
-                </HeaderTemplate>
-            </GridColumn>
+                    <EditTemplate>
+                        <SfNumericTextBox Placeholder="Grundpreis"
+                                          FloatLabelType="FloatLabelType.Always"
+                                          TValue="double?"
+                                          @bind-Value="@((context as Electric_SupplierModel)!.Grundpreis)"
+                                          Format="0.00 €/Monat">
+                        </SfNumericTextBox>
+                    </EditTemplate>
 
-            <GridColumn HeaderText="Funktion" Width="20%" MinWidth="110">
-                <GridCommandColumns>
-                    <GridCommandColumn Type="CommandButtonType.Edit"
-                    ButtonOption="@(new CommandButtonOptions(){
-                                                    IconCss="e-icons e-edit",
-                                                    CssClass="e-flat"
-                                               })">
-                    </GridCommandColumn>
-                    <GridCommandColumn Type="CommandButtonType.Delete"
-                    ButtonOption="@(new CommandButtonOptions(){
-                                                    IconCss ="e-icons e-delete",
-                                                    CssClass="e-flat"
-                                               })">
-                    </GridCommandColumn>
-                    <GridCommandColumn Type="CommandButtonType.Save"
-                    ButtonOption="@(new CommandButtonOptions(){
-                                                    IconCss="e-icons e-update",
-                                                    CssClass="e-flat"
-                                               })">
-                    </GridCommandColumn>
-                    <GridCommandColumn Type="CommandButtonType.Cancel"
-                    ButtonOption="@(new CommandButtonOptions(){
-                                                    IconCss="e-icons e-cancel-icon",
-                                                    CssClass="e-flat"
-                                               })">
-                    </GridCommandColumn>
-                </GridCommandColumns>
-            </GridColumn>
-        </GridColumns>
-    </SfGrid>
-</div>
+                    <HeaderTemplate>
+                        <SfTooltip Content="@GetTooltipHeaderText("GP")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                            <span><b>GP</b></span>
+                        </SfTooltip>
+                    </HeaderTemplate>
+                </GridColumn>
+
+                <GridColumn Field=@nameof(Electric_SupplierModel.Zaehlermiete)
+                            Format="0.0 €/Monat"
+                            Width="90"
+                            HeaderText="Zählermiete">
+
+                    <EditTemplate>
+                        <SfNumericTextBox Placeholder="Zählermiete"
+                                          FloatLabelType="FloatLabelType.Always"
+                                          TValue="double?"
+                                          @bind-Value="@((context as Electric_SupplierModel)!.Zaehlermiete)"
+                                          Format="0.0 €/Monat">
+                        </SfNumericTextBox>
+                    </EditTemplate>
+
+                    <HeaderTemplate>
+                        <SfTooltip Content="@GetTooltipHeaderText("ZM")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                            <span><b>ZM</b></span>
+                        </SfTooltip>
+                    </HeaderTemplate>
+                </GridColumn>
+
+                <GridColumn Field=@nameof(Electric_SupplierModel.Bemerkung)
+                            Width="300"
+                            HeaderText="Bemerkung">
+
+                    <HeaderTemplate>
+                        <SfTooltip Content="@GetTooltipHeaderText("Bemerkung")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                            <span><b>Bemerkung</b></span>
+                        </SfTooltip>
+                    </HeaderTemplate>
+                </GridColumn>
+
+                <GridColumn HeaderText="Funktion" Width="20%" MinWidth="110">
+                    <GridCommandColumns>
+                        <GridCommandColumn Type="CommandButtonType.Edit"
+                        ButtonOption="@(new CommandButtonOptions(){
+                                                        IconCss="e-icons e-edit",
+                                                        CssClass="e-flat"
+                                                   })">
+                        </GridCommandColumn>
+                        <GridCommandColumn Type="CommandButtonType.Delete"
+                        ButtonOption="@(new CommandButtonOptions(){
+                                                        IconCss ="e-icons e-delete",
+                                                        CssClass="e-flat"
+                                                   })">
+                        </GridCommandColumn>
+                        <GridCommandColumn Type="CommandButtonType.Save"
+                        ButtonOption="@(new CommandButtonOptions(){
+                                                        IconCss="e-icons e-update",
+                                                        CssClass="e-flat"
+                                                   })">
+                        </GridCommandColumn>
+                        <GridCommandColumn Type="CommandButtonType.Cancel"
+                        ButtonOption="@(new CommandButtonOptions(){
+                                                        IconCss="e-icons e-cancel-icon",
+                                                        CssClass="e-flat"
+                                                   })">
+                        </GridCommandColumn>
+                    </GridCommandColumns>
+                </GridColumn>
+            </GridColumns>
+        </SfGrid>
+
+        @* Spinner für den Export *@
+        <SfSpinner Visible="@IsExporting"
+                   Label="Datei wird generiert, bitte warten..."
+                   Type="@SpinnerType.Material"
+                   Size="40"
+                   CssClass="e-spin-overlay e-custom-color">
+        </SfSpinner>
+    </div>
 }
 else
 {
-    <SfSpinner @bind-Visible="@spinnerVisibleProperty" Label="Lade Daten..." Size="40"></SfSpinner>
+    <SfSpinner @bind-Visible="@spinnerVisibleProperty"
+               Type="SpinnerType.Tailwind"
+               CssClass="e-custom-color"
+               Label="Lade Daten..." 
+               Size="40">
+</SfSpinner>
 }
 
 @* Dialog*@
@@ -424,6 +437,26 @@ else
 </div>
 
 <style>
+    /* 1. Zwingt das gesamte Spinner-Container-System nach ganz vorne */
+    .e-spinner-pane.e-spin-overlay {
+        z-index: 99999 !important;
+        background-color: rgba(0, 0, 0, 0.4) !important; /* Macht den Hintergrund dunkel-transparent */
+    }
+
+        /* 2. Zwingt das Ladesymbol und den Text, sich abzuheben */
+        .e-spinner-pane.e-spin-overlay .e-spinner-inner {
+            z-index: 100000 !important;
+        }
+
+        /* 3. HIER WIRD DER TEXT ERZWUNGEN UND SCHÖN FORMATIERT */
+        .e-spinner-pane.e-spin-overlay .e-spin-label {
+            color: #FFFFFF !important; /* Reines Weiß, damit es auf dem dunklen Overlay lesbar ist */
+            font-weight: bold !important; /* Fett gedruckt */
+            font-size: 16px !important; /* Etwas größer für bessere Lesbarkeit */
+            margin-top: 10px !important; /* Abstand zum drehenden Rad */
+            display: block !important; /* Sicherstellen, dass es nicht auf hidden steht */
+        }
+
     .e-dlg-overlay {
     background-color: slategray;
     opacity: 0.6;
@@ -490,6 +523,10 @@ else
     ApiResponse? apiResponse;
 
     private SfGrid<Electric_SupplierModel> SfDataGrid = new();
+
+    private enum GridOperation { None, Add, Edit }
+    private GridOperation currentOperation = GridOperation.None;
+
     private List<Electric_SupplierModel>? supplierList = null;
     private Electric_SupplierModel? supplierData { get; set; }
 
@@ -595,77 +632,94 @@ else
     ///
     /// </summary>
     /// <param name="args"></param>
-    public async void ToolbarBtnClickHandler(Syncfusion.Blazor.Navigations.ClickEventArgs args)
+    
+    // Variable zur Steuerung des Lade-Spinners im UI
+    private bool IsExporting { get; set; }
+
+    public async Task ToolbarBtnClickHandler(Syncfusion.Blazor.Navigations.ClickEventArgs args)
     {
-        if (args.Item.Id.Contains("_excelexport"))
+        string? itemId = args.Item?.Id;
+        if (string.IsNullOrEmpty(itemId)) return;
+
+        try
         {
-            ExcelExportProperties excelExportProperties = new();
-            excelExportProperties.FileName = $"Stromanbieter_{DateTime.Now.ToString("ddMMyyyy")}.xlsx";
+            // 1. Spinner aktivieren & UI aktualisieren
+            IsExporting = true;
 
-            ExcelTheme Theme = new ExcelTheme();
-            // Header
-            ExcelStyle ThemeStyleHeader = new ExcelStyle()
+            // Test Spinner sichtbar machen
+            // 2. ERZWINGEN, dass Blazor das UI JETZT sofort neu zeichnet
+            // StateHasChanged();
+            // 3. TEST: 3 Sekunden warten, um zu sehen, ob der Spinner auftaucht
+            // await Task.Delay(3000);
+
+            string dateSuffix = DateTime.Now.ToString("ddMMyyyy");
+
+            if (itemId.Contains("_excelexport", StringComparison.OrdinalIgnoreCase))
+            {
+                var excelExportProperties = new ExcelExportProperties
                 {
-                    FontName = "Calibri",
-                    FontSize = 12,
-                    Bold = true,
+                    FileName = $"Stromanbieter_{dateSuffix}.xlsx",
+                    Theme = new ExcelTheme
+                    {
+                        Header = new ExcelStyle { FontName = "Calibri", FontSize = 12, Bold = true },
+                        Record = new ExcelStyle { FontName = "Calibri", FontSize = 10, Bold = false }
+                    }
                 };
-            Theme.Header = ThemeStyleHeader;
-            // Data
-            ExcelStyle ThemeStyleRecord = new ExcelStyle()
+
+                // 2. Optionale Optimierung: Bestimmte Spalten vor Export verstecken
+                await ToggleActionColumnsAsync(hide: true);
+
+                await SfDataGrid.ExportToExcelAsync(excelExportProperties);
+            }
+            else if (itemId.Contains("_pdfexport", StringComparison.OrdinalIgnoreCase))
+            {
+                var pdfExportProperties = new PdfExportProperties
                 {
-                    FontName = "Calibri",
-                    FontSize = 10,
-                    Bold = false,
+                    IsRepeatHeader = true,
+                    FileName = $"Stromanbieter_{dateSuffix}.pdf",
+                    PageOrientation = Syncfusion.Blazor.Grids.PageOrientation.Landscape,
+                    Header = new PdfHeader { FromTop = 0, Height = 80, Contents = HeaderContent },
+                    Footer = new PdfFooter { FromBottom = 0, Height = 80, Contents = FooterContent },
+                    Theme = new PdfTheme
+                    {
+                        Header = new PdfThemeStyle { FontColor = "Blue", FontName = "Calibri", FontSize = 8, Bold = true }
+                    }
                 };
-            Theme.Record = ThemeStyleRecord;
 
-            excelExportProperties.Theme = Theme;
+                await ToggleActionColumnsAsync(hide: true);
 
-            await SfDataGrid.ExportToExcelAsync(excelExportProperties);
+                await SfDataGrid.ExportToPdfAsync(pdfExportProperties);
+            }
         }
-        else if (args.Item.Id.Contains("_pdfexport"))
+        catch (Exception ex)
         {
-            PdfExportProperties pdfExportProperties = new();
-            pdfExportProperties.IsRepeatHeader = true;
-            pdfExportProperties.FileName = $"Stromanbieter_{DateTime.Now.ToString("ddMMyyyy")}.pdf";
-            pdfExportProperties.PageOrientation = Syncfusion.Blazor.Grids.PageOrientation.Landscape;
-
-            PdfHeader pdfHeader = new()
-                {
-                    FromTop = 0,
-                    Height = 80,
-                    Contents = HeaderContent
-                };
-
-            PdfFooter pdfFooter = new()
-                {
-                    FromBottom = 0,
-                    Height = 80,
-                    Contents = FooterContent
-                };
-
-            PdfTheme Theme = new PdfTheme();
-
-            PdfThemeStyle HeaderThemeStyle = new PdfThemeStyle()
-                {
-                    FontColor = "Blue",
-                    FontName = "Calibri",
-                    FontSize = 8,
-                    Bold = true,
-                };
-            Theme.Header = HeaderThemeStyle;
-
-            pdfExportProperties.Theme = Theme;
-
-            pdfExportProperties.Header = pdfHeader;
-            pdfExportProperties.Footer = pdfFooter;
-
-            await SfDataGrid.ExportToPdfAsync(pdfExportProperties);
+            // Hier optionales Logging oder Benutzer-Fehlermeldung integrieren
+            Console.WriteLine($"Export fehlgeschlagen: {ex.Message}");
         }
-        else if (args.Item.Id.Contains("XmlExport"))
+        finally
         {
-            Console.Write("Export to Xml function");        // wird nicht genutzt
+            // 3. Spalten wieder einblenden & Spinner deaktivieren (läuft IMMER durch)
+            await ToggleActionColumnsAsync(hide: false);
+            IsExporting = false;
+        }
+    }
+
+    // Hilfsmethode zum Ein-/Ausblenden von Grid-Spalten (z.B. "Aktionen" oder "Id")
+    private async Task ToggleActionColumnsAsync(bool hide)
+    {
+        // Nutzen Sie die Field-Namen Ihrer Spalten, die nicht exportiert werden sollen
+        var columnsToToggle = new[] { "Id", "Actions" };
+
+        foreach (var field in columnsToToggle)
+        {
+            if (hide)
+            {
+                await SfDataGrid.HideColumnAsync(field);
+            }
+            else
+            {
+                await SfDataGrid.ShowColumnAsync(field);
+            }
         }
     }
     #endregion
@@ -677,150 +731,174 @@ else
     /// <param name="args"></param>
     public async Task ActionCompleteHandler(ActionEventArgs<Electric_SupplierModel> args)
     {
-        if (args.RequestType == Syncfusion.Blazor.Grids.Action.Save)
-        {
-            supplierData = args.Data;
+        if (args?.Data is null) return;
 
-            if (args.Action == "Add")
-            {
-                save = true;
-                OpenDialog("Datensatz speichern ?", "130px", "220px", true);
-            }
-            else if (args.Action == "Edit")
-            {
-                update = true;
-                OpenDialog("Datensatz ändern ?", "130px", "220px", true);
-            }
-        }
-        else if (args.RequestType == Syncfusion.Blazor.Grids.Action.Delete)
+        switch (args.RequestType)
         {
-            // Abfrage, ob args.Data == null oder args.Data.Id <= 0
-            if (args.Data is not { Id: > 0 })
-            {
-                supplierList = await gwsP!.LoadDataAsync<Electric_SupplierModel>(urlSupplier);
-                ShowToastMessage(false, "Datensatz nicht gelöscht!");
-            }
-            else
-            {
-                supplierData = await gwsP!.DeleteDataAsync<Electric_SupplierModel>(urlSupplier, Convert.ToString(args.Data.Id));
-                ShowToastMessage(true, "Datensatz gelöscht!");
-            }
+            case Syncfusion.Blazor.Grids.Action.Save:
+                supplierData = args.Data;
 
-            // Grid-Aktualisierung sicherstellen
-            if (SfDataGrid is not null)
-            {
-                await SfDataGrid.Refresh();
-            }
+                if (args.Action == "Add")
+                {
+                    currentOperation = GridOperation.Add;
+                    OpenDialog("Datensatz speichern ?", "130px", "220px", true);
+                }
+                else if (args.Action == "Edit")
+                {
+                    currentOperation = GridOperation.Edit;
+                    OpenDialog("Datensatz ändern ?", "130px", "220px", true);
+                }
+                break;
+
+            case Syncfusion.Blazor.Grids.Action.Delete:
+                if (args.Data.Id <= 0)
+                {
+                    if (gwsP is not null)
+                    {
+                        supplierList = await gwsP.LoadDataAsync<Electric_SupplierModel>(urlSupplier);
+                    }
+                    ShowToast(false, "Datensatz nicht gelöscht!");
+                }
+                else
+                {
+                    if (gwsP is not null)
+                    {
+                        supplierData = await gwsP.DeleteDataAsync<Electric_SupplierModel>(urlSupplier, args.Data.Id.ToString());
+                        ShowToast(true, "Datensatz gelöscht!");
+                    }
+                }
+
+                if (SfDataGrid is not null)
+                {
+                    await SfDataGrid.Refresh();
+                }
+                break;
         }
     }
     #endregion
 
     #region CancelClick
     /// <summary>
-    /// CancelClick
+    /// Abbrechen-Button im Dialog wurde geklickt, schließt den Dialog und setzt den aktuellen Operationstyp zurück.
     /// </summary>
     private async Task CancelClick()
     {
+        // Schließt den Dialog sofort visuell
         DialogVisible = false;
-        supplierList = await gwsP!.LoadDataAsync<Electric_SupplierModel>(urlSupplier);  // Daten neu laden
-        SfDataGrid?.Refresh();
+
+        // Setzt den aktuellen Operationstyp zurück, um sicherzustellen, dass keine Aktion mehr aussteht
+        currentOperation = GridOperation.None;
+
+        // Setzt die temporären Datenstrukturen zurück, falls diese im Grid gebunden waren
+        supplierData = null;
     }
     #endregion
 
     #region YesClick
     /// <summary>
-    /// YesClick
+    /// Ja-Button im Dialog wurde geklickt, führt die entsprechende Aktion (Add/Edit) aus und aktualisiert die Datenquelle.
     /// </summary>
     private async Task YesClick()
     {
         DialogVisible = false;
 
-        if (save) // Datensatz speichern
-        {
-            save = false;
-            if (supplierData != null)
-            {
-                apiResponse = await gwsP!.PostDataAsync<Electric_SupplierModel>(urlSupplier, supplierData);  // POST
+        if (gwsP is null || supplierData is null || currentOperation == GridOperation.None) return;
 
-                if (apiResponse.MyHttpStatusCode == HttpStatusCode.Created)
+        try
+        {
+            bool isSuccess = false;
+            string successMessage = string.Empty;
+            string defaultErrorMessage = "Aktion konnte nicht ausgeführt werden.";
+
+            switch (currentOperation)
+            {
+                case GridOperation.Add:
+                    apiResponse = await gwsP.PostDataAsync<Electric_SupplierModel>(urlSupplier, supplierData);
+                    isSuccess = apiResponse?.MyHttpStatusCode == HttpStatusCode.Created;
+                    successMessage = "Datensatz erfolgreich gespeichert!";
+                    defaultErrorMessage = "Datensatz konnte nicht gespeichert werden.";
+                    break;
+
+                case GridOperation.Edit:
+                    string url = $"{urlSupplier.TrimEnd('/')}/{supplierData.Id}";
+                    apiResponse = await gwsP.UpdateDataAsync<Electric_SupplierModel>(url, supplierData);
+                    isSuccess = apiResponse?.MyHttpStatusCode == HttpStatusCode.NoContent;
+                    successMessage = "Datensatz erfolgreich aktualisiert!";
+                    defaultErrorMessage = "Datensatz konnte nicht aktualisiert werden.";
+                    break;
+            }
+
+            if (isSuccess)
+            {
+                ShowToast(true, successMessage);
+                supplierList = await gwsP.LoadDataAsync<Electric_SupplierModel>(urlSupplier);
+            }
+            else
+            {
+                // Dynamische Fehlerursache aus MyResponseString ermitteln
+                string errorMessage = defaultErrorMessage;
+
+                if (apiResponse is not null && !string.IsNullOrWhiteSpace(apiResponse.MyResponseString))
                 {
-                    ShowToastMessage(true, "Datensatz gespeichert (created)!");
-                    supplierList = await gwsP!.LoadDataAsync<Electric_SupplierModel>(urlSupplier);  // Daten neu laden
+                    // Wenn die API direkt Text zurückgibt, nutzen wir ihn.
+                    // Falls es JSON ist (z.B. bei Validierungsfehlern), könnte man es hier parsen.
+                    errorMessage = $"Fehler ({apiResponse.MyHttpStatusCode}): {apiResponse.MyResponseString}";
                 }
-                else
-                {
-                    ShowToastMessage(false, "Datensatz nicht gespeichert!");
-                }
+
+                ShowToast(false, errorMessage);
+            }
+
+            if (SfDataGrid is not null)
+            {
+                await SfDataGrid.Refresh();
             }
         }
-        else if (update) // Datensatz updaten
+        catch (Exception ex)
         {
-            update = false;
-            if (supplierData != null)
-            {
-                string url = urlSupplier + Convert.ToString(supplierData.Id);
-                apiResponse = await gwsP!.UpdateDataAsync<Electric_SupplierModel>(url, supplierData);  // Put
-                if (apiResponse.MyHttpStatusCode == HttpStatusCode.NoContent)
-                {
-                    ShowToastMessage(true, "Datensatz aktualisiert!");
-                }
-                supplierList = await gwsP!.LoadDataAsync<Electric_SupplierModel>(urlSupplier);  // Daten neu laden
-            }
+            ShowToast(false, $"Netzwerkfehler: {ex.Message}");
         }
-        SfDataGrid?.Refresh();
-    }
-    #endregion
-
-    #region ShowToastMessage
-    /// <summary>
-    /// ShowToastMessage
-    /// </summary>
-    /// <param name="success"></param>
-    /// <param name="message"></param>
-    /// <returns></returns>
-    private void ShowToastMessage(bool success, string message)
-    {
-        if (success)
+        finally
         {
-            ShowToast("Erfolg", message, "e-toast-success", "e-circle-check");
-        }
-        else
-        {
-            ShowToast("Fehler", message, "e-toast-danger", "e-circle-close");
+            currentOperation = GridOperation.None;
         }
     }
     #endregion
 
     #region ShowToast
     /// <summary>
-    /// ShowToast
+    /// Anzeige einer Toast-Nachricht basierend auf dem Erfolg oder Misserfolg einer Aktion.
     /// </summary>
-    /// <param name="title"></param>
-    /// <param name="content"></param>
-    /// <param name="cssClass"></param>
-    /// <param name="icon"></param>
-    private void ShowToast(string title, string content, string cssClass, string icon)
+    /// <param name="success"></param>
+    /// <param name="message"></param>
+    /// <returns></returns>
+    private void ShowToast(bool success, string message)
     {
-        this.ToastService.Open(new ToastOption()
-            {
-                Title = "",
-                Content = content,
-                CssClass = cssClass,
-                Icon = icon,
-            });
+        var (title, cssClass, icon) = success switch
+        {
+            true => ("Erfolg", "e-toast-success", "e-circle-check"),
+            false => ("Fehler", "e-toast-danger", "e-circle-close")
+        };
+
+        this.ToastService.Open(new()
+        {
+            Title = title,
+            Content = message ?? string.Empty,
+            CssClass = cssClass,
+            Icon = icon,
+        });
     }
     #endregion
 
     #region GetTooltipContent
     /// <summary>
-    /// GetTooltipContent(string headerText)
+    /// Tooltip-Inhalt basierend auf dem HeaderText abrufen. Wenn keine Beschreibung vorhanden ist, wird eine Standardnachricht zurückgegeben.
     /// </summary>
     /// <param name="headerText"></param>
     /// <returns></returns>
     // Method to get tooltip content dynamically based on HeaderText
-    public string GetTooltipContent(string headerText)
+    public string GetTooltipHeaderText(string headerText)
     {
-        return ColumnDescriptions.ContainsKey(headerText) ? ColumnDescriptions[headerText] : "No description available.";
+        return ColumnDescriptions.ContainsKey(headerText) ? ColumnDescriptions[headerText] : "Keine Beschreibung verfügbar";
     }
     #endregion
 
