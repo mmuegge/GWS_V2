@@ -529,7 +529,7 @@
         DateTimeFormat = "MMM yy";
         ChartPointList = new List<ColumnChartData>();
 
-        List<IPaymentConsumption> payments_consumption = GWS_Calculation.CalcPaymentsConsumptions(supplier, counterChangeList, payments, counterList);
+        List<IPaymentConsumption> payments_consumption = GWS_Calculation.CalcPaymentsConsumptions(supplier, counterChangeList, payments, counterList, EnergyConfig.DAILY_MAX_DROP_WATER);
 
         foreach (var item in payments_consumption)
         {

@@ -257,6 +257,7 @@ else
 {
     // Variablendeklaration
     #region Variablendeklaration
+    private const double MAX_PLAUSIBLE_OVERFLOW_DROP = 1000.0;
     #region DialogBox
     DialogEffect animationEffect { get; set; } = DialogEffect.Zoom;
     bool DialogVisible { get; set; } = false;
@@ -421,7 +422,7 @@ else
         // Externe Daten asynchron laden
         counterChangeList = await gwsP!.LoadDataAsync<Water_CounterChangeModel>(urlCounterChangeAllSuppliers);
 
-        List<IConsumption> consumptionsYearly = await Task.Run(() => GWS_Calculation.CalcConsumptionYearly(suppliers, counterChangeList));
+        List<IConsumption> consumptionsYearly = await Task.Run(() => GWS_Calculation.CalcConsumptionYearly(suppliers, counterChangeList, MAX_PLAUSIBLE_OVERFLOW_DROP));
 
         if (consumptionsYearly == null || consumptionsYearly.Count == 0)
         {

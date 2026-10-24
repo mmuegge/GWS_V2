@@ -3,6 +3,7 @@
 
 @using GWS_Statistics.Helper
 @using GWS_Statistics.Calculation
+@using GWS_Statistics.Data
 @using System.Globalization
 @using Syncfusion.Blazor
 @using Syncfusion.Blazor.Charts
@@ -18,19 +19,16 @@
 
 @* Seiten-Überschrift *@
 <div class="container">
-    <div class="row">
         <div class="text-center fs-3 fw-bold">
             <span class="fa-solid fa-fire-flame-simple fa-3xs" aria-hidden="true"> </span>
             <label>Gas- Verbräuche</label>
         </div>
-    </div>
 </div>
 
 @* Auswahl Anbieter *@
 <div class="card shadow-lg p-2 mb-1">
     <div class="container-fluid bg-color-grey pb-2 border">
         <div class="row justify-content-center">
-
             @* Anbieter *@
             <div class="col-6 col-xl-3">
                 <div class="control-wrapper">
@@ -182,14 +180,15 @@
 
                 <ChartAxes>
                     <ChartAxis Name="yAxisCons"
-                    Title="Verbrauch (kWh)"
-                    RangePadding="ChartRangePadding.Auto"
-                    OpposedPosition="false"
-                    Interval="@Interval_YAxis_kWh"
-                    Minimum="0"
-                    Maximum="@MaxRangeCons_kWh"
-                    LabelFormat="@labelFormat">
-                        <ChartAxisMajorGridLines Width="1"></ChartAxisMajorGridLines>
+                               Title="Verbrauch (kWh)"
+                               RangePadding="ChartRangePadding.Auto"
+                               OpposedPosition="false"
+                               Interval="@Interval_YAxis_kWh"
+                               Minimum="0"
+                               Maximum="@MaxRangeCons_kWh"
+                               LabelFormat="@labelFormat">
+
+                               <ChartAxisMajorGridLines Width="1"></ChartAxisMajorGridLines>
                     </ChartAxis>
 
                     <ChartAxis Name="yAxisCons-m3"
@@ -333,6 +332,7 @@ else
 @code {
     // Variabledeklaration
     #region Variablen
+    //private const double MAX_PLAUSIBLE_OVERFLOW_DROP = 1000.0;
     private bool success = false;
     bool supplierSelectEnabled = true;
 
@@ -359,8 +359,9 @@ else
     #region Daten
     private List<Gas_SupplierModel>? supplierList = null;
     private List<Gas_CounterModel>? counterList = new();
-    private Gas_SupplierModel? supplierData = new();
     private List<Gas_CounterChangeModel>? counterChangeList = null;
+    private List<Gas_CounterChangeModel>? counterChangeListAllSuppliers = null;
+    private Gas_SupplierModel? supplierData = new();
     #endregion
 
     #region DateTime
@@ -413,7 +414,6 @@ else
     public bool serieTempVisible = false;
 
     public string fontFamily { get; set; } = "Arial";
-    //public IntervalType IntervalType { get; set; } = IntervalType.Months;
     public IntervalType IntervalType { get; set; } = IntervalType.Days;
     public int IntervalDuration { get; set; } = 1;
 
@@ -539,18 +539,33 @@ else
             string supplierIdStr = (supplierData?.Id ?? 0).ToString();
             var counterTask = gwsP.LoadDataAsync<Gas_CounterModel>($"{urlMeter}{supplierIdStr}");
             var changeTask = gwsP.LoadDataAsync<Gas_CounterChangeModel>($"{urlCounterChange}{supplierIdStr}");
+            var changeAllTask = gwsP.LoadDataAsync<Gas_CounterChangeModel>(urlCounterChangeAllSuppliers);
 
-            // Beide Netzwerk-Anfragen laufen gleichzeitig
-            await Task.WhenAll(counterTask, changeTask);
+            // Alle Requests laufen gleichzeitig über das Netzwerk
+            await Task.WhenAll(counterTask, changeAllTask, changeTask);
 
-            counterList = await counterTask;
-            counterChangeList = await changeTask;
+            // Ergebnisse sicher auslesen, sortieren und Null-Safe absichern
+            var rawCounters = counterTask.Result;
+            counterList = rawCounters != null
+                ? rawCounters.OrderBy(c => c.Ablesetag).ToList()
+                : [];
+
+            var rawChanges = changeTask.Result;
+            counterChangeList = rawChanges != null
+                ? rawChanges.OrderBy(cc => cc.Wechsel_Datum).ToList()
+                : [];
+
+            // Einmaliges Laden und Sortieren der globalen Gesamtliste für die Jahresansicht
+            var rawAllChanges = changeAllTask.Result;
+            counterChangeListAllSuppliers = rawAllChanges != null
+                ? rawAllChanges.OrderBy(cc => cc.Wechsel_Datum).ToList()
+                : [];
 
             // 4. Verbräuche verarbeiten
-            if (counterList != null && counterList.Count > 0)
+            if (counterList.Count > 0)
             {
-                counterList.Sort((x, y) => x.Ablesetag.CompareTo(y.Ablesetag));
-                await Task.Run(() => SelectChartData(DdlInterval));
+                // Hinweis: Sortierung erfolgt jetzt bereits direkt oben via LINQ beim Zuweisen!
+                await SelectChartData(DdlInterval);
             }
             else
             {
@@ -563,9 +578,7 @@ else
         }
         finally
         {
-            // Durch das 'finally' wird der Spinner jetzt auch bei Abstürzen sicher abgeschaltet.
             this.spinnerVisibleProperty = false;
-
             StateHasChanged();
         }
     }
@@ -590,49 +603,63 @@ else
 
         this.spinnerVisibleProperty = true;
 
-        // In Blazor oft nötig, damit der Spinner SOFORT gezeichnet wird,
-        // bevor die blockierenden asynchronen Operationen starten
+        // Erzwingt das sofortige Zeichnen des Spinners in der Blazor-UI
         StateHasChanged();
 
         try
         {
-            // 2. Vereinfachtes LINQ (FirstOrDefault sucht direkt mit Lambda)
+            // 2. LINQ optimiert
             supplierData = supplierList?.FirstOrDefault(s => s.Id == args.ItemData.Id);
 
-            if (supplierData != null && supplierData.Id > 0)
+            if (gwsP != null && supplierData != null && supplierData.Id > 0)
             {
-                // 3. Konstanten/Zuweisungen bündeln
                 StartDate = supplierData.Zeitraum_Start ?? DateTime.Now;
                 EndDate = supplierData.Zeitraum_Ende ?? DateTime.Now;
 
-                double brennwert = supplierData.Brennwert ?? 1.0d;
-                double zustandszahl = supplierData.Zustandszahl ?? 1.0d;
-                Factor_kWh = brennwert * zustandszahl;
+                // 3. OPTIMIERT: Nur noch die 2 anbieterspezifischen Tasks parallel vorbereiten (OHNE changeAllTask!)
+                var counterTask = gwsP.LoadDataAsync<Gas_CounterModel>($"{urlMeter}{supplierData.Id}");
+                var changeTask = gwsP.LoadDataAsync<Gas_CounterChangeModel>($"{urlCounterChange}{supplierData.Id}");
 
-                // 4. String-Interpolation statt veraltetem Convert.ToString()
-                string supplierIdStr = supplierData.Id.ToString();
-
-                // Parallelisierung der API-Aufrufe zur Performance-Optimierung
-                var counterTask = gwsP!.LoadDataAsync<Gas_CounterModel>($"{urlMeter}{supplierIdStr}");
-                var changeTask = gwsP!.LoadDataAsync<Gas_CounterChangeModel>($"{urlCounterChange}{supplierIdStr}");
-
-                // Beide Abfragen laufen gleichzeitig -> Halbiert potenziell die Ladezeit
+                // 4. Parallel auf den Abschluss der 2 Abfragen warten
                 await Task.WhenAll(counterTask, changeTask);
 
-                var rawCounterList = await counterTask;
-                counterChangeList = await changeTask;
+                // 5. Ergebnisse sicher aus den Tasks auslesen
+                var rawCounterList = counterTask.Result;
+                var rawCounterChangeList = changeTask.Result;
 
-                // 5. Effizientes Sortieren im Speicher ( LINQ .OrderBy ist oft sauberer,
-                // aber List.Sort() In-Place ist performant. Hier sicher konvertiert:)
-                counterList = rawCounterList?.OrderBy(c => c.Ablesetag).ToList() ?? new List<Gas_CounterModel>();
+                // 6. Normale Zählerstände verarbeiten
+                if (rawCounterList != null && rawCounterList.Any())
+                {
+                    counterList = rawCounterList.OrderBy(c => c.Ablesetag).ToList();
+                }
+                else
+                {
+                    counterList = [];
+                    OpenDialog("Keine Gas-Verbräuche vorhanden!", "60px", "380px", false);
+                }
 
-                // 6. UI-Charts NICHT in Task.Run auslagern (Gefahr von Rendering-Crashes)
-                // Stattdessen direkt asynchron aufrufen, wenn SelectChartData async ist.
+                // 7. Zählertausche für den AKTUELLEN Anbieter verarbeiten
+                if (rawCounterChangeList != null)
+                {
+                    counterChangeList = rawCounterChangeList.OrderBy(cc => cc.Wechsel_Datum).ToList();
+                }
+                else
+                {
+                    counterChangeList = [];
+                }
+
+                // 8. Diagrammdaten berechnen
+                // (Nutzt counterList, counterChangeList und die in OnInitializedAsync einmalig geladene counterChangeListAllSuppliers)
                 await SelectChartData(DdlInterval);
 
-                // 7. Konfiguration speichern
-                success = await GetSetMyAppConfig.SetMyAppSettings.WriteSettingsAsync(myAppSettings, "Supplier_Id.Gas", supplierIdStr);
-                if (!success)
+                // 9. Einstellungen asynchron speichern
+                bool writeSuccess = await GetSetMyAppConfig.SetMyAppSettings.WriteSettingsAsync(
+                    myAppSettings,
+                    "Supplier_Id.Gas",
+                    supplierData.Id.ToString()
+                );
+
+                if (!writeSuccess)
                 {
                     OpenDialog("Gas-Anbieter nicht gespeichert!", "60px", "380px", false);
                 }
@@ -645,13 +672,14 @@ else
         }
         catch (Exception ex)
         {
-            // 8. Fehler abfangen, damit die App nicht abstürzt und der Spinner ausgeht
-            OpenDialog($"Fehler beim Laden der Anbieterdaten: {ex.Message}", "60px", "380px", false);
+            // 10. Fehlermeldung mit Details (optional, aber hilfreich für das Debugging)
+            OpenDialog($"Ein Fehler ist aufgetreten: {ex.Message}", "60px", "380px", false);
         }
         finally
         {
-            // 9. Spinner wird IMMER deaktiviert
+            // 11. Spinner-Garantie und UI-Aktualisierung
             this.spinnerVisibleProperty = false;
+            StateHasChanged();
         }
     }
 
@@ -719,7 +747,6 @@ else
     /// </summary>
     /// <param name="supplier"></param>
     /// <param name="counters"></param>
-
     public async Task GetChartDataDaily(Gas_SupplierModel? supplier, List<Gas_CounterModel>? counters)
     {
         DateTimeFormat = "dd.MM.yy";
@@ -740,7 +767,7 @@ else
 
         // 2. CPU-intensive Berechnung im Hintergrundthread belassen (das ist hier korrekt!)
         // Aber direkt prüfen, ob das Ergebnis null oder leer ist.
-        var consumptions = await Task.Run(() => GWS_Calculation.CalcConsumptionDaily(supplier, counterChangeList, counters));
+        var consumptions = await Task.Run(() => GWS_Calculation.CalcConsumptionDaily(supplier, counterChangeList, counters, EnergyConfig.DAILY_MAX_DROP_GAS));
 
         if (consumptions == null || consumptions.Count == 0)
         {
@@ -760,11 +787,13 @@ else
         double factor = Factor_kWh;
         foreach (var cons in consumptions)
         {
+            double consumption = cons.Consumption ?? 0.0d; // KORREKTUR: Null-sicherer Fallback
+
             ChartPointList.Add(new ColumnChartData
             {
                 Date = cons.Date,
-                Cons_m3 = cons.Consumption,
-                Cons_kWh = cons.Consumption * factor,
+                Cons_m3 = consumption,
+                Cons_kWh = consumption * factor,
                 Temp = cons.Temperature
             });
         }
@@ -773,7 +802,6 @@ else
         CalcAverageSum();
         GetChartMinMaxRange(ChartPointList);
     }
-
     #endregion
 
     #region GetChartDataMonthly
@@ -791,7 +819,7 @@ else
         ChartPointList.Clear();
 
         // 1. CPU-intensive Berechnung im Hintergrundthread belassen
-        var consumptionsMonthly = await Task.Run(() => GWS_Calculation.CalcConsumptionMonthly(supplier, counterChangeList, counters));
+        var consumptionsMonthly = await Task.Run(() => GWS_Calculation.CalcConsumptionMonthly(supplier, counterChangeList, counters, EnergyConfig.DAILY_MAX_DROP_GAS));
 
         // 2. Schnelle und sichere Null- sowie Leerprüfung (Count ist bei Listen performanter als .Any())
         if (consumptionsMonthly == null || consumptionsMonthly.Count == 0)
@@ -810,11 +838,13 @@ else
         double factor = Factor_kWh;
         foreach (var cons in consumptionsMonthly)
         {
+            double consumption = cons.Consumption ?? 0.0d; // KORREKTUR: Null-sicherer Fallback
+
             ChartPointList.Add(new ColumnChartData
             {
                 Date = cons.Date,
-                Cons_m3 = cons.Consumption,
-                Cons_kWh = cons.Consumption * factor,
+                Cons_m3 = consumption,
+                Cons_kWh = consumption * factor,
                 Temp = cons.Temperature
             });
         }
@@ -864,7 +894,12 @@ else
         }
 
         // 3. CPU-intensive Jahresberechnung im Hintergrundthread
-        var consumptionsYearly = await Task.Run(() => GWS_Calculation.CalcConsumptionYearly(suppliers, counterChangeList));
+        // FEHLERBEHEBUNG: Auf CHANGE_MAX_DROP_GAS umgestellt, da es sich um eine Jahres-/Tauschwertberechnung handelt!
+        var consumptionsYearly = await Task.Run(() => GWS_Calculation.CalcConsumptionYearly(
+            suppliers,
+            counterChangeListAllSuppliers,
+            EnergyConfig.CHANGE_MAX_DROP_GAS
+        ));
 
         if (consumptionsYearly == null || consumptionsYearly.Count == 0)
         {
@@ -877,11 +912,6 @@ else
         {
             list.EnsureCapacity(consumptionsYearly.Count);
         }
-
-        // 5. Performance-Booster: Dictionary für O(1) statt O(N) Lookup in der Schleife
-        // Verhindert, dass für JEDES Jahr die komplette Liste der Anbieter linear durchsucht wird.
-        // var supplierLookup = suppliers
-        //     .ToDictionary(s => s.Id, s => new { Brennwert = s.Brennwert ?? 1.0d, Zustandszahl = s.Zustandszahl ?? 1.0d });
 
         // 5. Dictionary mit einem klaren, nicht-nullbaren ValueTuple (double Brennwert, double Zustandszahl)
         var supplierLookup = suppliers
@@ -949,25 +979,41 @@ else
     /// </summary>
     public void CalcAverageSum()
     {
+        if (supplierData is null || ChartPointList is null || ChartPointList.Count == 0)
+        {
+            ConsMin_kWh = 0;
+            ConsMax_kWh = 0;
+            ConsSum_kWh = 0;
+            ConsSum_m3 = 0;
+            ConsAverage_kWh = 0;
+            ConsAverage_m3 = 0;
+            TempAverage = 0;
+            return;
+        }
+
+        // 1. Allgemeine Durchschnitts-, Min- und Max-Werte direkt aus der Chart-Liste berechnen
         ConsAverage_m3 = Math.Round(ChartPointList.Average(x => x.Cons_m3).GetValueOrDefault(), 2);
-
-        // Berechnung der Summe m3: Wenn Start- und End-Zählerstand vorhanden, dann Differenz berechnen, ansonsten Summe der Verbrauchswerte
-        if (supplierData?.Ende_Zaehlerstand != null && supplierData?.Start_Zaehlerstand != null)
-        {
-            ConsSum_m3=Math.Round(supplierData.Ende_Zaehlerstand.Value - supplierData.Start_Zaehlerstand.Value, 2);
-        }
-        else
-        {
-            double actCounter = counterList?.MaxBy(c => c.Ablesetag)?.Zaehlerstand ?? 0.0d;
-            double startCounter = supplierData?.Start_Zaehlerstand ?? 0.0d;
-            ConsSum_m3 = Math.Round(actCounter - startCounter, 2);
-        }
-
         ConsAverage_kWh = Math.Round(ChartPointList.Average(x => x.Cons_kWh).GetValueOrDefault(), 2);
-        ConsSum_kWh = Math.Round(ChartPointList.Sum(x => x.Cons_kWh).GetValueOrDefault(), 2);
         ConsMin_kWh = Math.Round(ChartPointList.Min(x => x.Cons_kWh).GetValueOrDefault(), 2);
         ConsMax_kWh = Math.Round(ChartPointList.Max(x => x.Cons_kWh).GetValueOrDefault(), 2);
         TempAverage = Math.Round(ChartPointList.Average(x => x.Temp).GetValueOrDefault(), 2);
+
+        // =========================================================================
+        // SUMMEN-BERECHNUNG (Direkt aus der Liste aggregiert)
+        // =========================================================================
+
+        // Fall A: Bei jährlich werden die Summen-Felder in der UI immer geleert
+        if (DdlInterval == Interval.jährlich)
+        {
+            ConsSum_kWh = null;
+            ConsSum_m3 = null;
+        }
+        // Fall B: Bei täglich / monatlich ziehen wir die echten Summen direkt aus den Chart-Punkten
+        else
+        {
+            ConsSum_kWh = Math.Round(ChartPointList.Sum(x => x.Cons_kWh).GetValueOrDefault(), 2);
+            ConsSum_m3 = Math.Round(ChartPointList.Sum(x => x.Cons_m3).GetValueOrDefault(), 2);
+        }
     }
     #endregion
 
@@ -1166,4 +1212,225 @@ else
         }
     }
     #endregion
+
+    #region CalculateTotalConsumption
+    /// <summary>
+    /// Berechnet den Gesamtverbrauch über ein bestimmtes Zeitintervall
+    /// </summary>
+    /// <param name="startCounter"></param>
+    /// <param name="periodStartDate"></param>
+    /// <param name="dayCounters"></param>
+    /// <param name="counterChanges"></param>
+    /// <returns>Total consumption</returns>
+    public double CalculateTotalConsumption(
+                    double startCounter, 
+                    DateTime periodStartDate,
+                    List<Gas_CounterModel> dayCounters,
+                    List<Gas_CounterChangeModel> counterChanges)
+    {
+        // Maximaler Verbrauch, den wir bei einem Zählerüberlauf (z.B. von 999999 auf 0) pro Tag erwarten
+        // Verhindert, dass massive Tippfehler als Überlauf gewertet werden. 5000.0 -> max. Tagesverbrauch
+
+        // 1. Sortieren aller Listen nach Datum aufsteigend, um chronologische Fehler zu vermeiden
+        var sortedCounters = (dayCounters ?? new List<Gas_CounterModel>())
+            .Where(z => z.Zaehlerstand.HasValue) // Nur Einträge mit Werten nutzen
+            .OrderBy(z => z.Ablesetag)
+            .ToList();
+
+        var sortedCounterChanges = (counterChanges ?? new List<Gas_CounterChangeModel>())
+            .OrderBy(w => w.Wechsel_Datum)
+            .ToList();
+
+        double totalConsumption = 0;
+
+        // Wir starten mit dem allerersten Zähler
+        DateTime periodStart = periodStartDate;
+        double currentCounter = startCounter;
+
+        // 2. Schleife über alle Zählertausche
+        foreach (var change in sortedCounterChanges)
+        {
+            // Alle Tagesstände dieses spezifischen Zählers holen (während seiner Laufzeit)
+            var valuesForThisCounter = sortedCounters
+                .Where(z => z.Ablesetag >= periodStart && z.Ablesetag <= change.Wechsel_Datum)
+                .Select(z => z.Zaehlerstand.GetValueOrDefault()) // .GetValueOrDefault() ist sicher, da oben gefiltert
+                .ToList();
+
+            if (valuesForThisCounter.Any())
+            {
+                // Überlauf-sichere Berechnung über die Tagesliste (Nutzt die korrigierte Logik)
+                totalConsumption += CalcIntervalConsumption(currentCounter, valuesForThisCounter, EnergyConfig.DAILY_MAX_DROP_GAS);
+            }
+            else
+            {
+                // Fallback auf die offiziellen Wechseldaten, falls für diesen Zeitraum keine Tagesdaten vorliegen
+                double oldLastValue = change.Zaehlerstand_alt ?? 0;
+
+                if (oldLastValue >= currentCounter)
+                {
+                    // Normaler Verlauf: Alter Zähler stieg bis zum Ausbau
+                    totalConsumption += (oldLastValue - currentCounter);
+                }
+                else
+                {
+                    // FEHLERBEHEBUNG: Zählerüberlauf direkt beim offiziellen Tauschwert abfangen
+                    // Wir berechnen den potenziellen Verbrauch über den Nullsprung hinweg
+                    double overflowBasis = GetCounterOverflowBasis(currentCounter);
+                    double calculatedOverflowConsumption = (overflowBasis - currentCounter) + oldLastValue;
+
+                    // Prüfen, ob der Überlauf-Verbrauch im plausiblen Rahmen liegt
+                    if (calculatedOverflowConsumption <= EnergyConfig.CHANGE_MAX_DROP_GAS)
+                    {
+                        totalConsumption += calculatedOverflowConsumption;
+                    }
+                }
+            }
+
+            // Parameter für den NÄCHSTEN Zähler vorbereiten
+            periodStart = change.Wechsel_Datum;
+            currentCounter = change.Zaehlerstand_neu ?? 0;
+        }
+
+        // 3. Den Verbrauch des AKTUELLEN (letzten) Zählers nach dem letzten Tausch berechnen
+        var remainValues = sortedCounters
+            .Where(z => z.Ablesetag >= periodStart)
+            .Select(z => z.Zaehlerstand.GetValueOrDefault())
+            .ToList();
+
+        if (remainValues.Any())
+        {
+            // Überlauf-sichere Berechnung für den letzten Zähler bis zum Ende der Periode
+            totalConsumption += CalcIntervalConsumption(currentCounter, remainValues, EnergyConfig.DAILY_MAX_DROP_GAS);
+        }
+
+        return totalConsumption;
+    }
+    #endregion
+
+    #region CalcIntervalConsumption
+    /// <summary>
+    /// Berechnet den Verbrauch eines Intervalls und behandelt Überläufe sowie Tippfehler
+    /// </summary>
+    /// <param name="startValue"></param>
+    /// <param name="counterValues"></param>
+    /// <param name="maxDrop"></param>
+    /// <returns>Den errechneten Verbrauch</returns>
+    // Hilfsmethode: Berechnet den Verbrauch einer Liste und fängt Überläufe sowie Tippfehler ab
+    private double CalcIntervalConsumption(double startValue, List<double> counterValues, double maxDrop)
+    {
+        double consumption = 0;
+        double previousValue = startValue;
+
+        foreach (var actualValue in counterValues)
+        {
+            if (actualValue >= previousValue)
+            {
+                // Normaler Verlauf: Zähler steigt
+                consumption += (actualValue - previousValue);
+                previousValue = actualValue;
+            }
+            else
+            {
+                // Zählerstand ist GESUNKEN: Überlauf berechnen
+                double overflowBasis = GetCounterOverflowBasis(previousValue);
+                double calculatedOverflowConsumption = (overflowBasis - previousValue) + actualValue;
+
+                // Prüfen, ob der errechnete Verbrauch für einen Tag plausibel ist
+                if (calculatedOverflowConsumption <= maxDrop)
+                {
+                    // SZENARIO A: Plausibler Verbrauch -> Zählerüberlauf (Roll-Over)
+                    consumption += calculatedOverflowConsumption;
+                    previousValue = actualValue;
+                }
+                // SZENARIO B: Zu hoher Verbrauch -> Offensichtlicher Tippfehler (wird ignoriert)
+                // previousValue bleibt unverändert für den nächsten Schleifendurchlauf
+            }
+        }
+
+        return consumption;
+    }
+    #endregion
+
+    #region GetCounterOverflowBasis
+    /// <summary>
+    /// Findet die nächste logische Zehnerpotenz für den Zählerüberlauf (10.000, 100.000 etc.)
+    /// </summary>
+    /// <param name="value"></param>
+    /// <returns></returns>
+    // Hilfsmethode: Findet die nächste logische Zehnerpotenz für den Zählerüberlauf (10.000, 100.000 etc.)
+    private double GetCounterOverflowBasis(double value)
+    {
+        if (value < 10000.0) return 10000.0;       // 4 Stellen (max. 9.999)
+        if (value < 100000.0) return 100000.0;     // 5 Stellen (max. 99.999)
+        if (value < 1000000.0) return 1000000.0;   // 6 Stellen (max. 999.999)
+
+        return 10000000.0;                        // 7 Stellen (max. 9.999.999)
+    }
+    #endregion
+
+    #region CalculatePeriodConsumptionWithChanges
+    /// <summary>
+    /// Berechnet den Gesamtverbrauch für einen bestimmten Zeitraum unter Berücksichtigung von Zählerwechseln.
+    /// </summary>
+    /// <param name="startCounterValue"></param>
+    /// <param name="endCounterValue"></param>
+    /// <param name="changeCounterList"></param>
+    /// <returns>Den errechneten Gesamtverbrauch</returns>
+    public double CalculatePeriodConsumptionWithChanges(
+            double startCounterValue,
+            double endCounterValue,
+            List<Gas_CounterChangeModel> changeCounterList)
+    {
+        var sortedCounterChanges = (changeCounterList ?? new List<Gas_CounterChangeModel>())
+            .OrderBy(w => w.Wechsel_Datum)
+            .ToList();
+
+        double totalConsumption = 0;
+        double actualCounterStartValue = startCounterValue;
+
+        foreach (var change in sortedCounterChanges)
+        {
+            double oldLastCounterValue = change.Zaehlerstand_alt ?? 0;
+            double newCounterValue = change.Zaehlerstand_neu ?? 0;
+
+            if (oldLastCounterValue >= actualCounterStartValue)
+            {
+                totalConsumption += (oldLastCounterValue - actualCounterStartValue);
+            }
+            else
+            {
+                // KORREKTUR: Auf dynamische Basis-Ermittlung umgestellt
+                double overflowBasis = GetCounterOverflowBasis(actualCounterStartValue);
+                double calculatedOverflowConsumption = (overflowBasis - actualCounterStartValue) + oldLastCounterValue;
+
+                // KORREKTUR: Sichert den Überlauf mit dem zentralen Gas-Tauschlimit ab
+                if (calculatedOverflowConsumption <= EnergyConfig.CHANGE_MAX_DROP_GAS)
+                {
+                    totalConsumption += calculatedOverflowConsumption;
+                }
+            }
+
+            actualCounterStartValue = newCounterValue;
+        }
+
+        if (endCounterValue >= actualCounterStartValue)
+        {
+            totalConsumption += (endCounterValue - actualCounterStartValue);
+        }
+        else
+        {
+            // KORREKTUR: Auf dynamische Basis-Ermittlung umgestellt
+            double overflowBasis = GetCounterOverflowBasis(actualCounterStartValue);
+            double calculatedOverflowConsumption = (overflowBasis - actualCounterStartValue) + endCounterValue;
+
+            if (calculatedOverflowConsumption <= EnergyConfig.CHANGE_MAX_DROP_GAS)
+            {
+                totalConsumption += calculatedOverflowConsumption;
+            }
+        }
+
+        return totalConsumption;
+    }
+    #endregion
+
 }

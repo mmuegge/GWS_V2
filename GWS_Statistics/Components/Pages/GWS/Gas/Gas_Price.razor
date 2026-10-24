@@ -12,12 +12,11 @@
 
 <PageTitle>Gas- Preise</PageTitle>
 
+@* Seiten-Überschrift *@
 <div class="container">
-    <div class="row">
-        <div class="text-center fs-3 fw-bold">
-            <span class="fa-solid fa-fire-flame-simple fa-3xs" aria-hidden="true"> </span>
-            <label>Gas- Preise</label>
-        </div>
+    <div class="text-center fs-3 fw-bold">
+        <span class="fa-solid fa-fire-flame-simple fa-3xs" aria-hidden="true"> </span>
+        <label>Gas- Preise</label>
     </div>
 </div>
 
@@ -28,7 +27,7 @@
             <div class="col-12 col-lg-4 mb-2">
                 <div class="control-wrapper">
                     <label class="control-label fw-bold mb-sm-1 me-1">Anbieter</label>
-                    <SfDropDownList DataSource="@supplierDataList" TItem="Gas_SupplierDataModel" TValue="int" Placeholder="Anbieter auswählen" @bind-Value="@supplierData!.Id">
+                    <SfDropDownList DataSource="@supplierList" TItem="Gas_SupplierDataModel" TValue="int" Placeholder="Anbieter auswählen" @bind-Value="@supplierData!.Id">
                         <DropDownListFieldSettings Text="Anbieter" Value="Id"></DropDownListFieldSettings>
                         <DropDownListEvents TItem="Gas_SupplierDataModel" TValue="int" OnValueSelect="@ValueSelectHandler"></DropDownListEvents>
                     </SfDropDownList>
@@ -52,212 +51,230 @@
     </div>
 </div>
 
-<div class="control-section" id="target" align="center">
-    <SfGrid ID="Grid" @ref="SfDataGrid" DataSource="@costsList"
-    AllowPaging="true"
-    AllowFiltering="true"
-    AllowReordering="true"
-    AllowResizing="true"
-    AllowExcelExport="true"
-    AllowPdfExport="true"
-    EnableHover="true"
-    AllowTextWrap="true"
-    AllowSelection="true"
-    AllowSorting="true"
-    Height="100%" Width="100%"
-    Toolbar=@toolbar
-    EnableStickyHeader="true">
+@* Grid *@
+@if (supplierList != null && supplierList.Count > 0)
+{
+    <div class="control-section" id="target" align="center">
+        <SfGrid ID="Grid" @ref="sfDataGrid" DataSource="@costsList"
+                AllowPaging="true"
+                AllowFiltering="true"
+                AllowReordering="true"
+                AllowResizing="true"
+                AllowExcelExport="true"
+                AllowPdfExport="true"
+                EnableHover="true"
+                AllowTextWrap="true"
+                AllowSelection="true"
+                AllowSorting="true"
+                Height="100%" Width="100%"
+                Toolbar=@toolbar
+                EnableStickyHeader="true">
 
-        <GridEditSettings AllowAdding="true"
-        AllowEditing="true"
-        AllowDeleting="true"
-        ShowDeleteConfirmDialog="true"
-        Mode="EditMode.Dialog"
-        Dialog="DialogParams">
+            <GridEditSettings AllowAdding="true"
+                              AllowEditing="true"
+                              AllowDeleting="true"
+                              ShowDeleteConfirmDialog="true"
+                              Mode="EditMode.Dialog"
+                              Dialog="dialogParams">
 
-            <HeaderTemplate>
+                <HeaderTemplate>
                 @{
-                    var DialogHeader = GetDialogHeader((context as Gas_CostModel));
-                    <span>@DialogHeader</span>
-                }
-            </HeaderTemplate>
-        </GridEditSettings>
-
-        <GridEvents OnToolbarClick="ToolbarBtnClickHandler"
-                    RowCreating="RowCreatingHandler"
-                    RowEditing="RowEditingHandler"
-                    OnActionComplete="ActionCompleteHandler"
-                    TValue="Gas_CostModel">
-        </GridEvents>
-
-        <GridPageSettings PageSize="20" PageSizes="true"></GridPageSettings>
-
-        <GridFilterSettings Type="Syncfusion.Blazor.Grids.FilterType.CheckBox"></GridFilterSettings>
-
-        <GridSortSettings>
-            <GridSortColumns>
-                <GridSortColumn 
-                    Field="Gueltig_Ab" 
-                    Direction="SortDirection.Descending">
-                </GridSortColumn>
-            </GridSortColumns>
-        </GridSortSettings>
-
-        <GridColumns>
-            <GridColumn IsPrimaryKey="true" Field="@nameof(Gas_CostModel.Id)" Visible="false"
-            AllowAdding="false"
-            AllowEditing="false"
-            AllowSorting="false"
-            AllowFiltering="false"
-            Width="35">
-            </GridColumn>
-
-            <GridColumn Field=@nameof(Gas_CostModel.Anbieter)
-            Width="200"
-            EditType="EditType.DropDownEdit"
-            HeaderText="Anbieter">
-
-                <EditTemplate>
-                    <SfDropDownList Placeholder="Anbieter"
-                    FloatLabelType="FloatLabelType.Always"
-                    ID="Anbieter"
-                    TItem="Gas_SupplierDataModel"
-                    TValue="string" 
-                    @bind-Value="@((context as Gas_CostModel)!.Anbieter)"
-                    DataSource="@supplierDataList">
-
-                        <DropDownListFieldSettings Value="Anbieter" Text="Anbieter"></DropDownListFieldSettings>
-                    </SfDropDownList>
-                </EditTemplate>
-
-                <HeaderTemplate>
-                    <SfTooltip Content="@GetTooltipContent("Anbieter")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
-                        <span><b>Anbieter</b></span>
-                    </SfTooltip>
+                        var DialogHeader = GetDialogHeader((context as Gas_CostModel));
+                        <span>@DialogHeader</span>
+                    }
                 </HeaderTemplate>
-            </GridColumn>
+            </GridEditSettings>
 
-            <GridColumn Field=@nameof(Gas_CostModel.Gueltig_Ab)
-            Format="d"
-            EditType="EditType.DatePickerEdit"
-            Width="110"
-            HeaderText="Gültig ab">
+            <GridEvents OnToolbarClick="ToolbarBtnClickHandler"
+                        RowCreating="RowCreatingHandler"
+                        RowEditing="RowEditingHandler"
+                        OnActionComplete="ActionCompleteHandler"
+                        TValue="Gas_CostModel">
+            </GridEvents>
 
-                <HeaderTemplate>
-                    <SfTooltip Content="@GetTooltipContent("G-ab")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
-                        <span><b>Datum</b></span>
-                    </SfTooltip>
-                </HeaderTemplate>
-            </GridColumn>
+            <GridPageSettings PageSize="20" PageSizes="true"></GridPageSettings>
 
-            <GridColumn Field=@nameof(Gas_CostModel.Grundpreis)
-            Format="0.0000 €/Monat"
-            Width="100"
-            HeaderText="Grundpreis">
+            <GridFilterSettings Type="Syncfusion.Blazor.Grids.FilterType.CheckBox"></GridFilterSettings>
 
-                <EditTemplate>
-                    <SfNumericTextBox Placeholder="Grundpreis"
-                    FloatLabelType="FloatLabelType.Always"
-                    TValue="double?"
-                    @bind-Value="@((context as Gas_CostModel)!.Grundpreis)"
-                    Format="0.0000 €/Monat">
-                    </SfNumericTextBox>
-                </EditTemplate>
+            <GridSortSettings>
+                <GridSortColumns>
+                    <GridSortColumn 
+                            Field="Gueltig_Ab" 
+                            Direction="SortDirection.Descending">
+                    </GridSortColumn>
+                </GridSortColumns>
+            </GridSortSettings>
 
-                <HeaderTemplate>
-                    <SfTooltip Content="@GetTooltipContent("GP")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
-                        <span><b>GP</b></span>
-                    </SfTooltip>
-                </HeaderTemplate>
-            </GridColumn>
+            <GridColumns>
+                <GridColumn IsPrimaryKey="true" Field="@nameof(Gas_CostModel.Id)" Visible="false"
+                            AllowAdding="false"
+                            AllowEditing="false"
+                            AllowSorting="false"
+                            AllowFiltering="false"
+                            Width="35">
+                </GridColumn>
 
-            <GridColumn Field=@nameof(Gas_CostModel.Arbeitspreis)
-            Format="0.0000 ct/kWh"
-            Width="100"
-            HeaderText="Arbeitspreis">
+                <GridColumn Field=@nameof(Gas_CostModel.Anbieter)
+                Width="200"
+                EditType="EditType.DropDownEdit"
+                HeaderText="Anbieter">
 
-                <EditTemplate>
-                    <SfNumericTextBox Placeholder="Arbeitspreis"
-                    FloatLabelType="FloatLabelType.Always"
-                    TValue="double?"
-                    @bind-Value="@((context as Gas_CostModel)!.Arbeitspreis)"
-                    Format="0.0000# ct/kWh">
-                    </SfNumericTextBox>
-                </EditTemplate>
+                    <EditTemplate>
+                        <SfDropDownList Placeholder="Anbieter"
+                                        FloatLabelType="FloatLabelType.Always"
+                                        ID="Anbieter"
+                                        TItem="Gas_SupplierDataModel"
+                                        TValue="string" 
+                                        @bind-Value="@((context as Gas_CostModel)!.Anbieter)"
+                                        DataSource="@supplierList">
 
-                <HeaderTemplate>
-                    <SfTooltip Content="@GetTooltipContent("AP")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
-                        <span><b>AP</b></span>
-                    </SfTooltip>
-                </HeaderTemplate>
-            </GridColumn>
+                            <DropDownListFieldSettings Value="Anbieter" Text="Anbieter"></DropDownListFieldSettings>
+                        </SfDropDownList>
+                    </EditTemplate>
 
-            <GridColumn Field=@nameof(Gas_CostModel.Zaehlermiete)
-            Format="#0.0000 €/Monat"
-            Width="110"
-            HeaderText="Zählermiete">
+                    <HeaderTemplate>
+                        <SfTooltip Content="@GetTooltipContent("Anbieter")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                            <span><b>Anbieter</b></span>
+                        </SfTooltip>
+                    </HeaderTemplate>
+                </GridColumn>
 
-                <EditTemplate>
-                    <SfNumericTextBox Placeholder="Zählermiete"
-                    FloatLabelType="FloatLabelType.Always"
-                    TValue="double?"
-                    @bind-Value="@((context as Gas_CostModel)!.Zaehlermiete)"
-                    Format="0.0000 €/Monat">
-                    </SfNumericTextBox>
-                </EditTemplate>
+                <GridColumn Field=@nameof(Gas_CostModel.Gueltig_Ab)
+                            Format="d"
+                            EditType="EditType.DatePickerEdit"
+                            Width="110"
+                            HeaderText="Gültig ab">
 
-                <HeaderTemplate>
-                    <SfTooltip Content="@GetTooltipContent("ZM")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
-                        <span><b>ZM</b></span>
-                    </SfTooltip>
-                </HeaderTemplate>
-            </GridColumn>
+                    <HeaderTemplate>
+                        <SfTooltip Content="@GetTooltipContent("G-ab")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                            <span><b>Datum</b></span>
+                        </SfTooltip>
+                    </HeaderTemplate>
+                </GridColumn>
 
-            <GridColumn Field=@nameof(Gas_CostModel.Bemerkung)
-            Width="300"
-            HeaderText="Bemerkung">
+                <GridColumn Field=@nameof(Gas_CostModel.Grundpreis)
+                Format="0.0000 €/Monat"
+                Width="100"
+                HeaderText="Grundpreis">
 
-                <HeaderTemplate>
-                    <SfTooltip Content="@GetTooltipContent("Bemerkung")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
-                        <span><b>Bemerkung</b></span>
-                    </SfTooltip>
-                </HeaderTemplate>
-            </GridColumn>
+                    <EditTemplate>
+                        <SfNumericTextBox Placeholder="Grundpreis"
+                                          FloatLabelType="FloatLabelType.Always"
+                                          TValue="double?"
+                                          @bind-Value="@((context as Gas_CostModel)!.Grundpreis)"
+                                          Format="0.0000 €/Monat">
+                        </SfNumericTextBox>
+                    </EditTemplate>
 
-            <GridColumn HeaderText="Funktion" Width="20%" MinWidth="110">
-                <GridCommandColumns>
-                    <GridCommandColumn Type="CommandButtonType.Edit"
-                    ButtonOption="@(new CommandButtonOptions(){
+                    <HeaderTemplate>
+                        <SfTooltip Content="@GetTooltipContent("GP")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                            <span><b>GP</b></span>
+                        </SfTooltip>
+                    </HeaderTemplate>
+                </GridColumn>
+
+                <GridColumn Field=@nameof(Gas_CostModel.Arbeitspreis)
+                            Format="0.0000 ct/kWh"
+                            Width="100"
+                            HeaderText="Arbeitspreis">
+
+                    <EditTemplate>
+                        <SfNumericTextBox Placeholder="Arbeitspreis"
+                                          FloatLabelType="FloatLabelType.Always"
+                                          TValue="double?"
+                                          @bind-Value="@((context as Gas_CostModel)!.Arbeitspreis)"
+                                          Format="0.0000# ct/kWh">
+                        </SfNumericTextBox>
+                    </EditTemplate>
+
+                    <HeaderTemplate>
+                        <SfTooltip Content="@GetTooltipContent("AP")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                            <span><b>AP</b></span>
+                        </SfTooltip>
+                    </HeaderTemplate>
+                </GridColumn>
+
+                <GridColumn Field=@nameof(Gas_CostModel.Zaehlermiete)
+                            Format="#0.0000 €/Monat"
+                            Width="110"
+                            HeaderText="Zählermiete">
+
+                    <EditTemplate>
+                        <SfNumericTextBox Placeholder="Zählermiete"
+                                          FloatLabelType="FloatLabelType.Always"
+                                          TValue="double?"
+                                          @bind-Value="@((context as Gas_CostModel)!.Zaehlermiete)"
+                                          Format="0.0000 €/Monat">
+                        </SfNumericTextBox>
+                    </EditTemplate>
+
+                    <HeaderTemplate>
+                        <SfTooltip Content="@GetTooltipContent("ZM")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                            <span><b>ZM</b></span>
+                        </SfTooltip>
+                    </HeaderTemplate>
+                </GridColumn>
+
+                <GridColumn Field=@nameof(Gas_CostModel.Bemerkung)
+                            Width="300"
+                            HeaderText="Bemerkung">
+
+                    <HeaderTemplate>
+                        <SfTooltip Content="@GetTooltipContent("Bemerkung")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                            <span><b>Bemerkung</b></span>
+                        </SfTooltip>
+                    </HeaderTemplate>
+                </GridColumn>
+
+                <GridColumn HeaderText="Funktion" Width="20%" MinWidth="110">
+                    <GridCommandColumns>
+                        <GridCommandColumn Type="CommandButtonType.Edit"
+                        ButtonOption="@(new CommandButtonOptions(){
                                                     IconCss="e-icons e-edit",
                                                     CssClass="e-flat"
                                                })">
-                    </GridCommandColumn>
-                    <GridCommandColumn Type="CommandButtonType.Delete"
-                    ButtonOption="@(new CommandButtonOptions(){
+                        </GridCommandColumn>
+                        <GridCommandColumn Type="CommandButtonType.Delete"
+                        ButtonOption="@(new CommandButtonOptions(){
                                                     IconCss ="e-icons e-delete",
                                                     CssClass="e-flat"
                                                })">
-                    </GridCommandColumn>
-                    <GridCommandColumn Type="CommandButtonType.Save"
-                    ButtonOption="@(new CommandButtonOptions(){
+                        </GridCommandColumn>
+                        <GridCommandColumn Type="CommandButtonType.Save"
+                        ButtonOption="@(new CommandButtonOptions(){
                                                     IconCss="e-icons e-update",
                                                     CssClass="e-flat"
                                                })">
-                    </GridCommandColumn>
-                    <GridCommandColumn Type="CommandButtonType.Cancel"
-                    ButtonOption="@(new CommandButtonOptions(){
+                        </GridCommandColumn>
+                        <GridCommandColumn Type="CommandButtonType.Cancel"
+                        ButtonOption="@(new CommandButtonOptions(){
                                                     IconCss="e-icons e-cancel-icon",
                                                     CssClass="e-flat"
                                                })">
-                    </GridCommandColumn>
-                </GridCommandColumns>
-            </GridColumn>
-        </GridColumns>
+                        </GridCommandColumn>
+                    </GridCommandColumns>
+                </GridColumn>
+            </GridColumns>
+        </SfGrid>
 
-    </SfGrid>
-</div>
-
-<SfSpinner @bind-Visible="@SpinnerVisibleProperty" Type="SpinnerType.Tailwind" Size="40" CssClass="e-custom-color"></SfSpinner>
+        @* Spinner für den Export *@
+        <SfSpinner Visible="@IsExporting"
+                   Label="Datei wird generiert, bitte warten..."
+                   Type="@SpinnerType.Material"
+                   Size="40"
+                   CssClass="e-spin-overlay e-custom-color">
+        </SfSpinner>
+    </div>
+}
+else
+{
+    <SfSpinner @bind-Visible="@spinnerVisibleProperty"
+               Type="SpinnerType.Tailwind"
+               CssClass="e-custom-color"
+               Label="Lade Daten..."
+               Size="40">
+    </SfSpinner>
+}
 
 @* Dialog*@
 <div>
@@ -272,7 +289,7 @@
               CssClass="MyCss">
 
         <DialogTemplates>
-            <Header>@Header</Header>
+            <Header>@header</Header>
         </DialogTemplates>
 
         <DialogPositionData X="@dialogXValue" Y="@dialogYValue"></DialogPositionData>
@@ -290,6 +307,26 @@
 </div>
 
 <style>
+    /* 1. Zwingt das gesamte Spinner-Container-System nach ganz vorne */
+    .e-spinner-pane.e-spin-overlay {
+        z-index: 99999 !important;
+        background-color: rgba(0, 0, 0, 0.4) !important; /* Macht den Hintergrund dunkel-transparent */
+    }
+
+        /* 2. Zwingt das Ladesymbol und den Text, sich abzuheben */
+        .e-spinner-pane.e-spin-overlay .e-spinner-inner {
+            z-index: 100000 !important;
+        }
+
+        /* 3. HIER WIRD DER TEXT ERZWUNGEN UND SCHÖN FORMATIERT */
+        .e-spinner-pane.e-spin-overlay .e-spin-label {
+            color: #FFFFFF !important; /* Reines Weiß, damit es auf dem dunklen Overlay lesbar ist */
+            font-weight: bold !important; /* Fett gedruckt */
+            font-size: 16px !important; /* Etwas größer für bessere Lesbarkeit */
+            margin-top: 10px !important; /* Abstand zum drehenden Rad */
+            display: block !important; /* Sicherstellen, dass es nicht auf hidden steht */
+        }
+
     .e-dlg-overlay {
     background-color: slategray;
     opacity: 0.6;
@@ -343,11 +380,11 @@
     padding-bottom: 15px; */
     }
 
-    .dialog-label {
+   /*  .dialog-label {
     color: black;
     font-size: 14px;
     margin-bottom: 2px;
-    }
+    } */
 
     /* .e-grid .e-dlg-content,
     .e-grid .e-footer-content {
@@ -369,13 +406,13 @@
     private bool update = false;
     private bool success = false;
 
-    private bool SpinnerVisibleProperty { get; set; } = false;
+    private bool spinnerVisibleProperty { get; set; } = false;
 
-    private DialogSettings DialogParams = new DialogSettings { MinHeight = "400px", Width = "450px" };
+    private DialogSettings dialogParams = new DialogSettings { MinHeight = "400px", Width = "450px" };
     public DialogEffect animationEffect = DialogEffect.Zoom;
     public bool DialogVisible { get; set; } = false;
     private bool showDialogButtons = false;
-    private string DialogText { get; set; } = string.Empty;
+    private string dialogText { get; set; } = string.Empty;
     private string dialogXValue = "center";
     private string dialogYValue = "center";
     private string dialogHeight = "130px";
@@ -387,14 +424,14 @@
     readonly string urlCost = "gas/kosten/";
     readonly string urlCostSupplier = "gas/kosten/anbieter/";
 
-    string? Header { get; set; }
-    string? Content { get; set; }
+    string? header { get; set; }
+    string? content { get; set; }
 
     GWSProcessor? gwsP;
     ApiResponse? apiResponse;
 
-    private SfGrid<Gas_CostModel> SfDataGrid = new();
-    private List<Gas_SupplierDataModel>? supplierDataList = new();
+    private SfGrid<Gas_CostModel> sfDataGrid = new();
+    private List<Gas_SupplierDataModel>? supplierList = new();
 
     private Gas_SupplierDataModel? supplierData = new();
     private List<Gas_CostModel>? costsList = null;
@@ -445,7 +482,7 @@
     protected override async Task OnInitializedAsync()
     {
         // Spinner
-        this.SpinnerVisibleProperty = true;
+        this.spinnerVisibleProperty = true;
 
         // MyAppSettings.json auslesen und letzten gespeicherten Anbieter auslesen
         settings = await GetSetMyAppConfig.GetMyAppSettings.ReadSettingsAsync(myAppSettings);
@@ -454,20 +491,20 @@
         try
         {
             // Anbieterdaten auslesen (nur Anbieter und Id => durch Gas_SupplierDataModel)
-            supplierDataList = await gwsP.LoadDataAsync<Gas_SupplierDataModel>(urlSupplier);
+            supplierList = await gwsP.LoadDataAsync<Gas_SupplierDataModel>(urlSupplier);
 
-            if (supplierDataList != null && supplierDataList.Any()) // prüfen ob es Anbieterdaten gibt
+            if (supplierList != null && supplierList.Any()) // prüfen ob es Anbieterdaten gibt
             {
                 // gespeicherten letzten Anbieter auslesen
-                supplierData!.Id = String.IsNullOrEmpty(settings!.Supplier_Id!.Gas) ? supplierData.Id = supplierDataList.Max(x => x.Id) : supplierData.Id = Int32.Parse(settings.Supplier_Id.Gas);
+                supplierData!.Id = String.IsNullOrEmpty(settings!.Supplier_Id!.Gas) ? supplierData.Id = supplierList.Max(x => x.Id) : supplierData.Id = Int32.Parse(settings.Supplier_Id.Gas);
 
                 // Anbieter Start-Datum auslesen
-                startDate = supplierDataList
+                startDate = supplierList
                 .Where(c => c.Id == supplierData.Id)
                 .Select(c => c.Zeitraum_Start).FirstOrDefault();
 
                 // Anbieter Ende-Datum auslesen
-                endDate = supplierDataList
+                endDate = supplierList
                .Where(c => c.Id == supplierData.Id)
                .Select(c => c.Zeitraum_Ende).FirstOrDefault();
             }
@@ -494,7 +531,7 @@
 
         // Spinner
         await Task.Delay(200);
-        this.SpinnerVisibleProperty = false;
+        this.spinnerVisibleProperty = false;
     }
     #endregion
 
@@ -510,7 +547,7 @@
         if (supplierData.Id > 0)
         {
             // Spinner
-            this.SpinnerVisibleProperty = true;
+            this.spinnerVisibleProperty = true;
 
             success = await GetSetMyAppConfig.SetMyAppSettings.WriteSettingsAsync(myAppSettings, "Supplier_Id.Gas", supplierData.Id.ToString());
 
@@ -523,11 +560,11 @@
             {
                 OpenDialog("Keine Gas-Preise vorhanden!", "60px", false);
             }
-            SfDataGrid?.Refresh();
+            sfDataGrid?.Refresh();
 
             // Spinner
             await Task.Delay(200);
-            this.SpinnerVisibleProperty = false;
+            this.spinnerVisibleProperty = false;
         }
     }
     #endregion
@@ -538,6 +575,10 @@
     ///
     /// </summary>
     /// <param name="args"></param>
+    
+    // Variable zur Steuerung des Lade - Spinners im UI
+    private bool IsExporting { get; set; }
+
     public async Task ToolbarBtnClickHandler(Syncfusion.Blazor.Navigations.ClickEventArgs args)
     {
         if (args.Item.Id.Contains("_excelexport"))
@@ -565,7 +606,7 @@
 
             excelExportProperties.Theme = Theme;
 
-            await SfDataGrid.ExportToExcelAsync(excelExportProperties);
+            await sfDataGrid.ExportToExcelAsync(excelExportProperties);
         }
         else if (args.Item.Id.Contains("_pdfexport"))
         {
@@ -604,7 +645,7 @@
             pdfExportProperties.Header = pdfHeader;
             pdfExportProperties.Footer = pdfFooter;
 
-            await SfDataGrid.ExportToPdfAsync(pdfExportProperties);
+            await sfDataGrid.ExportToPdfAsync(pdfExportProperties);
         }
         else if (args.Item.Id.Contains("XmlExport"))
         {
@@ -697,7 +738,7 @@
                 costData = await gwsP!.DeleteDataAsync<Gas_CostModel>(urlCost, Convert.ToString(args.Data.Id));
                 ShowToastMessage(true, "Datensatz gelöscht!");
             }
-            SfDataGrid?.Refresh();
+            sfDataGrid?.Refresh();
         }
     }
     #endregion
@@ -710,7 +751,7 @@
     {
         DialogVisible = false;
         costsList = await gwsP!.LoadDataAsync<Gas_CostModel>(urlCostSupplier + Convert.ToString(supplierData!.Id));  // Daten neu laden
-        SfDataGrid?.Refresh();
+        sfDataGrid?.Refresh();
     }
     #endregion
 
@@ -754,7 +795,7 @@
                 costsList = await gwsP.LoadDataAsync<Gas_CostModel>(urlCostSupplier + Convert.ToString(supplierData!.Id));  // Daten neu laden
             }
         }
-        SfDataGrid?.Refresh();
+        sfDataGrid?.Refresh();
     }
     #endregion
 
@@ -817,7 +858,7 @@
     /// </summary>
     private void OpenDialog(string header, string height, bool showButtons)
     {
-        Header = header;
+        this.header = header;
         dialogHeight = height;
         showDialogButtons = showButtons;
         this.DialogVisible = true;
@@ -854,7 +895,7 @@
     {
            // Daten aus Dropdown "Anbieter" auslesen und Anbieter-Feld in Grid vorbesetzen
             args.Data.Id_Anbieter = supplierData!.Id;
-            args.Data.Anbieter = supplierDataList?
+            args.Data.Anbieter = supplierList?
                                         .Where(x => x.Id == supplierData.Id)
                                         .Select(a => a.Anbieter)
                                         .FirstOrDefault();

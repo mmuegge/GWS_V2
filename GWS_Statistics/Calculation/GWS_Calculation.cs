@@ -13,11 +13,15 @@ namespace GWS_Statistics.Calculation
         /// <param name="supplier"></param>
         /// <param name="counterChanges"></param>
         /// <param name="counters"></param>
-        /// <returns></returns>
+        /// <returns>List<IConsumption></returns>
         /// </summary>
-        public static List<IConsumption> CalcConsumptionDaily<T, U>(ISupplier? supplier, List<U>? counterChanges, List<T>? counters)
-        where T : ICounter
-        where U : ICounterChange
+        public static List<IConsumption> CalcConsumptionDaily<T, U>(
+         ISupplier? supplier,
+         List<U>? counterChanges,
+         List<T>? counters,
+         double maxDrop) // Puffer zur Absicherung gegen Tippfehler beim Überlauf
+         where T : ICounter
+         where U : class, ICounterChange
         {
             var consumptions = new List<IConsumption>();
 
@@ -30,21 +34,31 @@ namespace GWS_Statistics.Calculation
             DateTime startPeriod = supplier.Zeitraum_Start.GetValueOrDefault().Date;
             DateTime endPeriod = supplier.Zeitraum_Ende.GetValueOrDefault().Date;
 
-            endPeriod = endPeriod < DateTime.Now.Date ? endPeriod : DateTime.Now.Date; // Enddatum darf nicht in der Zukunft liegen
+            // Enddatum darf nicht in der Zukunft liegen
+            endPeriod = endPeriod < DateTime.Now.Date ? endPeriod : DateTime.Now.Date;
 
             int totalDays = (endPeriod - startPeriod).Days;
-
             if (totalDays < 2) return consumptions;
 
             // 2. Fall: Keine Zählerstände vorhanden -> Lineare Aufteilung des Gesamtzeitraums
             if (counters is null || counters.Count == 0)
             {
-                if (supplier.Start_Zaehlerstand.HasValue && supplier.Ende_Zaehlerstand.HasValue
-                    && supplier.Start_Zaehlerstand <= supplier.Ende_Zaehlerstand)
+                if (supplier.Start_Zaehlerstand.HasValue && supplier.Ende_Zaehlerstand.HasValue)
                 {
-                    double totalCons = (supplier.Ende_Zaehlerstand - supplier.Start_Zaehlerstand).Value;
+                    double totalCons = 0;
+
+                    if (supplier.Ende_Zaehlerstand.Value >= supplier.Start_Zaehlerstand.Value)
+                    {
+                        totalCons = supplier.Ende_Zaehlerstand.Value - supplier.Start_Zaehlerstand.Value;
+                    }
+                    else
+                    {
+                        double overflowBasis = GetCounterOverflowBasisStatic(supplier.Start_Zaehlerstand.Value);
+                        double calculatedOverflow = (overflowBasis - supplier.Start_Zaehlerstand.Value) + supplier.Ende_Zaehlerstand.Value;
+                        if (calculatedOverflow <= maxDrop) totalCons = calculatedOverflow;
+                    }
+
                     double dailyCons = Math.Max(0.0d, totalCons / totalDays);
-                    double temperature = 0.0d;
 
                     for (int d = 0; d < totalDays; d++)
                     {
@@ -53,7 +67,7 @@ namespace GWS_Statistics.Calculation
                             SupplierId = supplier.Id,
                             Date = startPeriod.AddDays(d),
                             Consumption = dailyCons,
-                            Temperature = temperature
+                            Temperature = 0.0d
                         });
                     }
                 }
@@ -68,7 +82,21 @@ namespace GWS_Statistics.Calculation
                 int initialDays = (firstCounter.Ablesetag.Date - startPeriod).Days;
                 if (initialDays > 0)
                 {
-                    double diff = (firstCounter.Zaehlerstand - supplier.Start_Zaehlerstand).GetValueOrDefault();
+                    double diff = 0;
+                    double firstVal = firstCounter.Zaehlerstand.GetValueOrDefault();
+                    double startVal = supplier.Start_Zaehlerstand.Value;
+
+                    if (firstVal >= startVal)
+                    {
+                        diff = firstVal - startVal;
+                    }
+                    else
+                    {
+                        double overflowBasis = GetCounterOverflowBasisStatic(startVal);
+                        double calculatedOverflow = (overflowBasis - startVal) + firstVal;
+                        if (calculatedOverflow <= maxDrop) diff = calculatedOverflow;
+                    }
+
                     double initialDailyCons = Math.Max(0.0d, diff / initialDays);
                     double temperature = firstCounter.Temperatur_aussen ?? 0.0d;
 
@@ -110,22 +138,82 @@ namespace GWS_Statistics.Calculation
                 int intervalDays = (nextDay - currentDay).Days;
                 if (intervalDays <= 0) continue;
 
-                double dailyCons;
-                if (nextCons >= currentCons)
+                double intervalCons = 0;
+
+                // Relevanten Zählerwechsel finden, der EXAKT in dieses Urlaubs-/Tagesintervall fällt
+                U? changeInInterval = null;
+
+                if (counterChanges != null)
                 {
-                    dailyCons = (nextCons - currentCons) / intervalDays;
+                    changeInInterval = counterChanges
+                        .FirstOrDefault(cc => cc.Id_Anbieter == supplier.Id
+                                           && cc.Wechsel_Datum.Date >= currentDay
+                                           && cc.Wechsel_Datum.Date <= nextDay);
+                }
+
+                // KORREKTUR: Zählerwechsel priorisiert behandeln, wenn die Werte sinken ODER der Tausch-Tag exakt heute stattfindet
+                if (changeInInterval != null && (nextCons < currentCons || changeInInterval.Wechsel_Datum.Date == currentDay))
+                {
+                    // FALL A: Ein Zählerwechsel fand innerhalb dieses Intervalls statt!
+                    double oldLastValue = changeInInterval.Zaehlerstand_alt ?? 0;
+                    double newStartValue = changeInInterval.Zaehlerstand_neu ?? 0;
+
+                    // 1. Verbrauch des alten Zählers bis zum Ausbau
+                    if (oldLastValue >= currentCons)
+                    {
+                        intervalCons += (oldLastValue - currentCons);
+                    }
+                    else
+                    {
+                        double overflowBasis = GetCounterOverflowBasisStatic(currentCons);
+                        double calculatedOverflow = (overflowBasis - currentCons) + oldLastValue;
+                        if (calculatedOverflow <= maxDrop) intervalCons += calculatedOverflow;
+                    }
+
+                    // 2. Verbrauch des neuen Zählers ab Einbau bis zum Intervallende
+                    if (nextCons >= newStartValue)
+                    {
+                        intervalCons += (nextCons - newStartValue);
+                    }
+                    else
+                    {
+                        double overflowBasis = GetCounterOverflowBasisStatic(newStartValue);
+                        double calculatedOverflow = (overflowBasis - newStartValue) + nextCons;
+                        if (calculatedOverflow <= maxDrop) intervalCons += calculatedOverflow;
+                    }
+
+                    // CRITICAL FIX: Die Zählerstands-Basis des Schleifenobjekts für den Folgetag korrigieren!
+                    // Das verhindert, dass am nächsten Tag das alte Millionen-Minus berechnet wird.
+                    counters[i].Zaehlerstand = nextCons;
                 }
                 else
                 {
-                    // Zählerwechsel-Logik greift hier
-                    dailyCons = 0.0d;
-                    if (counterChanges != null)
+                    // FALL B: Kein Zählerwechsel im Intervall (Reiner Verbrauch oder normaler Überlauf)
+                    if (nextCons >= currentCons)
                     {
-                        // TODO: Zählerwechsel-Berechnung implementieren
+                        intervalCons = nextCons - currentCons;
+                    }
+                    else
+                    {
+                        // Normaler Zähler-Überlauf (Roll-Over) mitten im Intervall
+                        double overflowBasis = GetCounterOverflowBasisStatic(currentCons);
+                        double calculatedOverflow = (overflowBasis - currentCons) + nextCons;
+
+                        if (calculatedOverflow <= maxDrop)
+                        {
+                            intervalCons = calculatedOverflow;
+                        }
+                        else
+                        {
+                            // Tippfehler-Bremse: Wert nullen und Vortag mitschleifen, damit der Fehler nicht wandert
+                            intervalCons = 0;
+                            counters[i].Zaehlerstand = nextCons;
+                        }
                     }
                 }
 
-                dailyCons = Math.Max(0.0d, dailyCons);
+                // Lineare Aufteilung des Intervall-Verbrauchs auf die einzelnen Tage
+                double dailyCons = Math.Max(0.0d, intervalCons / intervalDays);
 
                 for (int d = 0; d < intervalDays; d++)
                 {
@@ -150,47 +238,51 @@ namespace GWS_Statistics.Calculation
         /// <typeparam name="T, U"></typeparam>
         /// <param name="supplier"></param>
         /// <param name="consumptions"></param>
-        /// <returns></returns>
-        public static List<IConsumption> CalcConsumptionMonthly<T, U>(ISupplier? supplier, List<U>? counterChanges, List<T>? counters)
+        /// <returns>List<IConsumption></returns>
+        public static List<IConsumption> CalcConsumptionMonthly<T, U>(
+            ISupplier? supplier,
+            List<U>? counterChanges,
+            List<T>? counters,
+            double maxDrop)
             where T : ICounter
-            where U : ICounterChange
+            where U : class, ICounterChange // 2. KORREKTUR: 'class' hinzugefügt, um mit CalcConsumptionDaily kompatibel zu sein
+        {
+            if (supplier == null || counters == null || counters.Count == 0)
             {
-                if (supplier == null || counters == null || counters.Count == 0)
-                {
-                    return [];
-                }
-
-                var start = supplier.Zeitraum_Start.GetValueOrDefault();
-                var end = supplier.Zeitraum_Ende.GetValueOrDefault();
-
-                if (!HelperMethods.CheckValidDates(start, end) || (end - start).Days < 2)
-                {
-                    return [];
-                }
-
-                List<IConsumption> consumptions = CalcConsumptionDaily(supplier, counterChanges, counters);
-                if (consumptions.Count == 0)
-                {
-                    return [];
-                }
-
-                // 1. Gruppierung in einem einzigen Durchlauf (O(N))
-                // 2. Filtern nach dem relevanten Zeitraum direkt in der Abfrage
-                return consumptions
-                    .Where(c => c.Date >= new DateTime(start.Year, start.Month, 1) && c.Date <= end && c.Date <= DateTime.Now)
-                    .GroupBy(c => new { c.Date.Year, c.Date.Month })
-                    .OrderBy(g => g.Key.Year)
-                    .ThenBy(g => g.Key.Month)
-                    .Select(g => (IConsumption)new ConsumptionData
-                    {
-                        // Erster Tag des jeweiligen Monats
-                        Date = new DateTime(g.Key.Year, g.Key.Month, 1),
-                        Consumption = g.Sum(c => c.Consumption),
-                        Temperature = g.Average(c => c.Temperature)
-                    })
-                    .ToList();
+                return [];
             }
-            #endregion
+
+            var start = supplier.Zeitraum_Start.GetValueOrDefault();
+            var end = supplier.Zeitraum_Ende.GetValueOrDefault();
+
+            if (!HelperMethods.CheckValidDates(start, end) || (end - start).Days < 2)
+            {
+                return [];
+            }
+
+            // 3. KORREKTUR: maxDrop wird hier an die tägliche Berechnung weitergereicht
+            List<IConsumption> consumptions = CalcConsumptionDaily(supplier, counterChanges, counters, maxDrop);
+            if (consumptions.Count == 0)
+            {
+                return [];
+            }
+
+            // 1. Gruppierung in einem einzigen Durchlauf (O(N))
+            // 2. Filtern nach dem relevanten Zeitraum direkt in der Abfrage
+            return [.. consumptions
+                .Where(c => c.Date >= new DateTime(start.Year, start.Month, 1) && c.Date <= end && c.Date <= DateTime.Now)
+                .GroupBy(c => new { c.Date.Year, c.Date.Month })
+                .OrderBy(g => g.Key.Year)
+                .ThenBy(g => g.Key.Month)
+                .Select(g => (IConsumption)new ConsumptionData
+                {
+                    // Erster Tag des jeweiligen Monats
+                    Date = new DateTime(g.Key.Year, g.Key.Month, 1),
+                    Consumption = g.Sum(c => c.Consumption),
+                    Temperature = g.Average(c => c.Temperature)
+                })];
+        }
+        #endregion
 
         #region CalcConsumptionYearly
         /// <summary>
@@ -198,82 +290,131 @@ namespace GWS_Statistics.Calculation
         /// </summary>
         /// <typeparam name="T, U"></typeparam>
         /// <param name="suppliers"></param>
-        /// <returns></returns>
-        public static List<IConsumption> CalcConsumptionYearly<T, U>(List<T>? suppliers, List<U>? counterChanges)
-            where T : ISupplier
-            where U : ICounterChange
+        /// <returns>List<IConsumption></returns>
+        public static List<IConsumption> CalcConsumptionYearly<T, U>(
+                List<T>? suppliers,
+                List<U>? counterChangesAllSuppliers,
+                double maxDrop) // NEU: Dynamisches Limit für die jeweilige Energieform
+                where T : ISupplier
+                where U : ICounterChange
+        {
+            if (suppliers == null || suppliers.Count == 0)
             {
-                if (suppliers == null || suppliers.Count == 0)
-                {
-                    return [];
-                }
-
-                // 1. Performance-Boost: Zählerwechsel einmalig nach Anbieter-ID indexieren (O(M))
-                // Holt direkt pro Anbieter den Wechsel mit dem höchsten alten Zählerstand
-                var counterChangesLookUp = counterChanges?
-                    .Where(cc => cc.Zaehlerstand_alt != null && cc.Zaehlerstand_neu != null)
-                    .GroupBy(cc => cc.Id_Anbieter)
-                    .ToDictionary(
-                        g => g.Key,
-                        g => g.MaxBy(cc => cc.Zaehlerstand_alt)
-                    ) ?? [];
-
-                // Sortierung der Anbieter im Speicher (In-Place)
-                suppliers.Sort((x, y) => x.Id.CompareTo(y.Id));
-
-                List<IConsumption> yearlyConsumptions = [];
-
-                foreach (var supplier in suppliers)
-                {
-                    var start = supplier.Zeitraum_Start.GetValueOrDefault();
-                    var end = supplier.Zeitraum_Ende.GetValueOrDefault();
-
-                    if (!HelperMethods.CheckValidDates(start, end) || (end - start).Days < 2)
-                    {
-                        continue;
-                    }
-
-                    if (supplier.Start_Zaehlerstand == null || supplier.Ende_Zaehlerstand == null)
-                    {
-                        continue;
-                    }
-
-                    double? yearlyCons = 0.0d;
-
-                    if (supplier.Start_Zaehlerstand >= supplier.Ende_Zaehlerstand) // Zählerwechsel vermutet
-                    {
-                        // O(1) statt O(M) durch das Dictionary
-                        if (counterChangesLookUp.TryGetValue(supplier.Id, out var change))
-                        {
-                            yearlyCons = (change?.Zaehlerstand_alt - supplier.Start_Zaehlerstand)
-                                        + (supplier.Ende_Zaehlerstand - change?.Zaehlerstand_neu);
-                        }
-                        else
-                        {
-                            continue; // Kein passender Zählerwechsel hinterlegt -> ignorieren
-                        }
-                    }
-                    else // Normaler Verbrauch ohne Wechsel
-                    {
-                        yearlyCons = supplier.Ende_Zaehlerstand - supplier.Start_Zaehlerstand;
-                    }
-
-                    if (yearlyCons > 2.0d)
-                    {
-                        yearlyConsumptions.Add(new ConsumptionData
-                        {
-                            SupplierId = supplier.Id,
-                            Date = start,
-                            Consumption = yearlyCons,
-                            Temperature = 0.0d
-                        });
-                    }
-                }
-
-                return yearlyConsumptions;
+                return [];
             }
 
-            #endregion
+            // 1. Alle Zählerwechsel hocheffizient nach Anbieter-ID gruppieren
+            var counterChangesLookUp = counterChangesAllSuppliers?
+                .GroupBy(cc => cc.Id_Anbieter)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.ToList()
+                ) ?? [];
+
+            // Sortierung der Anbieter im Speicher (In-Place)
+            suppliers.Sort((x, y) => x.Id.CompareTo(y.Id));
+
+            List<IConsumption> yearlyConsumptions = [];
+
+            foreach (var supplier in suppliers)
+            {
+                var start = supplier.Zeitraum_Start.GetValueOrDefault();
+                var end = supplier.Zeitraum_Ende.GetValueOrDefault();
+
+                if (!HelperMethods.CheckValidDates(start, end) || (end - start).Days < 2)
+                {
+                    continue;
+                }
+
+                if (supplier.Start_Zaehlerstand == null || supplier.Ende_Zaehlerstand == null)
+                {
+                    continue;
+                }
+
+                // 2. Holt die Wechsel-Liste NUR für diesen spezifischen Zeitraum heraus
+                List<U> relevantChanges = [];
+                if (counterChangesLookUp.TryGetValue(supplier.Id, out var allChangesForSupplier))
+                {
+                    relevantChanges = allChangesForSupplier
+                        .Where(cc => cc.Wechsel_Datum >= start && cc.Wechsel_Datum <= end)
+                        .OrderBy(cc => cc.Wechsel_Datum)
+                        .ToList();
+                }
+
+                // 3. Berechnung starten
+                double yearlyCons = 0;
+                double actualCounterStartValue = supplier.Start_Zaehlerstand.Value;
+
+                // Schleife über alle Wechsel innerhalb dieses spezifischen Intervalls
+                foreach (var change in relevantChanges)
+                {
+                    double oldLastCounterValue = change.Zaehlerstand_alt ?? 0;
+                    double newCounterValue = change.Zaehlerstand_neu ?? 0;
+
+                    if (oldLastCounterValue >= actualCounterStartValue)
+                    {
+                        // Normaler Verlauf des alten Zählers bis zum Ausbau
+                        yearlyCons += (oldLastCounterValue - actualCounterStartValue);
+                    }
+                    else
+                    {
+                        // ABSICHERUNG: Zählerüberlauf beim alten Zähler vor dem Ausbau
+                        // (Nutzt hier die dynamische Überlaufbasis basierend auf dem letzten Stand)
+                        double overflowBasis = GetCounterOverflowBasisStatic(actualCounterStartValue);
+                        double calculatedOverflowConsumption = (overflowBasis - actualCounterStartValue) + oldLastCounterValue;
+
+                        // Nur aufaddieren, wenn der Sprung plausibel ist
+                        if (calculatedOverflowConsumption <= maxDrop)
+                        {
+                            yearlyCons += calculatedOverflowConsumption;
+                        }
+                    }
+
+                    // Der Startwert für den nächsten Teilabschnitt ist der neue Stand des eingebauten Zählers
+                    actualCounterStartValue = newCounterValue;
+                }
+
+                // 4. Den Verbrauch des letzten (oder einzigen) Zählers bis zum Intervall-Endstand addieren
+                if (supplier.Ende_Zaehlerstand.Value >= actualCounterStartValue)
+                {
+                    yearlyCons += (supplier.Ende_Zaehlerstand.Value - actualCounterStartValue);
+                }
+                else
+                {
+                    // ABSICHERUNG: Auch am Ende des Intervalls könnte ein Überlauf stattgefunden haben
+                    double overflowBasis = GetCounterOverflowBasisStatic(actualCounterStartValue);
+                    double calculatedOverflowConsumption = (overflowBasis - actualCounterStartValue) + supplier.Ende_Zaehlerstand.Value;
+
+                    if (calculatedOverflowConsumption <= maxDrop)
+                    {
+                        yearlyCons += calculatedOverflowConsumption;
+                    }
+                }
+
+                if (yearlyCons > 2.0d)
+                {
+                    yearlyConsumptions.Add(new ConsumptionData
+                    {
+                        SupplierId = supplier.Id,
+                        Date = start,
+                        Consumption = yearlyCons,
+                        Temperature = 0.0d
+                    });
+                }
+            }
+
+            return yearlyConsumptions;
+        }
+
+        // Kleine statische Hilfsmethode für die statische Klasse, damit GetCounterOverflowBasis funktioniert:
+        private static double GetCounterOverflowBasisStatic(double wert)
+        {
+            if (wert < 10000.0) return 10000.0;
+            if (wert < 100000.0) return 100000.0;
+            if (wert < 1000000.0) return 1000000.0;
+            return 10000000.0;
+        }
+        #endregion
 
         #region CalcPaymentsConsumptions
         /// <summary>
@@ -283,9 +424,9 @@ namespace GWS_Statistics.Calculation
         /// <param name="paymentList"></param>
         /// <param name="counters"></param>
         /// <returns></returns>
-        public static List<IPaymentConsumption> CalcPaymentsConsumptions<T, U>(ISupplier supplier, List<U>? counterChanges, List<GWS_PaymentModel>? paymentList, List<T>? counters)
+        public static List<IPaymentConsumption> CalcPaymentsConsumptions<T, U>(ISupplier supplier, List<U>? counterChanges, List<GWS_PaymentModel>? paymentList, List<T>? counters, double maxDrop)
             where T : ICounter
-            where U : ICounterChange
+            where U : class, ICounterChange
             {
                 if (supplier == null) return [];
 
@@ -302,8 +443,6 @@ namespace GWS_Statistics.Calculation
                     return [];
                 }
 
-            // .Where(x => x.Zahlungsart == "Abschlag" || x.Zahlungsart == "Nachzahlung" || x.Zahlungsart == "Rückvergütung" || x.Zahlungsart == "Endabrechnung")
-
             // 1. Performance-Boost: Zahlungen einmalig nach Jahr/Monat gruppieren und summieren (O(M))
                 var paymentsLookUp = paymentList?
                         .Where(x => x.Zahlungsart != "Bonus") // alle Zahlungen außer Bonus berücksichtigen
@@ -314,7 +453,7 @@ namespace GWS_Statistics.Calculation
                         ) ?? [];
 
                 // 2. Verbräuche holen und direkt nach Jahr/Monat indexieren für eine sichere Zuordnung
-                List<IConsumption> consumptionsMonthly = GWS_Calculation.CalcConsumptionMonthly(supplier, counterChanges, counters);
+                List<IConsumption> consumptionsMonthly = GWS_Calculation.CalcConsumptionMonthly(supplier, counterChanges, counters, maxDrop);
                 var consumptionsLookUp = consumptionsMonthly?
                     .ToDictionary(
                         c => new { c.Date.Year, c.Date.Month },

@@ -628,8 +628,7 @@ else
 
     #region ToolbarBtnClickHandler
     /// <summary>
-    /// ToolbarBtnClickHandler
-    ///
+    /// Toolbar Button Click Handler für das Grid. Behandelt das Exportieren von Daten in Excel oder PDF.
     /// </summary>
     /// <param name="args"></param>
     
@@ -726,7 +725,7 @@ else
 
     #region ActionCompleteHandler
     /// <summary>
-    /// ActionCompleteHandler
+    /// Action Complete Handler für das Grid. Behandelt das Speichern, Bearbeiten und Löschen von Datensätzen.
     /// </summary>
     /// <param name="args"></param>
     public async Task ActionCompleteHandler(ActionEventArgs<Electric_SupplierModel> args)
@@ -895,7 +894,7 @@ else
     /// </summary>
     /// <param name="headerText"></param>
     /// <returns></returns>
-    // Method to get tooltip content dynamically based on HeaderText
+    // Hole den Tooltip-Inhalt basierend auf dem HeaderText. Wenn keine Beschreibung vorhanden ist, wird eine Standardnachricht zurückgegeben.
     public string GetTooltipHeaderText(string headerText)
     {
         return ColumnDescriptions.ContainsKey(headerText) ? ColumnDescriptions[headerText] : "Keine Beschreibung verfügbar";
