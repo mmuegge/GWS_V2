@@ -89,12 +89,15 @@
                 </div>
 
                 @* Gesamtverbrauch *@
-                <div class="col-6 col-xl-3 mb-2">
-                    <div class="control-wrapper">
-                        <label class="control-label fw-bold mb-sm-1 me-1">&#8721-Verbrauch</label>
-                        <SfNumericTextBox TValue="double?" Value="@ConsSum_kWh" Enabled="false" Format="####0.00 kWh"></SfNumericTextBox>
+                @if (DdlInterval != Interval.jährlich)
+                {
+                    <div class="col-6 col-xl-3 mb-2">
+                        <div class="control-wrapper">
+                            <label class="control-label fw-bold mb-sm-1 me-1">&#8721-Verbrauch</label>
+                            <SfNumericTextBox TValue="double?" Value="@ConsSum_kWh" Enabled="false" Format="####0.00 kWh"></SfNumericTextBox>
+                        </div>
                     </div>
-                </div>
+                }
 
                 @* Max/Min Verbrauch *@
                 <div class="col-6 col-xl-3 mb-2">
@@ -114,6 +117,19 @@
                         <div class="control-wrapper">
                             <label class="control-label fw-bold mb-sm-1 me-1">Ø-Temperatur</label>
                             <SfNumericTextBox TValue="double?" Value="@TempAverage" Enabled="false" Format="##0.0 °C"></SfNumericTextBox>
+                        </div>
+                    </div>
+                }
+                else
+                @* Jahr mit höchstem/niedrigstem Verbrauch *@
+                {
+                    <div class="col-6 col-xl-3 mb-2">
+                        <div class="control-wrapper">
+                            <label class="control-label fw-bold mb-sm-1 me-1">Max/Min-Jahr</label>
+                            <SfNumericTextBox TValue="double?" Value="@Year_MaxCons" Enabled="false" Format="####0000"></SfNumericTextBox>
+                            <div class="mt-1">
+                                <SfNumericTextBox TValue="double?" Value="@Year_MinCons" Enabled="false" Format="####0000"></SfNumericTextBox>
+                            </div>
                         </div>
                     </div>
                 }
@@ -301,7 +317,6 @@ else
 </style>
 
 @code {
-    // Variabledeklaration
     #region Variablen
     private bool success = false;
     bool supplierSelectEnabled = true;
@@ -405,6 +420,8 @@ else
     public double? ConsMin_kWh { get; set; } = 0.0;
     public double? ConsMax_kWh { get; set; } = 0.0;
     public double? TempAverage { get; set; } = 0.0;
+    public double? Year_MaxCons { get; set; } = 1990;
+    public double? Year_MinCons { get; set; } = 1990;
 
     private string labelFormat = "N0";
 
@@ -496,16 +513,28 @@ else
             // Alle Requests laufen gleichzeitig
             await Task.WhenAll(counterTask, changeAllTask, changeTask);
 
-            counterList = await counterTask;
-            counterChangeList = await changeTask;
-            counterChangeListAllSuppliers = await changeAllTask;
+            // Ergebnisse sicher auslesen, sortieren und Null-Safe absichern
+            var rawCounters = counterTask.Result;
+            counterList = rawCounters != null
+                ? rawCounters.OrderBy(c => c.Ablesetag).ToList()
+                : [];
+
+            var rawChanges = changeTask.Result;
+            counterChangeList = rawChanges != null
+                ? rawChanges.OrderBy(cc => cc.Wechsel_Datum).ToList()
+                : [];
+
+            // Einmaliges Laden und Sortieren der globalen Gesamtliste für die Jahresansicht
+            var rawAllChanges = changeAllTask.Result;
+            counterChangeListAllSuppliers = rawAllChanges != null
+                ? rawAllChanges.OrderBy(cc => cc.Wechsel_Datum).ToList()
+                : [];
 
             // 4. Verbräuche verarbeiten
-            if (counterList != null && counterList.Count > 0)
+            if (counterList.Count > 0)
             {
-                // Schnelleres Sortieren im Speicher (In-Place)
-                counterList.Sort((x, y) => x.Ablesetag.CompareTo(y.Ablesetag));
-                await Task.Run(() => SelectChartData(DdlInterval));
+                // Hinweis: Sortierung erfolgt jetzt bereits direkt oben via LINQ beim Zuweisen!
+                await SelectChartData(DdlInterval);
             }
             else
             {
@@ -520,7 +549,6 @@ else
         {
             // Spinner sicher ausschalten (auch im Fehlerfall dank 'finally')
             this.spinnerVisibleProperty = false;
-
             StateHasChanged();
         }
     }
@@ -863,6 +891,22 @@ else
         // }
 
         // Kompakte Zuweisung der Tasks via Switch-Expression
+        // Task chartTask = interval switch
+        // {
+        //     Interval.monatlich => GetChartDataMonthly(supplierData, counterList),
+        //     Interval.jährlich => GetChartDataYearly(supplierList),
+        //     _ => GetChartDataDaily(supplierData, counterList) // deckt täglich und default ab
+        // };
+
+        // await chartTask;
+
+        // Vorab-Abfrage für das Laden der Zählerwechsel-Daten (nur bei jährlich)
+        if (interval == Interval.jährlich)
+        {
+            counterChangeList = await gwsP!.LoadDataAsync<Electric_CounterChangeModel>(urlCounterChangeAllSuppliers);
+        }
+
+        // Kompakte Zuordnung und Ausführung der Diagramm-Tasks
         Task chartTask = interval switch
         {
             Interval.monatlich => GetChartDataMonthly(supplierData, counterList),
@@ -880,43 +924,88 @@ else
     /// </summary>
     public void CalcAverageSum()
     {
+        // if (supplierData is null || ChartPointList is null || ChartPointList.Count == 0)
+        // {
+        //     ConsMin_kWh = 0;
+        //     ConsMax_kWh = 0;
+        //     TempAverage = 0;
+        //     return;
+        // }
+        // ConsAverage_kWh = Math.Round(ChartPointList.Average(x => x.Cons_kWh).GetValueOrDefault(), 2);
+
+        // // Berechnung der Summe kWh: Wenn Start- und End-Zählerstand vorhanden, dann Differenz berechnen, ansonsten Summe der Verbrauchswerte
+        // // 1. Früher Abbruch/Sonderfall: Bei jährlich wird die Summe immer geleert
+        // if (DdlInterval == Interval.jährlich)
+        // {
+        //     ConsSum_kWh = null;
+        // }
+        // // 2. Fall A: Beide offiziellen Zählerstände sind vorhanden (Schnelle Perioden-Berechnung)
+        // else if (supplierData?.Ende_Zaehlerstand != null && supplierData?.Start_Zaehlerstand != null)
+        // {
+        //     ConsSum_kWh = CalculatePeriodConsumptionWithChanges(
+        //         supplierData.Start_Zaehlerstand.Value,
+        //         supplierData.Ende_Zaehlerstand.Value,
+        //         counterChangeList ?? new()
+        //     );
+        // }
+        // // 3. Fall B: Zählerstände fehlen -> Berechnung über feinere Tagesdaten (Detaillierte Berechnung)
+        // else
+        // {
+        //     ConsSum_kWh = CalculateTotalConsumption(
+        //         supplierData?.Start_Zaehlerstand ?? 0,
+        //         supplierData?.Zeitraum_Start ?? DateTime.Now,
+        //         counterList ?? new(),
+        //         counterChangeList ?? new()
+        //     );
+        // }
+        // ConsMin_kWh = Math.Round(ChartPointList.Min(x => x.Cons_kWh).GetValueOrDefault(), 2);
+        // ConsMax_kWh = Math.Round(ChartPointList.Max(x => x.Cons_kWh).GetValueOrDefault(), 2);
+        // TempAverage = Math.Round(ChartPointList.Average(x => x.Temp).GetValueOrDefault(), 2);
+
         if (supplierData is null || ChartPointList is null || ChartPointList.Count == 0)
         {
             ConsMin_kWh = 0;
             ConsMax_kWh = 0;
+            ConsSum_kWh = 0;
+            ConsAverage_kWh = 0;
             TempAverage = 0;
+            Year_MaxCons = 1990;
+            Year_MinCons = 1990;
             return;
         }
-        ConsAverage_kWh = Math.Round(ChartPointList.Average(x => x.Cons_kWh).GetValueOrDefault(), 2);
 
-        // Berechnung der Summe kWh: Wenn Start- und End-Zählerstand vorhanden, dann Differenz berechnen, ansonsten Summe der Verbrauchswerte
-        // 1. Früher Abbruch/Sonderfall: Bei jährlich wird die Summe immer geleert
-        if (DdlInterval == Interval.jährlich)
-        {
-            ConsSum_kWh = null;
-        }
-        // 2. Fall A: Beide offiziellen Zählerstände sind vorhanden (Schnelle Perioden-Berechnung)
-        else if (supplierData?.Ende_Zaehlerstand != null && supplierData?.Start_Zaehlerstand != null)
-        {
-            ConsSum_kWh = CalculatePeriodConsumptionWithChanges(
-                supplierData.Start_Zaehlerstand.Value,
-                supplierData.Ende_Zaehlerstand.Value,
-                counterChangeList ?? new()
-            );
-        }
-        // 3. Fall B: Zählerstände fehlen -> Berechnung über feinere Tagesdaten (Detaillierte Berechnung)
-        else
-        {
-            ConsSum_kWh = CalculateTotalConsumption(
-                supplierData?.Start_Zaehlerstand ?? 0,
-                supplierData?.Zeitraum_Start ?? DateTime.Now,
-                counterList ?? new(),
-                counterChangeList ?? new()
-            );
-        }
+        // 1. Allgemeine Durchschnitts-, Min- und Max-Werte direkt aus der Chart-Liste berechnen
+        ConsAverage_kWh = Math.Round(ChartPointList.Average(x => x.Cons_kWh).GetValueOrDefault(), 2);
         ConsMin_kWh = Math.Round(ChartPointList.Min(x => x.Cons_kWh).GetValueOrDefault(), 2);
         ConsMax_kWh = Math.Round(ChartPointList.Max(x => x.Cons_kWh).GetValueOrDefault(), 2);
         TempAverage = Math.Round(ChartPointList.Average(x => x.Temp).GetValueOrDefault(), 2);
+
+        // =========================================================================
+        // SUMMEN-BERECHNUNG (Direkt aus der Liste aggregiert) 
+        // =========================================================================
+
+        // Fall A: Bei jährlich werden die Summen-Felder in der UI immer geleert
+        if (DdlInterval == Interval.jährlich)
+        {
+            ConsSum_kWh = null;
+
+            // Jahr mit dem höchsten Verbrauch
+            Year_MaxCons = ChartPointList
+                .OrderByDescending(x => x.Cons_kWh)
+                .Select(x => x.Date.Year)
+                .FirstOrDefault();
+
+            // Jahr mit dem niedrigsten Verbrauch
+            Year_MinCons = ChartPointList
+                .OrderBy(x => x.Cons_kWh)
+                .Select(x => x.Date.Year)
+                .FirstOrDefault();
+        }
+        // Fall B: Bei täglich / monatlich ziehen wir die echten Summen direkt aus den Chart-Punkten
+        else
+        {
+            ConsSum_kWh = Math.Round(ChartPointList.Sum(x => x.Cons_kWh).GetValueOrDefault(), 2);
+        }
     }
     #endregion
 

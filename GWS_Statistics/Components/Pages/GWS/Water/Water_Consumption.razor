@@ -90,15 +90,18 @@
                 </div>
 
                 @* Gesamtverbrauch *@
-                <div class="col-6 col-xl-3">
-                    <div class="control-wrapper">
-                        <label class="control-label fw-bold mb-sm-1 me-1">&#8721-Verbrauch TW/AW</label>
-                        <SfNumericTextBox TValue="double?" Value="@ConsSum_TW_m3" Enabled="false" Format="####0.00 m³"></SfNumericTextBox>
-                        <div class="mt-1">
-                            <SfNumericTextBox TValue="double?" Value="@ConsSum_AW_m3" Enabled="false" Format="####0.00 m³"></SfNumericTextBox>
+                @if (DdlInterval != Interval.jährlich)
+                {
+                    <div class="col-6 col-xl-3">
+                        <div class="control-wrapper">
+                            <label class="control-label fw-bold mb-sm-1 me-1">&#8721-Verbrauch TW/AW</label>
+                            <SfNumericTextBox TValue="double?" Value="@ConsSum_TW_m3" Enabled="false" Format="####0.00 m³"></SfNumericTextBox>
+                            <div class="mt-1">
+                                <SfNumericTextBox TValue="double?" Value="@ConsSum_AW_m3" Enabled="false" Format="####0.00 m³"></SfNumericTextBox>
+                            </div>
                         </div>
                     </div>
-                </div>
+                }
 
                 @* Max/Min Verbrauch *@
                 <div class="col-6 col-xl-3">
@@ -118,6 +121,19 @@
                         <div class="control-wrapper">
                             <label class="control-label fw-bold mb-sm-1 me-1">Ø-Temperatur</label>
                             <SfNumericTextBox TValue="double?" Value="@TempAverage" Enabled="false" Format="##0.0 °C"></SfNumericTextBox>
+                        </div>
+                    </div>
+                }
+                else
+                @* Jahr mit höchstem/niedrigstem Verbrauch *@
+                {
+                    <div class="col-6 col-xl-3 mb-2">
+                        <div class="control-wrapper">
+                            <label class="control-label fw-bold mb-sm-1 me-1">Max/Min-Jahr</label>
+                            <SfNumericTextBox TValue="double?" Value="@Year_MaxCons" Enabled="false" Format="####0000"></SfNumericTextBox>
+                            <div class="mt-1">
+                                <SfNumericTextBox TValue="double?" Value="@Year_MinCons" Enabled="false" Format="####0000"></SfNumericTextBox>
+                            </div>
                         </div>
                     </div>
                 }
@@ -415,6 +431,8 @@ else
     public double? ConsMin_AW_m3 { get; set; } = 0.0; // Abwasser
     public double? ConsMax_AW_m3 { get; set; } = 0.0; // Abwasser
     public double? TempAverage { get; set; } = 0.0;
+    public int? Year_MaxCons { get; set; } = 1990;
+    public int? Year_MinCons { get; set; } = 1990;
 
     public string labelFormat = "N0";
 
@@ -433,7 +451,7 @@ else
 
     #region OnInitializedAsync
     /// <summary>
-    /// OnInitializedAsync
+    /// Startet die asynchrone Initialisierung der Komponente, lädt die Konfiguration und die Strom-Anbieter-Daten.
     /// </summary>
     /// <returns></returns>
     /// <exception cref="Exception"></exception>
@@ -506,18 +524,6 @@ else
             // Alle Requests laufen gleichzeitig
             await Task.WhenAll(counterTask, changeAllTask, changeTask);
 
-        //     // 4. Verbräuche verarbeiten
-        //     if (counterList != null && counterList.Count > 0)
-        //     {
-        //         counterList.Sort((x, y) => x.Ablesetag.CompareTo(y.Ablesetag));
-        //         await Task.Run(() => SelectChartData(DdlInterval));
-        //     }
-        //     else
-        //     {
-        //         HandleMissingData();
-        //     }
-        // }
-
             // Ergebnisse sicher auslesen, sortieren und Null-Safe absichern
             var rawCounters = counterTask.Result;
             counterList = rawCounters != null
@@ -554,7 +560,6 @@ else
         {
             // Spinner sicher ausschalten (auch im Fehlerfall dank 'finally')
             this.spinnerVisibleProperty = false;
-
             StateHasChanged();
         }
     }
@@ -885,7 +890,6 @@ else
     /// <param name="interval"></param>
     public async Task SelectChartData(Interval interval)
     {
-
         // Vorab-Abfrage für das Laden der Zählerwechsel-Daten (nur bei jährlich)
         if (interval == Interval.jährlich)
         {
@@ -938,6 +942,18 @@ else
         {
             ConsSum_TW_m3 = null;
             ConsSum_AW_m3 = null;
+
+            // Jahr mit dem höchsten Verbrauch ermitteln
+            Year_MaxCons = ChartPointList
+                .OrderByDescending(x => x.Cons_TW_m3)
+                .Select(x => x.Date.Year)
+                .FirstOrDefault();
+
+            // Jahr mit dem niedrigsten Verbrauch ermitteln
+            Year_MinCons = ChartPointList
+                .OrderBy(x => x.Cons_TW_m3)
+                .Select(x => x.Date.Year)
+                .FirstOrDefault();
         }
         // Fall B: Bei täglich / monatlich ziehen wir die echten Summen direkt aus den Chart-Punkten
         else

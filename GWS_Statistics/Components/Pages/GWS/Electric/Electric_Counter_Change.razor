@@ -659,37 +659,6 @@
     }
     #endregion
 
-    // #region ActionBeginHandler
-    // /// <summary>
-    // /// ActionBeginHandler
-    // /// </summary>
-    // /// <param name="args"></param>
-    // public void ActionBeginHandler(ActionEventArgs<Electric_CounterChangeModel> args)
-    // {
-    //     if (args.Data != null)
-    //     {
-    //         if (!args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Save))
-    //         {
-    //             // Add
-    //             if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Add))
-    //             {
-    //                 // Daten aus Dropdown "Anbieter" auslesen und Anbieter-Feld in Grip vorbesetzen
-    //                 args.Data.Id_Anbieter = supplierData!.Id;
-    //                 args.Data.Anbieter = supplierDataList?
-    //                                           .Where(x => x.Id == supplierData.Id)
-    //                                           .Select(a => a.Anbieter)
-    //                                           .FirstOrDefault();
-
-    //             }
-    //             else if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.BeginEdit))
-    //             {
-    //                 DropDownValueSupplier = args.Data.Id_Anbieter;
-    //             }
-    //         }
-    //     }
-    // }
-    // #endregion
-
     #region ActionCompleteHandler
     /// <summary>
     /// ActionCompleteHandler

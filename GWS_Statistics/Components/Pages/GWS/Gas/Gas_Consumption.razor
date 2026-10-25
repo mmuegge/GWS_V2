@@ -75,8 +75,8 @@
         </div>
     </div>
 
-    <div>
     @* Durchschnitt, Summe, Min, Max *@
+    <div>
         <div class="container-fluid bg-color-grey mt-2 pb-2 border">
             <div class="row">
                 @* Durchschnittsverbrauch *@
@@ -91,20 +91,23 @@
                 </div>
 
                 @* Gesamtverbrauch *@
-                <div class="col-6 col-xl-3 mb-2">
-                    <div class="control-wrapper">
-                        <label class="control-label fw-bold mb-sm-1 me-1">&#8721-Verbrauch</label>
-                        <SfNumericTextBox TValue="double?" Value="@ConsSum_kWh" Enabled="false" Format="####0.00 kWh"></SfNumericTextBox>
-                        <div class="mt-1">
-                            <SfNumericTextBox TValue="double?" Value="@ConsSum_m3" Enabled="false" Format="####0.00 m³"></SfNumericTextBox>
+                @if (DdlInterval != Interval.jährlich)
+                {
+                    <div class="col-6 col-xl-3 mb-2">
+                        <div class="control-wrapper">
+                            <label class="control-label fw-bold mb-sm-1 me-1">&#8721-Verbrauch</label>
+                            <SfNumericTextBox TValue="double?" Value="@ConsSum_kWh" Enabled="false" Format="####0.00 kWh"></SfNumericTextBox>
+                            <div class="mt-1">
+                                <SfNumericTextBox TValue="double?" Value="@ConsSum_m3" Enabled="false" Format="####0.00 m³"></SfNumericTextBox>
+                            </div>
                         </div>
                     </div>
-                </div>
+                }
 
                 @* Max/Min Verbrauch *@
                 <div class="col-6 col-xl-3 mb-2">
                     <div class="control-wrapper">
-                        <label class="control-label fw-bold mb-sm-1 me-1">Max/Min</label>
+                        <label class="control-label fw-bold mb-sm-1 me-1">Max/Min-Verbrauch</label>
                         <SfNumericTextBox TValue="double?" Value="@ConsMax_kWh" Enabled="false" Format="####0.00 kWh"></SfNumericTextBox>
                         <div class="mt-1">
                             <SfNumericTextBox TValue="double?" Value="@ConsMin_kWh" Enabled="false" Format="####0.00 kWh"></SfNumericTextBox>
@@ -119,6 +122,19 @@
                         <div class="control-wrapper">
                             <label class="control-label fw-bold mb-sm-1 me-1">Ø-Temperatur</label>
                             <SfNumericTextBox TValue="double?" Value="@TempAverage" Enabled="false" Format="##0.0 °C"></SfNumericTextBox>
+                        </div>
+                    </div>
+                }
+                else
+                @* Jahr mit höchstem/niedrigstem Verbrauch *@
+                {
+                    <div class="col-6 col-xl-3 mb-2">
+                        <div class="control-wrapper">
+                            <label class="control-label fw-bold mb-sm-1 me-1">Max/Min-Jahr</label>
+                            <SfNumericTextBox TValue="double?" Value="@Year_MaxCons" Enabled="false" Format="####0000"></SfNumericTextBox>
+                            <div class="mt-1">
+                                <SfNumericTextBox TValue="double?" Value="@Year_MinCons" Enabled="false" Format="####0000"></SfNumericTextBox>
+                            </div>
                         </div>
                     </div>
                 }
@@ -330,7 +346,6 @@ else
 </style>
 
 @code {
-    // Variabledeklaration
     #region Variablen
     //private const double MAX_PLAUSIBLE_OVERFLOW_DROP = 1000.0;
     private bool success = false;
@@ -440,6 +455,8 @@ else
     public double? ConsMin_kWh { get; set; } = 0;
     public double? ConsMax_kWh { get; set; } = 0;
     public double Factor_kWh { get; set; } = 0;
+    public int? Year_MaxCons { get; set; } = 1990;
+    public int? Year_MinCons { get; set; } = 1990;
     public double? TempAverage { get; set; } = 0;
 
     public string labelFormat = "N0";
@@ -988,6 +1005,8 @@ else
             ConsAverage_kWh = 0;
             ConsAverage_m3 = 0;
             TempAverage = 0;
+            Year_MaxCons = 1990;
+            Year_MinCons = 1990;
             return;
         }
 
@@ -1007,6 +1026,18 @@ else
         {
             ConsSum_kWh = null;
             ConsSum_m3 = null;
+
+            // Jahr mit dem höchsten Verbrauch ermitteln
+            Year_MaxCons = ChartPointList
+                .OrderByDescending(x => x.Cons_kWh)
+                .Select(x => x.Date.Year)
+                .FirstOrDefault();
+
+            // Jahr mit dem niedrigsten Verbrauch ermitteln
+            Year_MinCons = ChartPointList
+            .OrderBy(x => x.Cons_kWh)
+            .Select(x => x.Date.Year)
+            .FirstOrDefault();
         }
         // Fall B: Bei täglich / monatlich ziehen wir die echten Summen direkt aus den Chart-Punkten
         else

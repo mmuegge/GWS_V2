@@ -7,7 +7,7 @@ namespace GWS_Statistics.Calculation
     {
         #region CalcConsumptionDaily
         /// <summary>
-        /// Calculation of daily consumption
+        /// Berechnung des täglichen Verbrauch, Berücksichtigung eines Zählerwechsels
         /// </summary>
         /// <typeparam name="T, U"></typeparam>
         /// <param name="supplier"></param>
@@ -113,11 +113,29 @@ namespace GWS_Statistics.Calculation
                 }
             }
 
-            // Intervalle zwischen den einzelnen Zählerständen abarbeiten
+            // =========================================================================
+            // 4. Hauptberechnung: Intervalle zwischen den einzelnen Zählerständen abarbeiten
+            // =========================================================================
+            double trackingCurrentCons = 0;
+            bool isFirstRunInInterval = true;
+
+            // Test
+            //DateTime lulliDate = new(2026, 10, 20);
+
             for (int i = 0; i < counters.Count; i++)
             {
                 DateTime currentDay = counters[i].Ablesetag.Date;
-                double currentCons = counters[i].Zaehlerstand.GetValueOrDefault();
+
+                //Test
+                //if (counters[i].Ablesetag.Date >= lulliDate)
+                //{
+                //    var lulli = counters[i].Ablesetag.Date;
+                //}
+                // Holt den Zählerstand: Entweder den echten (beim allerersten Start) 
+                // oder den sicher im C#-Arbeitsspeicher mitgeführten Folgewert nach einem Wechsel!
+                double currentCons = isFirstRunInInterval ? counters[i].Zaehlerstand.GetValueOrDefault() : trackingCurrentCons;
+                isFirstRunInInterval = false;
+
                 double temperature = counters[i].Temperatur_aussen ?? 0.0d;
 
                 DateTime nextDay;
@@ -127,12 +145,16 @@ namespace GWS_Statistics.Calculation
                 {
                     nextDay = counters[i + 1].Ablesetag.Date;
                     nextCons = counters[i + 1].Zaehlerstand.GetValueOrDefault();
+
+                    // Standardmäßig bereiten wir den Stand des nächsten Elements vor
+                    trackingCurrentCons = nextCons;
                 }
                 else
                 {
                     // Letzter Eintrag: Bis zum Ende des Lieferanten-Zeitraums rechnen
                     nextDay = endPeriod;
                     nextCons = supplier.Ende_Zaehlerstand ?? currentCons;
+                    trackingCurrentCons = nextCons;
                 }
 
                 int intervalDays = (nextDay - currentDay).Days;
@@ -140,9 +162,8 @@ namespace GWS_Statistics.Calculation
 
                 double intervalCons = 0;
 
-                // Relevanten Zählerwechsel finden, der EXAKT in dieses Urlaubs-/Tagesintervall fällt
+                // Relevanten Zählerwechsel finden, der EXAKT in dieses Intervall fällt
                 U? changeInInterval = null;
-
                 if (counterChanges != null)
                 {
                     changeInInterval = counterChanges
@@ -151,7 +172,7 @@ namespace GWS_Statistics.Calculation
                                            && cc.Wechsel_Datum.Date <= nextDay);
                 }
 
-                // KORREKTUR: Zählerwechsel priorisiert behandeln, wenn die Werte sinken ODER der Tausch-Tag exakt heute stattfindet
+                // Zählerwechsel priorisiert behandeln, wenn Werte sinken ODER der Tausch-Tag exakt heute stattfindet
                 if (changeInInterval != null && (nextCons < currentCons || changeInInterval.Wechsel_Datum.Date == currentDay))
                 {
                     // FALL A: Ein Zählerwechsel fand innerhalb dieses Intervalls statt!
@@ -182,9 +203,9 @@ namespace GWS_Statistics.Calculation
                         if (calculatedOverflow <= maxDrop) intervalCons += calculatedOverflow;
                     }
 
-                    // CRITICAL FIX: Die Zählerstands-Basis des Schleifenobjekts für den Folgetag korrigieren!
-                    // Das verhindert, dass am nächsten Tag das alte Millionen-Minus berechnet wird.
-                    counters[i].Zaehlerstand = nextCons;
+                    // DER ENTSCHEIDENDE FIX: Wir weisen den neuen Wert der getrackten C#-Variable zu!
+                    // Das zwingt die Schleife in der nächsten Runde dazu, mit 'nextCons' (der neuen 0) weiterzurechnen.
+                    trackingCurrentCons = nextCons;
                 }
                 else
                 {
@@ -205,9 +226,9 @@ namespace GWS_Statistics.Calculation
                         }
                         else
                         {
-                            // Tippfehler-Bremse: Wert nullen und Vortag mitschleifen, damit der Fehler nicht wandert
+                            // Tippfehler-Bremse: Wert nullen und alten Stand mitschleifen
                             intervalCons = 0;
-                            counters[i].Zaehlerstand = nextCons;
+                            trackingCurrentCons = currentCons;
                         }
                     }
                 }
@@ -225,15 +246,17 @@ namespace GWS_Statistics.Calculation
                         Temperature = temperature
                     });
                 }
+
             }
 
             return consumptions;
         }
+
         #endregion
 
         #region CalcConsumptionMonthly
         /// <summary>
-        /// Calculation of monthly consumption
+        /// Berechnung des monatlichen Verbrauchs
         /// </summary>
         /// <typeparam name="T, U"></typeparam>
         /// <param name="supplier"></param>
@@ -509,7 +532,7 @@ namespace GWS_Statistics.Calculation
 
         #region ConsumptionData
         /// <summary>
-        /// Klasser Verbrauch
+        /// Klasse Verbrauch
         /// </summary>
         public class ConsumptionData : IConsumption
         {

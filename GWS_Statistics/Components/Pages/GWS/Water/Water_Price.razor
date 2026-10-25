@@ -662,52 +662,6 @@ else
     }
     #endregion
 
-    // #region ActionBeginHandler
-    // /// <summary>
-    // /// ActionBeginHandler
-    // /// </summary>
-    // /// <param name="args"></param>
-    // public void ActionBeginHandler(ActionEventArgs<Water_CostModel> args)
-    // {
-    //     if (args.Data != null)
-    //     {
-    //         if (!args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Save))
-    //         {
-    //             // Add
-    //             if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Add))
-    //             {
-    //                 // Daten aus Dropdown "Anbieter" auslesen und Anbieter-Feld in Grid vorbesetzen
-    //                 args.Data.Id_Anbieter = supplierData!.Id;
-    //                 args.Data.Anbieter = supplierDataList?
-    //                                           .Where(x => x.Id == supplierData.Id)
-    //                                           .Select(a => a.Anbieter)
-    //                                           .FirstOrDefault();
-
-    //                 args.Data.Gueltig_Ab = DateTime.Now;  // das Datum auf Heute setzen
-
-    //                 // letzte Einträge holen und Variable vorbesetzen
-    //                 if (costsList != null && costsList.Any())
-    //                 {
-    //                     var lastCost = costsList?.LastOrDefault();
-    //                     if (lastCost != null)
-    //                     {
-    //                         args.Data.Grundpreis = lastCost.Grundpreis;
-    //                         args.Data.Arbeitspreis = lastCost.Arbeitspreis;  // Trinkwasserpreis
-    //                         args.Data.Abwasserpreis = lastCost.Abwasserpreis;
-    //                         args.Data.Zaehlermiete = lastCost.Zaehlermiete;
-    //                         args.Data.Bemerkung = lastCost.Bemerkung;
-    //                     }
-    //                 }
-    //             }
-    //             else if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.BeginEdit))
-    //             {
-    //                 DropDownValueSupplier = args.Data.Id_Anbieter;
-    //             }
-    //         }
-    //     }
-    // }
-    // #endregion
-
     #region ActionCompleteHandler
     /// <summary>
     /// ActionCompleteHandler
