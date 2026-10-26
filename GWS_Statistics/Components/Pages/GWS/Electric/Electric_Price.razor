@@ -258,7 +258,6 @@
             </GridColumns>
         </SfGrid>
 
-
         @* Spinner für den Export *@
         <SfSpinner Visible="@IsExporting"
                    Label="Datei wird generiert, bitte warten..."
@@ -384,8 +383,6 @@ else
 @code
 {
     #region Variablendeklaration
-    private bool save = false;
-    private bool update = false;
     private bool success = false;
 
     bool spinnerVisibleProperty { get; set; } = false;
@@ -463,7 +460,7 @@ else
 
     #region OnInitializedAsync
     /// <summary>
-    /// Startet die asynchrone Initialisierung der Komponente, lädt die Konfiguration und die Strom-Anbieter-Daten.
+    /// Startet die asynchrone Initialisierung der Komponente, lädt die Konfiguration und die Anbieter-Daten.
     /// </summary>
     /// <returns></returns>
     protected override async Task OnInitializedAsync()
@@ -523,7 +520,6 @@ else
         finally
         {
             // 5. Sicherstellen, dass der Spinner IMMER ausgeblendet wird
-            //await Task.Delay(200);
             this.spinnerVisibleProperty = false;
         }
     }
@@ -531,7 +527,7 @@ else
 
     #region ValueSelectHandler
     /// <summary>
-    /// Auswahl eines Strom-Anbieters aus der Dropdown-Liste. Lädt die entsprechenden Kosten und speichert die Auswahl in den Einstellungen.
+    /// Auswahl eines Anbieters aus der Dropdown-Liste. Lädt die entsprechenden Kosten und speichert die Auswahl in den Einstellungen.
     /// </summary>
     /// <param name="args"></param>
     private async Task ValueSelectHandler(SelectEventArgs<Electric_SupplierDataModel>? args)
@@ -782,7 +778,6 @@ else
             if (isSuccess)
             {
                 ShowToast(true, successMessage);
-                //costsList = await gwsP.LoadDataAsync<Electric_CostModel>(urlCostSupplier);
                 costsList = await gwsP.LoadDataAsync<Electric_CostModel>($"{urlCostSupplier}{supplierData!.Id}");
             }
             else
@@ -816,7 +811,7 @@ else
     }
     #endregion
 
-    #region ShowToastMessage
+    #region ShowToast
     /// <summary>
     /// Anzeige einer Toast-Nachricht basierend auf dem Erfolg oder Misserfolg einer Aktion.
     /// </summary>

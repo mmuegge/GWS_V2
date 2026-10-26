@@ -276,15 +276,15 @@
                 </GridColumn>
             </GridColumns>
         </SfGrid>
-    </div>
 
-    @* Spinner für den Export *@
-    <SfSpinner Visible="@IsExporting"
-               Label="Datei wird generiert, bitte warten..."
-               Type="@SpinnerType.Material"
-               Size="40"
-               CssClass="e-spin-overlay e-custom-color">
-    </SfSpinner>
+        @* Spinner für den Export *@
+        <SfSpinner Visible="@IsExporting"
+                   Label="Datei wird generiert, bitte warten..."
+                   Type="@SpinnerType.Material"
+                   Size="40"
+                   CssClass="e-spin-overlay e-custom-color">
+        </SfSpinner>
+    </div>
 }
 else
 {
@@ -295,6 +295,7 @@ else
                Size="40">
     </SfSpinner>
 }
+
 @* Dialog*@
 <div>
     <SfDialog Target="#target"
@@ -436,6 +437,10 @@ else
     ApiResponse? apiResponse;
 
     private SfGrid<Water_CostModel> sfDataGrid = new();
+
+    private enum GridOperation { None, Add, Edit }
+    private GridOperation currentOperation = GridOperation.None;
+
     private List<Water_SupplierDataModel>? supplierList = new();
 
     private Water_SupplierDataModel? supplierData = new();
@@ -484,237 +489,285 @@ else
 
     #region OnInitializedAsync
     /// <summary>
-    /// OnInitializedAsync
+    /// Startet die asynchrone Initialisierung der Komponente, lädt die Konfiguration und die Anbieter-Daten.
     /// </summary>
     /// <returns></returns>
     protected override async Task OnInitializedAsync()
     {
-        // Spinner
         this.spinnerVisibleProperty = true;
 
-        // MyAppSettings.json auslesen und letzten gespeicherten Anbieter auslesen
-        settings = await GetSetMyAppConfig.GetMyAppSettings.ReadSettingsAsync(myAppSettings);
-
-        gwsP = new GWSProcessor(myHttpClient, settings!.GWSUri);
         try
         {
-            // Anbieterdaten auslesen (nur Anbieter und Id => durch Water_SupplierDataModel)
+            // Einstellungen laden
+            settings = await GetSetMyAppConfig.GetMyAppSettings.ReadSettingsAsync(myAppSettings);
+            gwsP = new GWSProcessor(myHttpClient, settings!.GWSUri);
+
             supplierList = await gwsP.LoadDataAsync<Water_SupplierDataModel>(urlSupplier);
 
-            if (supplierList != null && supplierList.Any()) // prüfen ob es Anbieterdaten gibt
+            // 1. Sichere und saubere Prüfung auf Daten
+            if (supplierList?.Any() == true)
             {
-                // gespeicherten letzten Anbieter auslesen
-                supplierData!.Id = String.IsNullOrEmpty(settings.Supplier_Id!.Water) ? supplierData.Id = supplierList.Max(x => x.Id) : supplierData.Id = Int32.Parse(settings.Supplier_Id.Water);
+                // 2. Doppelte Zuweisung entfernt & sicheres Parsen
+                if (string.IsNullOrEmpty(settings.Supplier_Id?.Water))
+                {
+                    supplierData!.Id = supplierList.Max(x => x.Id);
+                }
+                else if (int.TryParse(settings.Supplier_Id.Water, out int parsedId))
+                {
+                    supplierData!.Id = parsedId;
+                }
 
-                // Anbieter Start-Datum auslesen
-                startDate = supplierList
-                .Where(c => c.Id == supplierData.Id)
-                .Select(c => c.Zeitraum_Start).FirstOrDefault();
-
-                // Anbieter Ende-Datum auslesen
-                endDate = supplierList
-               .Where(c => c.Id == supplierData.Id)
-               .Select(c => c.Zeitraum_Ende).FirstOrDefault();
+                // 3. Nur noch EINMALIGER LINQ-Durchlauf statt dreimal
+                var currentSupplier = supplierList.FirstOrDefault(c => c.Id == supplierData?.Id);
+                if (currentSupplier != null)
+                {
+                    startDate = currentSupplier.Zeitraum_Start;
+                    endDate = currentSupplier.Zeitraum_Ende;
+                }
             }
             else
             {
-                // es gibt keine gültigen Daten der Anbieter
                 supplierData!.Id = 0;
             }
 
-            if (supplierData.Id > 0)
+            // Kosten laden
+            if (supplierData?.Id > 0)
             {
-                // Kosten anbieterabhängig auslesen
-                costsList = await gwsP.LoadDataAsync<Water_CostModel>(urlCostSupplier + Convert.ToString(supplierData.Id));
+                costsList = await gwsP.LoadDataAsync<Water_CostModel>($"{urlCostSupplier}{supplierData.Id}");
 
-                if (costsList == null || !costsList.Any())
+                if (costsList?.Any() != true)
                 {
-                    OpenDialog("Keine Wasser-Preise vorhanden!", "60px", false);
+                    OpenDialog("Keine Wasser-Preise vorhanden!", "60px", "380px", false);
                 }
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw new Exception("Es konnten keine Wasser-Preise geladen werden");
+            // 4. Echte Fehlerursache (Stacktrace) nicht zerstören
+            throw new Exception("Es konnten keine Wasser-Preise geladen werden.", ex);
         }
-
-        // Spinner
-        await Task.Delay(200);
-        this.spinnerVisibleProperty = false;
+        finally
+        {
+            // 5. Sicherstellen, dass der Spinner IMMER ausgeblendet wird
+            this.spinnerVisibleProperty = false;
+        }
     }
     #endregion
 
     #region ValueSelectHandler
     /// <summary>
-    /// Auslesen Ablesetage des neuen ausgewählten Anbieters
+    /// Auswahl eines Anbieters aus der Dropdown-Liste. Lädt die entsprechenden Kosten und speichert die Auswahl in den Einstellungen.
     /// </summary>
     /// <param name="args"></param>
-    private async Task ValueSelectHandler(SelectEventArgs<Water_SupplierDataModel> args)
+    private async Task ValueSelectHandler(SelectEventArgs<Water_SupplierDataModel>? args)
     {
+        // 1. Null-Check für die Event-Argumente
+        if (args?.ItemData == null) return;
+
         supplierData = args.ItemData;
 
         if (supplierData.Id > 0)
         {
-            // Spinner
             this.spinnerVisibleProperty = true;
-            success = await GetSetMyAppConfig.SetMyAppSettings.WriteSettingsAsync(myAppSettings, "Supplier_Id.Water", supplierData.Id.ToString());
 
-            // Start-Zeitpunkt/Ende-Zeitpunkt auslesen
-            startDate = args.ItemData.Zeitraum_Start;
-            endDate = args.ItemData.Zeitraum_Ende;
-
-            costsList = await gwsP!.LoadDataAsync<Water_CostModel>(urlCostSupplier + Convert.ToString(supplierData.Id)); // Daten des neu ausgewählten Anbieter laden
-            if (costsList == null || !costsList.Any())
+            try
             {
-                OpenDialog("Keine Wasser-Preise vorhanden!", "60px", false);
-            }
-            sfDataGrid?.Refresh();
+                // 2. Einstellungen asynchron speichern
+                success = await GetSetMyAppConfig.SetMyAppSettings.WriteSettingsAsync(
+                    myAppSettings,
+                    "Supplier_Id.Water",
+                    supplierData.Id.ToString()
+                );
 
-            // Spinner
-            await Task.Delay(200);
-            this.spinnerVisibleProperty = false;
+                // Direkt aus den validierten Event-Daten auslesen
+                startDate = supplierData.Zeitraum_Start;
+                endDate = supplierData.Zeitraum_Ende;
+
+                // 3. String-Interpolation statt Plus-Operator
+                costsList = await gwsP!.LoadDataAsync<Water_CostModel>($"{urlCostSupplier}{supplierData.Id}");
+
+                if (costsList?.Any() != true)
+                {
+                    OpenDialog("Keine Wasser-Preise vorhanden!", "60px", "380px", false);
+                }
+
+                // 4. Null-Conditional Operator für das Grid-Refresh
+                sfDataGrid?.Refresh();
+            }
+            finally
+            {
+                // 5. Spinner wird IMMER ausgeschaltet – auch bei Fehlern (ohne künstliches Delay)
+                this.spinnerVisibleProperty = false;
+            }
         }
     }
     #endregion
 
     #region ToolbarBtnClickHandler
     /// <summary>
-    /// ToolbarBtnClickHandler
-    ///
+    /// Toolbar Button Click Handler für das Grid. Behandelt das Exportieren von Daten in Excel oder PDF.
     /// </summary>
     /// <param name="args"></param>
-    
+
     // Variable zur Steuerung des Lade - Spinners im UI
     private bool IsExporting { get; set; }
 
     public async Task ToolbarBtnClickHandler(Syncfusion.Blazor.Navigations.ClickEventArgs args)
     {
-        if (args.Item.Id.Contains("_excelexport"))
+        string? itemId = args.Item?.Id;
+        if (string.IsNullOrEmpty(itemId)) return;
+
+        try
         {
-            ExcelExportProperties excelExportProperties = new();
-            excelExportProperties.FileName = $"Wasserkosten_{DateTime.Now.ToString("ddMMyyyy")}.xlsx";
+            // 1. Spinner aktivieren & UI aktualisieren
+            IsExporting = true;
 
-            ExcelTheme Theme = new ExcelTheme();
-            // Header
-            ExcelStyle ThemeStyleHeader = new ExcelStyle()
+            // Test Spinner sichtbar machen
+            // 2. ERZWINGEN, dass Blazor das UI JETZT sofort neu zeichnet
+            // StateHasChanged();
+            // 3. TEST: 3 Sekunden warten, um zu sehen, ob der Spinner auftaucht
+            // await Task.Delay(3000);
+
+            string dateSuffix = DateTime.Now.ToString("ddMMyyyy");
+
+            if (itemId.Contains("_excelexport", StringComparison.OrdinalIgnoreCase))
+            {
+                var excelExportProperties = new ExcelExportProperties
                 {
-                    FontName = "Calibri",
-                    FontSize = 12,
-                    Bold = true,
+                    FileName = $"Wasseranbieter_{dateSuffix}.xlsx",
+                    Theme = new ExcelTheme
+                    {
+                        Header = new ExcelStyle { FontName = "Calibri", FontSize = 12, Bold = true },
+                        Record = new ExcelStyle { FontName = "Calibri", FontSize = 10, Bold = false }
+                    }
                 };
-            Theme.Header = ThemeStyleHeader;
-            // Data
-            ExcelStyle ThemeStyleRecord = new ExcelStyle()
+
+                // 2. Optionale Optimierung: Bestimmte Spalten vor Export verstecken
+                await ToggleActionColumnsAsync(hide: true);
+
+                await sfDataGrid.ExportToExcelAsync(excelExportProperties);
+            }
+            else if (itemId.Contains("_pdfexport", StringComparison.OrdinalIgnoreCase))
+            {
+                var pdfExportProperties = new PdfExportProperties
                 {
-                    FontName = "Calibri",
-                    FontSize = 10,
-                    Bold = false,
+                    IsRepeatHeader = true,
+                    FileName = $"Wasseranbieter_{dateSuffix}.pdf",
+                    PageOrientation = Syncfusion.Blazor.Grids.PageOrientation.Landscape,
+                    Header = new PdfHeader { FromTop = 0, Height = 80, Contents = HeaderContent },
+                    Footer = new PdfFooter { FromBottom = 0, Height = 80, Contents = FooterContent },
+                    Theme = new PdfTheme
+                    {
+                        Header = new PdfThemeStyle { FontColor = "Blue", FontName = "Calibri", FontSize = 8, Bold = true }
+                    }
                 };
-            Theme.Record = ThemeStyleRecord;
 
-            excelExportProperties.Theme = Theme;
+                await ToggleActionColumnsAsync(hide: true);
 
-            await sfDataGrid.ExportToExcelAsync(excelExportProperties);
+                await sfDataGrid.ExportToPdfAsync(pdfExportProperties);
+            }
         }
-        else if (args.Item.Id.Contains("_pdfexport"))
+        catch (Exception ex)
         {
-            PdfExportProperties pdfExportProperties = new();
-            pdfExportProperties.IsRepeatHeader = true;
-            pdfExportProperties.FileName = $"Wasseranbieter_{DateTime.Now.ToString("ddMMyyyy")}.pdf";
-            pdfExportProperties.PageOrientation = Syncfusion.Blazor.Grids.PageOrientation.Landscape;
-
-            PdfHeader pdfHeader = new()
-                {
-                    FromTop = 0,
-                    Height = 80,
-                    Contents = HeaderContent
-                };
-
-            PdfFooter pdfFooter = new()
-                {
-                    FromBottom = 0,
-                    Height = 80,
-                    Contents = FooterContent
-                };
-
-            PdfTheme Theme = new PdfTheme();
-
-            PdfThemeStyle HeaderThemeStyle = new PdfThemeStyle()
-                {
-                    FontColor = "Blue",
-                    FontName = "Calibri",
-                    FontSize = 8,
-                    Bold = true,
-                };
-            Theme.Header = HeaderThemeStyle;
-
-            pdfExportProperties.Theme = Theme;
-
-            pdfExportProperties.Header = pdfHeader;
-            pdfExportProperties.Footer = pdfFooter;
-
-            await sfDataGrid.ExportToPdfAsync(pdfExportProperties);
+            // Hier optionales Logging oder Benutzer-Fehlermeldung integrieren
+            Console.WriteLine($"Export fehlgeschlagen: {ex.Message}");
         }
-        else if (args.Item.Id.Contains("XmlExport"))
+        finally
         {
-            Console.Write("Export to Xml function");        // wird nicht genutzt
+            // 3. Spalten wieder einblenden & Spinner deaktivieren (läuft IMMER durch)
+            await ToggleActionColumnsAsync(hide: false);
+            IsExporting = false;
+        }
+    }
+
+    // Hilfsmethode zum Ein-/Ausblenden von Grid-Spalten (z.B. "Aktionen" oder "Id")
+    private async Task ToggleActionColumnsAsync(bool hide)
+    {
+        // Nutzen Sie die Field-Namen Ihrer Spalten, die nicht exportiert werden sollen
+        var columnsToToggle = new[] { "Id", "Actions" };
+
+        foreach (var field in columnsToToggle)
+        {
+            if (hide)
+            {
+                await sfDataGrid.HideColumnAsync(field);
+            }
+            else
+            {
+                await sfDataGrid.ShowColumnAsync(field);
+            }
         }
     }
     #endregion
 
+
     #region ActionCompleteHandler
     /// <summary>
-    /// ActionCompleteHandler
+    /// Action Complete Handler für das Grid. Behandelt das Speichern, Bearbeiten und Löschen von Datensätzen.
     /// </summary>
     /// <param name="args"></param>
     public async Task ActionCompleteHandler(ActionEventArgs<Water_CostModel> args)
     {
-        if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Save))
+        if (args?.Data is null) return;
+
+        switch (args.RequestType)
         {
-            if (args.Action == "Add")
-            {
-                save = true;
+            case Syncfusion.Blazor.Grids.Action.Save:
                 costData = args.Data;
 
-                OpenDialog("Datensatz speichern ?", "130px", true);
-            }
-            else if (args.Action == "Edit")
-            {
-                update = true;
-                costData = args.Data;
-
-                OpenDialog("Datensatz ändern ?", "130px", true);
-            }
-        }
-        else if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Delete))
-        {
-            if (args.Data.Id == 0)
-            {
-                costsList = await gwsP!.LoadDataAsync<Water_CostModel>(urlCostSupplier + Convert.ToString(supplierData!.Id));
-                if (costsList == null || !costsList.Any())
+                if (args.Action == "Add")
                 {
-                    OpenDialog("Keine Wasser-Preise vorhanden!", "60px", false);
+                    currentOperation = GridOperation.Add;
+                    OpenDialog("Datensatz speichern ?", "130px", "220px", true);
                 }
-            }
-            else
-            {
-                costData = await gwsP!.DeleteDataAsync<Water_CostModel>(urlCost, Convert.ToString(args.Data.Id));
-                ShowToastMessage(true, "Datensatz gelöscht!");
-            }
-            sfDataGrid?.Refresh();
+                else if (args.Action == "Edit")
+                {
+                    currentOperation = GridOperation.Edit;
+                    OpenDialog("Datensatz ändern ?", "130px", "220px", true);
+                }
+                break;
+
+            case Syncfusion.Blazor.Grids.Action.Delete:
+                if (args.Data.Id <= 0)
+                {
+                    if (gwsP is not null)
+                    {
+                        costsList = await gwsP.LoadDataAsync<Water_CostModel>(urlCostSupplier);
+                    }
+                    ShowToast(false, "Datensatz nicht gelöscht!");
+                }
+                else
+                {
+                    if (gwsP is not null)
+                    {
+                        costData = await gwsP.DeleteDataAsync<Water_CostModel>(urlCost, args.Data.Id.ToString());
+                        ShowToast(true, "Datensatz gelöscht!");
+                    }
+                }
+
+                if (sfDataGrid is not null)
+                {
+                    await sfDataGrid.Refresh();
+                }
+                break;
         }
     }
     #endregion
 
     #region CancelClick
     /// <summary>
-    /// CancelClick
+    /// Abbrechen-Button im Dialog wurde geklickt, schließt den Dialog und setzt den aktuellen Operationstyp zurück.
     /// </summary>
     private async void CancelClick()
     {
+        // Schließt den Dialog sofort visuell
         DialogVisible = false;
-        costsList = await gwsP!.LoadDataAsync<Water_CostModel>(urlCostSupplier + Convert.ToString(supplierData!.Id));  // Daten neu laden
-        sfDataGrid?.Refresh();
+
+        // Setzt den aktuellen Operationstyp zurück, um sicherzustellen, dass keine Aktion mehr aussteht
+        currentOperation = GridOperation.None;
+
+        // Setzt die temporären Datenstrukturen zurück, falls diese im Grid gebunden waren
+        costData = null;
     }
     #endregion
 
@@ -722,43 +775,69 @@ else
     /// <summary>
     /// YesClick
     /// </summary>
-    private async void YesClick()
+    private async Task YesClick()
     {
         DialogVisible = false;
 
-        if (save) // Datensatz speichern
+        if (gwsP is null || costData is null || currentOperation == GridOperation.None) return;
+
+        try
         {
-            if (costData != null)
+            bool isSuccess = false;
+            string successMessage = string.Empty;
+            string defaultErrorMessage = "Aktion konnte nicht ausgeführt werden.";
+
+            switch (currentOperation)
             {
-                save = false;
+                case GridOperation.Add:
+                    apiResponse = await gwsP.PostDataAsync<Water_CostModel>(urlCost, costData);
+                    isSuccess = apiResponse?.MyHttpStatusCode == HttpStatusCode.Created;
+                    successMessage = "Datensatz erfolgreich gespeichert!";
+                    defaultErrorMessage = "Datensatz konnte nicht gespeichert werden.";
+                    break;
 
-                apiResponse = await gwsP!.PostDataAsync<Water_CostModel>(urlCost, costData);  // POST
+                case GridOperation.Edit:
+                    string url = $"{urlCost.TrimEnd('/')}/{costData.Id}";
+                    apiResponse = await gwsP.UpdateDataAsync<Water_CostModel>(url, costData);
+                    isSuccess = apiResponse?.MyHttpStatusCode == HttpStatusCode.NoContent;
+                    successMessage = "Datensatz erfolgreich aktualisiert!";
+                    defaultErrorMessage = "Datensatz konnte nicht aktualisiert werden.";
+                    break;
+            }
 
-                if (apiResponse.MyHttpStatusCode == HttpStatusCode.Created)
+            if (isSuccess)
+            {
+                ShowToast(true, successMessage);
+                costsList = await gwsP.LoadDataAsync<Water_CostModel>($"{urlCostSupplier}{supplierData!.Id}");
+            }
+            else
+            {
+                // Dynamische Fehlerursache aus MyResponseString ermitteln
+                string errorMessage = defaultErrorMessage;
+
+                if (apiResponse is not null && !string.IsNullOrWhiteSpace(apiResponse.MyResponseString))
                 {
-                    ShowToastMessage(true, "Datensatz gespeichert (created)!");
-                    costsList = await gwsP!.LoadDataAsync<Water_CostModel>(urlCostSupplier + Convert.ToString(supplierData!.Id));  // Daten neu laden
+                    // Wenn die API direkt Text zurückgibt, nutzen wir ihn.
+                    // Falls es JSON ist (z.B. bei Validierungsfehlern), könnte man es hier parsen.
+                    errorMessage = $"Fehler ({apiResponse.MyHttpStatusCode}): {apiResponse.MyResponseString}";
                 }
-                else
-                {
-                    ShowToastMessage(false, "Datensatz nicht gespeichert!");
-                }
+
+                ShowToast(false, errorMessage);
+            }
+
+            if (sfDataGrid is not null)
+            {
+                await sfDataGrid.Refresh();
             }
         }
-        else if (update) // Datensatz updaten
+        catch (Exception ex)
         {
-            update = false;
-
-            if (costData != null)
-            {
-                string url = urlCost + Convert.ToString(costData.Id);
-
-                apiResponse = await gwsP!.UpdateDataAsync<Water_CostModel>(url, costData);  // Put
-                ShowToastMessage(true, "Datensatz aktualisiert!");
-                costsList = await gwsP!.LoadDataAsync<Water_CostModel>(urlCostSupplier + Convert.ToString(supplierData!.Id));  // Daten neu laden
-            }
+            ShowToast(false, $"Netzwerkfehler: {ex.Message}");
         }
-        sfDataGrid?.Refresh();
+        finally
+        {
+            currentOperation = GridOperation.None;
+        }
     }
     #endregion
 
@@ -774,66 +853,43 @@ else
     }
     #endregion
 
-    #region ShowToastMessage
-    /// <summary>
-    /// ShowToastMessage
-    /// </summary>
-    /// <param name="success"></param>
-    /// <param name="message"></param>
-    /// <returns></returns>
-    private void ShowToastMessage(bool success, string message)
-    {
-        if (success)
-        {
-            ShowToast("Erfolg", message, "e-toast-success", "e-circle-check");
-        }
-        else
-        {
-            ShowToast("Fehler", message, "e-toast-danger", "e-circle-close");
-        }
-    }
-    #endregion
-
     #region ShowToast
     /// <summary>
-    /// ShowToast
+    /// Anzeige einer Toast-Nachricht basierend auf dem Erfolg oder Misserfolg einer Aktion.
+    /// </summary>
     /// </summary>
     /// <param name="title"></param>
     /// <param name="content"></param>
     /// <param name="cssClass"></param>
     /// <param name="icon"></param>
-    private void ShowToast(string title, string content, string cssClass, string icon)
+    private void ShowToast(bool success, string message)
     {
-        this.ToastService.Open(new ToastOption()
-            {
-                Title = title,
-                Content = content,
-                CssClass = cssClass,
-                Icon = icon,
-            });
+        var (title, cssClass, icon) = success switch
+        {
+            true => ("Erfolg", "e-toast-success", "e-circle-check"),
+            false => ("Fehler", "e-toast-danger", "e-circle-close")
+        };
+
+        this.ToastService.Open(new()
+        {
+            Title = title,
+            Content = message ?? string.Empty,
+            CssClass = cssClass,
+            Icon = icon,
+        });
     }
     #endregion
 
     #region GetTooltipContent
     /// <summary>
-    /// GetTooltipContent(string headerText)
+    /// Hole den Tooltip-Inhalt basierend auf dem HeaderText. Wenn keine Beschreibung vorhanden ist, wird eine Standardnachricht zurückgegeben.
     /// </summary>
     /// <param name="headerText"></param>
     /// <returns></returns>
     // Method to get tooltip content dynamically based on HeaderText
     public string GetTooltipContent(string headerText)
     {
-        return ColumnDescriptions.ContainsKey(headerText) ? ColumnDescriptions[headerText] : "No description available.";
-    }
-    #endregion
-
-    #region CloseDialog
-    /// <summary>
-    /// CloseDialog
-    /// </summary>
-    private void CloseDialog()
-    {
-        this.DialogVisible = false;
+        return ColumnDescriptions.ContainsKey(headerText) ? ColumnDescriptions[headerText] : "Keine Beschreibung verfügbar";
     }
     #endregion
 
@@ -841,12 +897,16 @@ else
     /// <summary>
     /// OpenDialog
     /// </summary>
-    private void OpenDialog(string header, string height, bool showButtons)
+    private void OpenDialog(string header, string height = "auto", string width = "500px", bool showButtons = true)
     {
         this.header = header;
         dialogHeight = height;
+        dialogWidth = width;
         showDialogButtons = showButtons;
         this.DialogVisible = true;
+
+        // Erzwingt das Neu-Rendern der UI (wichtig in Blazor für Dialoge)
+        this.StateHasChanged();
     }
     #endregion
 
@@ -856,12 +916,10 @@ else
     /// </summary>
     /// <param name="cost"></param>
     /// <returns></returns>
-    public string GetDialogHeader(Water_CostModel cost)
-    {
-        return cost.Id == 0
-            ? "Kosten: neue Kosten"
-            : "Kosten: " + cost.Gueltig_Ab.ToString("dd.MM.yyyy");
-    }
+    public string GetDialogHeader(Water_CostModel? cost) =>
+       cost is not { Id: > 0 }
+           ? "Kosten: neue Kosten"
+           : $"Kosten: {cost.Gueltig_Ab.ToString("dd.MM.yyyy")}";
     #endregion
 
     #region RowCreatingHandler
@@ -872,26 +930,53 @@ else
     public void RowCreatingHandler(RowCreatingEventArgs<Water_CostModel> args)
     {
         // Daten aus Dropdown "Anbieter" auslesen und Anbieter-Feld in Grid vorbesetzen
-        args.Data.Id_Anbieter = supplierData!.Id;
-        args.Data.Anbieter = supplierList?
-                                    .Where(x => x.Id == supplierData.Id)
-                                    .Select(a => a.Anbieter)
-                                    .FirstOrDefault();
+        // args.Data.Id_Anbieter = supplierData!.Id;
+        // args.Data.Anbieter = supplierList?
+        //                             .Where(x => x.Id == supplierData.Id)
+        //                             .Select(a => a.Anbieter)
+        //                             .FirstOrDefault();
 
-        args.Data.Gueltig_Ab = DateTime.Now;  // das Datum auf Heute setzen
+        // args.Data.Gueltig_Ab = DateTime.Now;  // das Datum auf Heute setzen
 
-        // letzte Einträge holen und Variable vorbesetzen
-        if (costsList != null && costsList.Any())
+        // // letzte Einträge holen und Variable vorbesetzen
+        // if (costsList != null && costsList.Any())
+        // {
+        //     var lastCost = costsList?.LastOrDefault();
+        //     if (lastCost != null)
+        //     {
+        //         args.Data.Grundpreis = lastCost.Grundpreis;
+        //         args.Data.Arbeitspreis = lastCost.Arbeitspreis;  // Trinkwasserpreis
+        //         args.Data.Abwasserpreis = lastCost.Abwasserpreis;
+        //         args.Data.Zaehlermiete = lastCost.Zaehlermiete;
+        //         args.Data.Bemerkung = lastCost.Bemerkung;
+        //     }
+        // }
+
+        if (args?.Data == null) return;
+
+        // 1. Anbieter-Daten direkt zuweisen (Vermeidung von LINQ-Suche auf Listen)
+        if (supplierData != null)
         {
-            var lastCost = costsList?.LastOrDefault();
-            if (lastCost != null)
+            args.Data.Id_Anbieter = supplierData.Id;
+
+            var selectedSupplier = supplierList?.FirstOrDefault(x => x.Id == supplierData.Id);
+            if (selectedSupplier != null)
             {
-                args.Data.Grundpreis = lastCost.Grundpreis;
-                args.Data.Arbeitspreis = lastCost.Arbeitspreis;  // Trinkwasserpreis
-                args.Data.Abwasserpreis = lastCost.Abwasserpreis;
-                args.Data.Zaehlermiete = lastCost.Zaehlermiete;
-                args.Data.Bemerkung = lastCost.Bemerkung;
+                args.Data.Anbieter = selectedSupplier.Anbieter;
             }
+        }
+
+        // 2. Datum auf das aktuelle Datum (ohne Uhrzeit) setzen
+        args.Data.Gueltig_Ab = DateTime.Today;
+
+        // 3. Effizientes Holen des letzten Eintrags (Vermeidung von Any() + LastOrDefault())
+        var lastCost = costsList?.LastOrDefault();
+        if (lastCost != null)
+        {
+            args.Data.Grundpreis = lastCost.Grundpreis;
+            args.Data.Arbeitspreis = lastCost.Arbeitspreis;
+            args.Data.Zaehlermiete = lastCost.Zaehlermiete;
+            args.Data.Bemerkung = lastCost.Bemerkung;
         }
     }
     #endregion
@@ -903,7 +988,10 @@ else
     /// <param name="args"></param>
     public void RowEditingHandler(RowEditingEventArgs<Water_CostModel> args)
     {
-        // copy data
+        // Best Practice: Null-Check für die Argumente und Daten
+        if (args?.Data is null) return;
+
+        // Daten aus Dropdown "Anbieter" auslesen und Anbieter-Feld in Grid vorbesetzen
         DropDownValueSupplier = args.Data.Id_Anbieter;
     }
     #endregion

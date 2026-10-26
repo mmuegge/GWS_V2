@@ -390,7 +390,7 @@ else
             // 4. Diagrammdaten berechnen
             CalcChartData(supplierList, costsList);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             // Tipp: Loggen Sie die Exception 'ex' hier (z.B. ILogger)
             OpenDialog("Keine Strom-Kosten vorhanden!", "60px", "380px", false);
@@ -472,7 +472,7 @@ else
                 OpenDialog("Keine Daten vorhanden!", "60px", "380px", false);
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             // Optional: Hier Fehler protokollieren (z.B. Logger.LogError(ex, "..."))
             OpenDialog("Fehler beim Verarbeiten der Anbieterdaten!", "60px", "380px", false);

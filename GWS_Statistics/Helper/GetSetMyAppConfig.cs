@@ -22,8 +22,17 @@ namespace GWS_Statistics.Helper
             Converters = { new JsonStringEnumConverter() }
         };
 
+        #region class GetMyAppSettings
+        /// <summary>
+        /// 
+        /// </summary>
         public static class GetMyAppSettings
         {
+            /// <summary>
+            ///  Lesen der Einstellungen aus der Config-Datei
+            /// </summary>
+            /// <param name="myConfig"></param>
+            /// <returns></returns>
             public static async Task<MyAppConfigModel?> ReadSettingsAsync(MyAppConfigModel myConfig)
             {
                 // Fallback auf den Standardnamen
@@ -57,6 +66,7 @@ namespace GWS_Statistics.Helper
                 // Allgemeiner Catch-Block entfernt: Fehler fliegen direkt hoch, wodurch der originale Stacktrace perfekt erhalten bleibt.
             }
         }
+        #endregion
 
         #region class SetMyAppSettings
         public static class SetMyAppSettings
@@ -218,5 +228,3 @@ namespace GWS_Statistics.Helper
     }
         #endregion
 }
-
-

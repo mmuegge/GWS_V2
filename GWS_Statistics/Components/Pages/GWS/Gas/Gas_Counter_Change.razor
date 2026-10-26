@@ -566,37 +566,6 @@
     }
     #endregion
 
-    //  #region ActionBeginHandler
-    // /// <summary>
-    // /// ActionBeginHandler
-    // /// </summary>
-    // /// <param name="args"></param>
-    // public void ActionBeginHandler(ActionEventArgs<Gas_CounterChangeModel> args)
-    // {
-    //     if (args.Data != null)
-    //     {
-    //         if (!args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Save))
-    //         {
-    //             // Add
-    //             if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Add))
-    //             {
-    //                 // Daten aus Dropdown "Anbieter" auslesen und Anbieter-Feld in Grip vorbesetzen
-    //                 args.Data.Id_Anbieter = supplierData!.Id;
-    //                 args.Data.Anbieter = supplierDataList?
-    //                                           .Where(x => x.Id == supplierData.Id)
-    //                                           .Select(a => a.Anbieter)
-    //                                           .FirstOrDefault();
-
-    //             }
-    //             else if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.BeginEdit))
-    //             {
-    //                 DropDownValueSupplier = args.Data.Id_Anbieter;
-    //             }
-    //         }
-    //     }
-    // }
-    // #endregion
-
     #region ActionCompleteHandler
     /// <summary>
     /// ActionCompleteHandler
@@ -604,35 +573,47 @@
     /// <param name="args"></param>
     public async Task ActionCompleteHandler(ActionEventArgs<Gas_CounterChangeModel> args)
     {
-        if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Save))
+        // Frühzeitiges Verlassen bei ungültigen Daten (Guard Clause)
+        if (args?.Data == null) return;
+
+        if (args.RequestType == Syncfusion.Blazor.Grids.Action.Save)
         {
-            if (args.Action == "Add")
-            {
-                save = true;
-                counterChangeData = args.Data;
+            counterChangeData = args.Data;
 
-                OpenDialog("Datensatz speichern ?", "130px", "220px", true);
-            }
-            else if (args.Action == "Edit")
+            // Nutzt eine Switch-Expression, um Text und Booleans kompakt zu bestimmen
+            var (isSave, isUpdate, dialogText) = args.Action switch
             {
-                update = true;
-                counterChangeData = args.Data;
+                "Add" => (true, false, "Datensatz speichern ?"),
+                "Edit" => (false, true, "Datensatz ändern ?"),
+                _ => (false, false, null)
+            };
 
-                OpenDialog("Datensatz ändern ?", "130px", "220px", true);
+            if (dialogText != null)
+            {
+                save = isSave;
+                update = isUpdate;
+                OpenDialog(dialogText, "130px", "220px", true);
             }
         }
-        else if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Delete))
+        else if (args.RequestType == Syncfusion.Blazor.Grids.Action.Delete)
         {
             if (args.Data.Id == 0)
             {
-                counterChangeList = await gwsP!.LoadDataAsync<Gas_CounterChangeModel>(urlCounterChangeSupplier + Convert.ToString(supplierData!.Id));
+                // String-Interpolation statt Convert.ToString()
+                counterChangeList = await gwsP!.LoadDataAsync<Gas_CounterChangeModel>($"{urlCounterChangeSupplier}{supplierData!.Id}");
             }
             else
             {
-                counterChangeData = await gwsP!.DeleteDataAsync<Gas_CounterChangeModel>(urlCounterChange, Convert.ToString(args.Data.Id));  // Zählerwechsel löschen
+                // Direktes .ToString() für die ID
+                counterChangeData = await gwsP!.DeleteDataAsync<Gas_CounterChangeModel>(urlCounterChange, args.Data.Id.ToString());
                 ShowToastMessage(true, "Datensatz gelöscht!");
             }
-            SfDataGrid?.Refresh();
+
+            // Sicherer Aufruf über den Null-Conditional-Operator
+            if (SfDataGrid != null)
+            {
+                await SfDataGrid.Refresh();
+            }
         }
     }
     #endregion
