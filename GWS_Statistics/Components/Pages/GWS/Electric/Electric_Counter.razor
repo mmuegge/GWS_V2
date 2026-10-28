@@ -574,20 +574,30 @@ else
     /// <returns></returns>
     protected override async Task OnInitializedAsync()
     {
+        // 1. Spinner sofort aktivieren
         this.spinnerVisibleProperty = true;
 
         try
         {
-            // Einstellungen laden
+            // 2. Konfiguration laden
             settings = await GetSetMyAppConfig.GetMyAppSettings.ReadSettingsAsync(myAppSettings);
+            
+            // 3. Fehlervermeidung: Falls Settings null sind, direkt abbrechen
+            if (settings?.GWSUri == null)
+            {
+                throw new InvalidOperationException("Konfiguration oder GWS-URI konnte nicht geladen werden.");
+            }
+
             gwsP = new GWSProcessor(myHttpClient, settings!.GWSUri);
 
-            supplierList = await gwsP.LoadDataAsync<Electric_SupplierDataModel>(urlSupplier);
+            // 4. Daten asynchron laden
+            var data = await gwsP.LoadDataAsync<Electric_SupplierDataModel>(urlSupplier);
+            supplierList = data?.ToList() ?? new List<Electric_SupplierDataModel>();
 
-            // 1. Sichere und saubere Prüfung auf Daten
+            // 5. Sichere und saubere Prüfung auf Daten
             if (supplierList?.Any() == true)
             {
-                // 2. Doppelte Zuweisung entfernt & sicheres Parsen
+                // 6. Doppelte Zuweisung entfernt & sicheres Parsen
                 if (string.IsNullOrEmpty(settings.Supplier_Id?.Electric))
                 {
                     supplierData!.Id = supplierList.Max(x => x.Id);
@@ -597,7 +607,7 @@ else
                     supplierData!.Id = parsedId;
                 }
 
-                // 3. Nur noch EINMALIGER LINQ-Durchlauf statt dreimal
+                // 7. Nur noch EINMALIGER LINQ-Durchlauf statt dreimal
                 var currentSupplier = supplierList.FirstOrDefault(c => c.Id == supplierData?.Id);
                 if (currentSupplier != null)
                 {
@@ -623,12 +633,12 @@ else
         }
         catch (Exception ex)
         {
-            // 4. Echte Fehlerursache (Stacktrace) nicht zerstören
+            // 8. Echte Fehlerursache (Stacktrace) nicht zerstören
             throw new Exception("Es konnten keine Strom-Zählerstände geladen werden.", ex);
         }
         finally
         {
-            // 5. Sicherstellen, dass der Spinner IMMER ausgeblendet wird
+            // 9. Sicherstellen, dass der Spinner IMMER ausgeblendet wird
             this.spinnerVisibleProperty = false;
         }
     }
