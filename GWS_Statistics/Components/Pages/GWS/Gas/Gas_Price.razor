@@ -37,14 +37,14 @@
             <div class="col-12 col-lg-4 mb-2">
                 <div class="control-wrapper">
                     <label class="control-label fw-bold mb-sm-1 me-1">Start-Datum</label>
-                    <SfDatePicker TValue="DateTime?" Value="@startDate" Min="@MinDate" Format="dd.MM.yyyy" AllowEdit="false" Readonly="true"></SfDatePicker>
+                    <SfDatePicker TValue="DateTime?" Value="@StartDate" Min="@MinDate" Format="dd.MM.yyyy" AllowEdit="false" Readonly="true"></SfDatePicker>
                 </div>
             </div>
 
             <div class="col-12 col-lg-4 mb-2">
                 <div class="control-wrapper">
                     <label class="control-label fw-bold mb-sm-1 me-1">Ende-Datum</label>
-                    <SfDatePicker TValue="DateTime?" Value="@endDate" Min="@MinDate" Format="dd.MM.yyyy" AllowEdit="false" Readonly="true"></SfDatePicker>
+                    <SfDatePicker TValue="DateTime?" Value="@EndDate" Min="@MinDate" Format="dd.MM.yyyy" AllowEdit="false" Readonly="true"></SfDatePicker>
                 </div>
             </div>
         </div>
@@ -445,8 +445,8 @@ else
 
     public DateTime MinDate { get; set; } = new DateTime(1990, 1, 1);
     public DateTime MaxDate { get; set; } = DateTime.Now;
-    public DateTime? startDate { get; set; } = new DateTime(2000, 1, 1);
-    public DateTime? endDate { get; set; } = new DateTime(2000, 1, 1);
+    public DateTime? StartDate { get; set; } = new DateTime(2000, 1, 1);
+    public DateTime? EndDate { get; set; } = new DateTime(2000, 1, 1);
 
     MyAppConfigModel? settings;
 
@@ -512,8 +512,8 @@ else
                 var currentSupplier = supplierList.FirstOrDefault(c => c.Id == supplierData?.Id);
                 if (currentSupplier != null)
                 {
-                    startDate = currentSupplier.Zeitraum_Start;
-                    endDate = currentSupplier.Zeitraum_Ende;
+                    StartDate = currentSupplier.Zeitraum_Start;
+                    EndDate = currentSupplier.Zeitraum_Ende;
                 }
             }
             else
@@ -571,8 +571,8 @@ else
                 );
 
                 // Direkt aus den validierten Event-Daten auslesen
-                startDate = supplierData.Zeitraum_Start;
-                endDate = supplierData.Zeitraum_Ende;
+                StartDate = supplierData.Zeitraum_Start;
+                EndDate = supplierData.Zeitraum_Ende;
 
                 // 3. String-Interpolation statt Plus-Operator
                 costsList = await gwsP!.LoadDataAsync<Gas_CostModel>($"{urlCostSupplier}{supplierData.Id}");
@@ -907,28 +907,6 @@ else
     /// <param name="args"></param>
     public void RowCreatingHandler(RowCreatingEventArgs<Gas_CostModel> args)
     {
-        // // Daten aus Dropdown "Anbieter" auslesen und Anbieter-Feld in Grid vorbesetzen
-        //  args.Data.Id_Anbieter = supplierData!.Id;
-        //  args.Data.Anbieter = supplierList?
-        //                              .Where(x => x.Id == supplierData.Id)
-        //                              .Select(a => a.Anbieter)
-        //                              .FirstOrDefault();
-
-        //  args.Data.Gueltig_Ab = DateTime.Now;  // das Datum auf Heute setzen
-
-        //  // letzte Einträge holen und Variable vorbesetzen
-        //  if (costsList != null && costsList.Any())
-        //  {
-        //      var lastCost = costsList?.LastOrDefault();
-        //      if (lastCost != null)
-        //      {
-        //          args.Data.Grundpreis = lastCost.Grundpreis;
-        //          args.Data.Arbeitspreis = lastCost.Arbeitspreis;
-        //          args.Data.Zaehlermiete = lastCost.Zaehlermiete;
-        //          args.Data.Bemerkung = lastCost.Bemerkung;
-        //      }
-        //  }
-
         if (args?.Data == null) return;
 
         // 1. Anbieter-Daten direkt zuweisen (Vermeidung von LINQ-Suche auf Listen)
