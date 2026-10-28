@@ -34,7 +34,7 @@
             <div class="col-12 col-lg-4 mb-2">
                 <div class="control-wrapper">
                     <label class="control-label fw-bold mb-sm-1 me-1">Anbieter</label>
-                    <SfDropDownList DataSource="@supplierDataList" TItem="Water_SupplierDataModel" TValue="int" Placeholder="Anbieter auswählen" @bind-Value="@supplierData!.Id">
+                    <SfDropDownList DataSource="@supplierList" TItem="Water_SupplierDataModel" TValue="int" Placeholder="Anbieter auswählen" @bind-Value="@supplierData!.Id">
                         <DropDownListFieldSettings Text="Anbieter" Value="Id"></DropDownListFieldSettings>
                         <DropDownListEvents TItem="Water_SupplierDataModel" TValue="int" OnValueSelect="@ValueSelectHandler"></DropDownListEvents>
                     </SfDropDownList>
@@ -59,268 +59,288 @@
 </div>
 
 @* Grid *@
-<div class="control-section" id="target" align="left">
-    <SfGrid ID="Grid" @ref="SfDataGrid" DataSource="@counterList"
-            AllowPaging="true"
-            AllowFiltering="true"
-            AllowReordering="true"
-            AllowResizing="true"
-            AllowExcelExport="true"
-            AllowPdfExport="true"
-            EnableHover="true"
-            AllowTextWrap="true"
-            AllowSelection="true"
-            AllowSorting="true"
-            Height="100%" Width="100%"
-            Toolbar=@toolbar
-            EnableStickyHeader="true">
+@if (counterList != null && counterList.Count > 0)
+{
+    <div class="control-section" id="target" align="left">
+        <SfGrid ID="Grid" @ref="sfDataGrid" DataSource="@counterList"
+        AllowPaging="true"
+        AllowFiltering="true"
+        AllowReordering="true"
+        AllowResizing="true"
+        AllowExcelExport="true"
+        AllowPdfExport="true"
+        EnableHover="true"
+        AllowTextWrap="true"
+        AllowSelection="true"
+        AllowSorting="true"
+        Height="100%" Width="100%"
+        Toolbar=@toolbar
+        EnableStickyHeader="true">
 
-        <GridEditSettings AllowAdding="true"
-                          AllowEditing="true"
-                          AllowDeleting="true"
-                          ShowDeleteConfirmDialog="true"
-                          Mode="EditMode.Dialog"
-                          Dialog="DialogParams">
-            <HeaderTemplate>
+            <GridEditSettings AllowAdding="true"
+                AllowEditing="true"
+                AllowDeleting="true"
+                ShowDeleteConfirmDialog="true"
+                Mode="EditMode.Dialog"
+                Dialog="DialogParams">
+
+                <HeaderTemplate>
                 @{
-                    var DialogHeader = GetDialogHeader((context as Water_CounterModel)!);
-                    <span>@DialogHeader</span>
-                }
-            </HeaderTemplate>
-        </GridEditSettings>
+                        var DialogHeader = GetDialogHeader((context as Water_CounterModel));
+                        <span>@DialogHeader</span>
+                    }
+                </HeaderTemplate>
+            </GridEditSettings>
 
-        <GridEvents OnToolbarClick="ToolbarBtnClickHandler"
-                    RowCreating="RowCreatingHandler"
-                    RowEditing="RowEditingHandler"
-                    OnActionComplete="ActionCompleteHandler"
-                    TValue="Water_CounterModel">
-        </GridEvents>
+            <GridEvents OnToolbarClick="ToolbarBtnClickHandler"
+            RowCreating="RowCreatingHandler"
+            RowEditing="RowEditingHandler"
+            OnActionComplete="ActionCompleteHandler"
+            TValue="Water_CounterModel">
+            </GridEvents>
 
-        <GridPageSettings PageSize="20" PageSizes="true"></GridPageSettings>
-        <GridFilterSettings Type="Syncfusion.Blazor.Grids.FilterType.CheckBox"></GridFilterSettings>
+            <GridPageSettings PageSize="20" PageSizes="true"></GridPageSettings>
+            <GridFilterSettings Type="Syncfusion.Blazor.Grids.FilterType.CheckBox"></GridFilterSettings>
 
-        <GridSortSettings>
-            <GridSortColumns>
-                <GridSortColumn 
+            <GridSortSettings>
+                <GridSortColumns>
+                    <GridSortColumn 
                     Field="Ablesetag" 
                     Direction="SortDirection.Descending">
-                </GridSortColumn>
-            </GridSortColumns>
-        </GridSortSettings>
+                    </GridSortColumn>
+                </GridSortColumns>
+            </GridSortSettings>
 
-        <GridColumns>
-            <GridColumn IsPrimaryKey="true" Field="@nameof(Water_CounterModel.ID_Tag)" Visible="false"
-                        AllowAdding="false"
-                        AllowEditing="false"
-                        AllowSorting="false"
-                        AllowFiltering="false"
-                        Width="35">
-            </GridColumn>
+            <GridColumns>
+                <GridColumn IsPrimaryKey="true" Field="@nameof(Water_CounterModel.ID_Tag)" Visible="false"
+                AllowAdding="false"
+                AllowEditing="false"
+                AllowSorting="false"
+                AllowFiltering="false"
+                Width="35">
+                </GridColumn>
 
-            <GridColumn Field=@nameof(Water_CounterModel.Anbieter)
-                        Width="200"
-                        EditType="EditType.DropDownEdit"
-                        HeaderText=" Anbieter">
+                <GridColumn Field=@nameof(Water_CounterModel.Anbieter)
+                Width="200"
+                EditType="EditType.DropDownEdit"
+                HeaderText=" Anbieter">
 
-                <EditTemplate>
-                    <SfDropDownList Placeholder="Anbieter"
-                                    FloatLabelType="FloatLabelType.Always"
-                                    TValue="int?" 
-                                    TItem="Water_SupplierDataModel"
-                                    DataSource="@supplierDataList" 
-                                    @bind-Value="@DropDownValueSupplier">
+                    <EditTemplate>
+                        <SfDropDownList Placeholder="Anbieter"
+                        FloatLabelType="FloatLabelType.Always"
+                        TValue="int?" 
+                        TItem="Water_SupplierDataModel"
+                        DataSource="@supplierList" 
+                        @bind-Value="@DropDownValueSupplier">
 
-                        <DropDownListFieldSettings Value="Id" Text="Anbieter"></DropDownListFieldSettings>
-                    </SfDropDownList>
-                </EditTemplate>
+                            <DropDownListFieldSettings Value="Id" Text="Anbieter"></DropDownListFieldSettings>
+                        </SfDropDownList>
+                    </EditTemplate>
 
-                <HeaderTemplate>
-                    <SfTooltip Content="@GetTooltipContent("Anbieter")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
-                        <span><b>Anbieter</b></span>
-                    </SfTooltip>
-                </HeaderTemplate>
-            </GridColumn>
+                    <HeaderTemplate>
+                        <SfTooltip Content="@GetTooltipContent("Anbieter")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                            <span><b>Anbieter</b></span>
+                        </SfTooltip>
+                    </HeaderTemplate>
+                </GridColumn>
 
-            <GridColumn Field=@nameof(Water_CounterModel.Ablesetag)
-                        EditType="EditType.DatePickerEdit"
-                        Type="ColumnType.DateTime"
-                        Width="110"
-                        DefaultValue="DateTime.Now"
-                        HeaderText="Datum"
-                        Format="d">
+                <GridColumn Field=@nameof(Water_CounterModel.Ablesetag)
+                EditType="EditType.DatePickerEdit"
+                Type="ColumnType.DateTime"
+                Width="110"
+                DefaultValue="DateTime.Now"
+                HeaderText="Datum"
+                Format="d">
 
-                        <EditTemplate>
-                            <SfDatePicker
-                                Placeholder="Ablesetag"
-                                FloatLabelType="FloatLabelType.Always"
-                                TValue="DateTime"
-                                @bind-Value="@((context as Water_CounterModel)!.Ablesetag)">
+                    <EditTemplate>
+                        <SfDatePicker
+                        Placeholder="Ablesetag"
+                        FloatLabelType="FloatLabelType.Always"
+                        TValue="DateTime"
+                        @bind-Value="@((context as Water_CounterModel)!.Ablesetag)">
 
-                                <DatePickerEvents TValue="DateTime" ValueChange="DayChangedHandler"></DatePickerEvents>
-                            </SfDatePicker>
-                        </EditTemplate>
+                            @* <DatePickerEvents TValue="DateTime" ValueChange="DayChangedHandler"></DatePickerEvents> *@
+                        </SfDatePicker>
+                    </EditTemplate>
 
-                        <HeaderTemplate>
-                            <SfTooltip Content="@GetTooltipContent("Datum")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
-                                <span><b>Datum</b></span>
-                            </SfTooltip>
-                        </HeaderTemplate>
-            </GridColumn>
+                    <HeaderTemplate>
+                        <SfTooltip Content="@GetTooltipContent("Datum")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                            <span><b>Datum</b></span>
+                        </SfTooltip>
+                    </HeaderTemplate>
+                </GridColumn>
 
-            <GridColumn Field=@nameof(Water_CounterModel.Uhrzeit)
+                <GridColumn Field=@nameof(Water_CounterModel.Uhrzeit)
+                Format="HH:mm"
+                Type="Syncfusion.Blazor.Grids.ColumnType.DateTime"
+                Width="110"
+                DefaultValue="DateTime.Now"
+                HeaderText="Uhrzeit">
+
+                    <HeaderTemplate>
+                        <SfTooltip Content="@GetTooltipContent("Uhrzeit")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                            <span><b>Uhrzeit</b></span>
+                        </SfTooltip>
+                    </HeaderTemplate>
+
+                    <EditTemplate>
+                        <SfTimePicker Placeholder="Uhrzeit"
+                        FloatLabelType="FloatLabelType.Always"
+                        TValue="DateTime?"
+                        @bind-Value="@((context as Water_CounterModel)!.Uhrzeit)"
                         Format="HH:mm"
-                        Type="Syncfusion.Blazor.Grids.ColumnType.DateTime"
-                        Width="110"
-                        DefaultValue="DateTime.Now"
-                        HeaderText="Uhrzeit">
+                        CssClass="customdatecss"
+                        ShowClearButton="true">
+                        </SfTimePicker>
+                    </EditTemplate>
+                </GridColumn>
 
-                <HeaderTemplate>
-                    <SfTooltip Content="@GetTooltipContent("Uhrzeit")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
-                        <span><b>Uhrzeit</b></span>
-                    </SfTooltip>
-                </HeaderTemplate>
+                <GridColumn Field=@nameof(Water_CounterModel.Zaehlerstand)
+                Format="0.#### m³"
+                Width="125"
+                HeaderText="Zählerstand Hauptzähler">
 
-                <EditTemplate>
-                    <SfTimePicker Placeholder="Uhrzeit"
-                                  FloatLabelType="FloatLabelType.Always"
-                                  TValue="DateTime?"
-                                  @bind-Value="@((context as Water_CounterModel)!.Uhrzeit)"
-                                  Format="HH:mm"
-                                  CssClass="customdatecss"
-                                  ShowClearButton="true">
-                    </SfTimePicker>
-                </EditTemplate>
-            </GridColumn>
+                    <EditTemplate>
+                        <SfNumericTextBox Placeholder="Zählerstand Hauptzähler"
+                        FloatLabelType="FloatLabelType.Always"
+                        TValue="Double?"
+                        @bind-Value="@((context as Water_CounterModel)!.Zaehlerstand)"
+                        Format="0.#### m³">
+                        </SfNumericTextBox>
+                    </EditTemplate>
 
-            <GridColumn Field=@nameof(Water_CounterModel.Zaehlerstand)
-                        Format="0.#### m³"
-                        Width="125"
-                        HeaderText="Zählerstand Hauptzähler">
+                    <HeaderTemplate>
+                        <SfTooltip Content="@GetTooltipContent("ZS-H")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                            <span><b>ZS-H</b></span>
+                        </SfTooltip>
+                    </HeaderTemplate>
+                </GridColumn>
 
-                <EditTemplate>
-                    <SfNumericTextBox Placeholder="Zählerstand Hauptzähler"
-                                      FloatLabelType="FloatLabelType.Always"
-                                      TValue="Double?"
-                                      @bind-Value="@((context as Water_CounterModel)!.Zaehlerstand)"
-                                      Format="0.#### m³">
-                    </SfNumericTextBox>
-                </EditTemplate>
+                <GridColumn Field=@nameof(Water_CounterModel.Zaehlerstand_aussen)
+                Format="0.### m³"
+                Width="125"
+                HeaderText="Zählerstand Nebenzähler">
 
-                <HeaderTemplate>
-                    <SfTooltip Content="@GetTooltipContent("ZS-H")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
-                        <span><b>ZS-H</b></span>
-                    </SfTooltip>
-                </HeaderTemplate>
-            </GridColumn>
+                    <EditTemplate>
+                        <SfNumericTextBox Placeholder="Zählerstand Nebenzähler"
+                        FloatLabelType="FloatLabelType.Always"
+                        TValue="Double?"
+                        @bind-Value="@((context as Water_CounterModel)!.Zaehlerstand_aussen)"
+                        Format="0.### m³">
+                        </SfNumericTextBox>
+                    </EditTemplate>
 
-            <GridColumn Field=@nameof(Water_CounterModel.Zaehlerstand_aussen)
-                        Format="0.### m³"
-                        Width="125"
-                        HeaderText="Zählerstand Nebenzähler">
+                    <HeaderTemplate>
+                        <SfTooltip Content="@GetTooltipContent("ZS-N")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                            <span><b>ZS-N</b></span>
+                        </SfTooltip>
+                    </HeaderTemplate>
+                </GridColumn>
 
-                <EditTemplate>
-                    <SfNumericTextBox Placeholder="Zählerstand Nebenzähler"
-                                      FloatLabelType="FloatLabelType.Always"
-                                      TValue="Double?"
-                                      @bind-Value="@((context as Water_CounterModel)!.Zaehlerstand_aussen)"
-                                      Format="0.### m³">
-                    </SfNumericTextBox>
-                </EditTemplate>
+                <GridColumn Field=@nameof(Water_CounterModel.Temperatur_aussen)
+                Format="0 °C"
+                Width="110"
+                HeaderText="Temperatur aussen">
 
-                <HeaderTemplate>
-                    <SfTooltip Content="@GetTooltipContent("ZS-N")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
-                        <span><b>ZS-N</b></span>
-                    </SfTooltip>
-                </HeaderTemplate>
-            </GridColumn>
+                    <EditTemplate>
+                        <SfNumericTextBox Placeholder="Temperatur aussen"
+                        FloatLabelType="FloatLabelType.Always"
+                        TValue="double?"
+                        @bind-Value="@temperatureOutside"
+                        Format="0 °C">
+                        </SfNumericTextBox>
+                    </EditTemplate>
 
-            <GridColumn Field=@nameof(Water_CounterModel.Temperatur_aussen)
-                        Format="0 °C"
-                        Width="110"
-                        HeaderText="Temperatur aussen">
+                    <HeaderTemplate>
+                        <SfTooltip Content="@GetTooltipContent("T-a")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                            <span><b>T-a</b></span>
+                        </SfTooltip>
+                    </HeaderTemplate>
+                </GridColumn>
 
-                <EditTemplate>
-                    <SfNumericTextBox Placeholder="Temperatur aussen"
-                                      FloatLabelType="FloatLabelType.Always"
-                                      TValue="double?"
-                                      @bind-Value="@temperatureOutside"
-                                      Format="0 °C">
-                    </SfNumericTextBox>
-                </EditTemplate>
+                <GridColumn Field=@nameof(Water_CounterModel.Temperatur_innen)
+                Format="0 °C"
+                Width="110"
+                HeaderText="Temperatur innen">
 
-                <HeaderTemplate>
-                    <SfTooltip Content="@GetTooltipContent("T-a")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
-                        <span><b>T-a</b></span>
-                    </SfTooltip>
-                </HeaderTemplate>
-            </GridColumn>
+                    <EditTemplate>
+                        <SfNumericTextBox Placeholder="Temperatur innen"
+                        FloatLabelType="FloatLabelType.Always"
+                        TValue="double?"
+                        @bind-Value="@temperatureInside"
+                        Format="0 °C">
+                        </SfNumericTextBox>
+                    </EditTemplate>
 
-            <GridColumn Field=@nameof(Water_CounterModel.Temperatur_innen)
-                        Format="0 °C"
-                        Width="110"
-                        HeaderText="Temperatur innen">
+                    <HeaderTemplate>
+                        <SfTooltip Content="@GetTooltipContent("T-i")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                            <span><b>T-i</b></span>
+                        </SfTooltip>
+                    </HeaderTemplate>
+                </GridColumn>
 
-                <EditTemplate>
-                    <SfNumericTextBox Placeholder="Temperatur innen"
-                                      FloatLabelType="FloatLabelType.Always"
-                                      TValue="double?"
-                                      @bind-Value="@temperatureInside"
-                                      Format="0 °C">
-                    </SfNumericTextBox>
-                </EditTemplate>
+                <GridColumn Field=@nameof(Water_CounterModel.Bemerkungen)
+                Width="300"
+                HeaderText="Bemerkung">
 
-                <HeaderTemplate>
-                    <SfTooltip Content="@GetTooltipContent("T-i")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
-                        <span><b>T-i</b></span>
-                    </SfTooltip>
-                </HeaderTemplate>
-            </GridColumn>
+                    <HeaderTemplate>
+                        <SfTooltip Content="@GetTooltipContent("Bemerkung")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                            <span><b>Bemerkung</b></span>
+                        </SfTooltip>
+                    </HeaderTemplate>
+                </GridColumn>
 
-            <GridColumn Field=@nameof(Water_CounterModel.Bemerkungen)
-                        Width="300"
-                        HeaderText="Bemerkung">
-
-                <HeaderTemplate>
-                    <SfTooltip Content="@GetTooltipContent("Bemerkung")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
-                        <span><b>Bemerkung</b></span>
-                    </SfTooltip>
-                </HeaderTemplate>
-            </GridColumn>
-
-            <GridColumn HeaderText="Funktion" Width="20%" MinWidth="110">
-                <GridCommandColumns>
-                    <GridCommandColumn Type="CommandButtonType.Edit"
-                                       ButtonOption="@(new CommandButtonOptions(){
+                <GridColumn HeaderText="Funktion" Width="20%" MinWidth="110">
+                    <GridCommandColumns>
+                        <GridCommandColumn Type="CommandButtonType.Edit"
+                        ButtonOption="@(new CommandButtonOptions(){
                                                     IconCss="e-icons e-edit",
                                                     CssClass="e-flat"
                                                })">
-                    </GridCommandColumn>
-                    <GridCommandColumn Type="CommandButtonType.Delete"
-                                       ButtonOption="@(new CommandButtonOptions(){
+                        </GridCommandColumn>
+                        <GridCommandColumn Type="CommandButtonType.Delete"
+                        ButtonOption="@(new CommandButtonOptions(){
                                                     IconCss ="e-icons e-delete",
                                                     CssClass="e-flat"
                                                })">
-                    </GridCommandColumn>
-                    <GridCommandColumn Type="CommandButtonType.Save"
-                                       ButtonOption="@(new CommandButtonOptions(){
+                        </GridCommandColumn>
+                        <GridCommandColumn Type="CommandButtonType.Save"
+                        ButtonOption="@(new CommandButtonOptions(){
                                                     IconCss="e-icons e-update",
                                                     CssClass="e-flat"
                                                })">
-                    </GridCommandColumn>
-                    <GridCommandColumn Type="CommandButtonType.Cancel"
-                                       ButtonOption="@(new CommandButtonOptions(){
+                        </GridCommandColumn>
+                        <GridCommandColumn Type="CommandButtonType.Cancel"
+                        ButtonOption="@(new CommandButtonOptions(){
                                                     IconCss="e-icons e-cancel-icon",
                                                     CssClass="e-flat"
                                                })">
-                    </GridCommandColumn>
-                </GridCommandColumns>
-            </GridColumn>
-        </GridColumns>
+                        </GridCommandColumn>
+                    </GridCommandColumns>
+                </GridColumn>
+            </GridColumns>
+        </SfGrid>
 
-    </SfGrid>
-</div>
+        @* Spinner für den Export *@
+        <SfSpinner Visible="@IsExporting"
+                   Label="Datei wird generiert, bitte warten..."
+                   Type="@SpinnerType.Material"
+                   Size="40"
+                   CssClass="e-spin-overlay e-custom-color">
+        </SfSpinner>
+    </div>
+}
+else
+{
+    <SfSpinner @bind-Visible="@spinnerVisibleProperty" 
+               Type="SpinnerType.Tailwind"  
+               CssClass="e-custom-color"
+               Label="Lade Daten..."
+               Size="40">
+    </SfSpinner>
+    
+}
 
-<SfSpinner @bind-Visible="@spinnerVisibleProperty" Type="SpinnerType.Tailwind" Size="40" CssClass="e-custom-color"></SfSpinner>
 
 @* Dialog*@
 <div>
@@ -335,7 +355,7 @@
                 @bind-Visible="@DialogVisible">
 
         <DialogTemplates>
-            <Header>@Header</Header>
+            <Header>@header</Header>
         </DialogTemplates>
 
         <DialogPositionData X="@dialogXValue" Y="@dialogYValue"></DialogPositionData>
@@ -436,27 +456,28 @@
     private bool dayChanged = false; 
 
     readonly string urlSupplier = "wasser/anbieter/";
-    readonly string urlMeter = "wasser/zaehlerstaende/anbieter/";
-    readonly string urlMeterDay = "wasser/zaehlerstand/";
+    readonly string urlCounter = "wasser/zaehlerstaende/anbieter/";
+    readonly string urlCounterDay = "wasser/zaehlerstand/";
 
-    string? Header { get; set; }
-    string? Content { get; set; }
+    string? header { get; set; }
+    string? content { get; set; }
 
     GWSProcessor? gwsP;
     ApiResponse? apiResponse;
 
     LoxoneTemperatures? loxoneTemp = new();
 
+    private SfGrid<Water_CounterModel> sfDataGrid { get; set; } = new();
 
-
-    private SfGrid<Water_CounterModel> SfDataGrid { get; set; } = new();
+    private enum GridOperation { None, Add, Edit }
+    private GridOperation currentOperation = GridOperation.None;
 
     private List<Water_CounterModel>? counterList = null;
     private Water_CounterModel? counterData = new();
 
     private Water_SupplierModel? supplier = new();
 
-    private List<Water_SupplierDataModel>? supplierDataList = null;
+    private List<Water_SupplierDataModel>? supplierList = null;
     private Water_SupplierDataModel? supplierData = new();
 
     private List<object> toolbar = new List<object>() { "Add", "Cancel", "Search", "ExcelExport", "PdfExport" };
@@ -511,276 +532,293 @@
     /// <exception cref="Exception"></exception>
     protected override async Task OnInitializedAsync()
     {
-        int lastSupplierId;
-
-        // Spinner anzeigen bis Daten ausgelesen wurden
         this.spinnerVisibleProperty = true;
 
-        // MyAppSettings.json auslesen und letzten gespeicherten Anbieter auslesen
-        settings = await GetSetMyAppConfig.GetMyAppSettings.ReadSettingsAsync(myAppSettings);
-
-        gwsP = new GWSProcessor(myHttpClient, settings!.GWSUri);
         try
         {
-            // Anbieterdaten auslesen (nur Anbieter und Id => durch Water_SupplierDataModel)
-            supplierDataList = await gwsP.LoadDataAsync<Water_SupplierDataModel>(urlSupplier);
+            // Einstellungen laden
+            settings = await GetSetMyAppConfig.GetMyAppSettings.ReadSettingsAsync(myAppSettings);
+            gwsP = new GWSProcessor(myHttpClient, settings!.GWSUri);
 
-            if (supplierDataList != null && supplierDataList.Any()) // prüfen ob es Anbieterdaten gibt
+            supplierList = await gwsP.LoadDataAsync<Water_SupplierDataModel>(urlSupplier);
+
+            // 1. Sichere und saubere Prüfung auf Daten
+            if (supplierList?.Any() == true)
             {
-                // gespeicherten letzten Anbieter auslesen
-                lastSupplierId = String.IsNullOrEmpty(settings.Supplier_Id!.Water) ? lastSupplierId = supplierDataList.Max(x => x.Id) : lastSupplierId = Int32.Parse(settings.Supplier_Id.Water);
-
-                supplierData = supplierDataList
-                                .Where(s => s.Id == lastSupplierId)
-                                .Select(s => s).FirstOrDefault();
-
-                if (supplierData != null)
+                // 2. Doppelte Zuweisung entfernt & sicheres Parsen
+                if (string.IsNullOrEmpty(settings.Supplier_Id?.Water))
                 {
-                    // Start-Datum auslesen
-                    StartDate = supplierData.Zeitraum_Start;
-                    EndDate = supplierData.Zeitraum_Ende;
+                    supplierData!.Id = supplierList.Max(x => x.Id);
+                }
+                else if (int.TryParse(settings.Supplier_Id.Water, out int parsedId))
+                {
+                    supplierData!.Id = parsedId;
+                }
+
+                // 3. Nur noch EINMALIGER LINQ-Durchlauf statt dreimal
+                var currentSupplier = supplierList.FirstOrDefault(c => c.Id == supplierData?.Id);
+                if (currentSupplier != null)
+                {
+                    StartDate = currentSupplier.Zeitraum_Start;
+                    EndDate = currentSupplier.Zeitraum_Ende;
                 }
             }
             else
             {
-                // es gibt keine gültigen Daten der Anbieter
-                if (supplierData != null)
-                {
-                    supplierData.Id = 0;
-                }
+                supplierData!.Id = 0;
             }
 
-            if (supplierData != null && supplierData.Id > 0)
+            // Zählerstände laden
+            if (supplierData?.Id > 0)
             {
-                // Zählerstände anbieterabhängig auslesen
-                counterList = await gwsP.LoadDataAsync<Water_CounterModel>(urlMeter + Convert.ToString(supplierData.Id));
-                if (counterList == null || !counterList.Any())
+                counterList = await gwsP.LoadDataAsync<Water_CounterModel>(urlCounter + Convert.ToString(supplierData.Id));
+
+                if (counterList?.Any() != true)
                 {
                     OpenDialog("Keine Wasser-Zählerstände vorhanden!", "60px", "380px", false);
                 }
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw new Exception("Es konnten keine Wasser-Zählerstände geladen werden");
+            // 4. Echte Fehlerursache (Stacktrace) nicht zerstören
+            throw new Exception("Es konnten keine Wasser-Zählerstände geladen werden.", ex);
         }
+        finally
+        {
+            // 5. Sicherstellen, dass der Spinner IMMER ausgeblendet wird
+            this.spinnerVisibleProperty = false;
+        }
+    }
+    #endregion
 
-        // Auslesen der akt. Temperaturen von Loxone
-        await ReadLoxoneTemperatures(settings.Loxone!.User, settings.Loxone.Password);
-        temperatureInside = loxoneTemp?.Innentemperatur;
-        temperatureOutside = loxoneTemp?.Aussentemperatur;
+    #region ValueSelectHandler
+    /// <summary>
+    /// Ablesetage des ausgewählten Anbieters auslesen
+    /// </summary>
+    /// <param name="args"></param>
+    private async Task ValueSelectHandler(SelectEventArgs<Water_SupplierDataModel> args)
+    {
+        // 1. Null-Check für die Event-Argumente
+        if (args?.ItemData == null) return;
 
-        #region Spinner
-        await Task.Delay(800);
-        this.spinnerVisibleProperty = false;
-        #endregion
+        supplierData = args.ItemData;
+
+        if (supplierData.Id > 0)
+        {
+            this.spinnerVisibleProperty = true;
+
+            try
+            {
+                // 2. Einstellungen asynchron speichern
+                success = await GetSetMyAppConfig.SetMyAppSettings.WriteSettingsAsync(
+                                    myAppSettings,
+                                    "Supplier_Id.Water",
+                                    supplierData.Id.ToString()
+                );
+
+                // Direkt aus den validierten Event-Daten auslesen
+                StartDate = supplierData.Zeitraum_Start;
+                EndDate = supplierData.Zeitraum_Ende;
+
+                // 3. String-Interpolation statt Plus-Operator
+                counterList = await gwsP!.LoadDataAsync<Water_CounterModel>(urlCounter + Convert.ToString(supplierData.Id));
+
+                if (counterList?.Any() != true)
+                {
+                    OpenDialog("Keine Wasser-Zählerstände vorhanden!", "60px", "380px", false);
+                }
+
+                // 4. Null-Conditional Operator für das Grid-Refresh
+                sfDataGrid?.Refresh();
+            }
+            finally
+            {
+                // 5. Spinner wird IMMER ausgeschaltet – auch bei Fehlern (ohne künstliches Delay)
+                this.spinnerVisibleProperty = false;
+            }
+        }
     }
     #endregion
 
     #region ToolbarBtnClickHandler
     /// <summary>
-    /// ToolbarBtnClickHandler
-    ///
+    /// Toolbar Button Click Handler für das Grid. Behandelt das Exportieren von Daten in Excel oder PDF.
     /// </summary>
     /// <param name="args"></param>
+
+    // Variable zur Steuerung des Lade - Spinners im UI
+    private bool IsExporting { get; set; }
+
     public async Task ToolbarBtnClickHandler(Syncfusion.Blazor.Navigations.ClickEventArgs args)
     {
-        if (args.Item.Id.Contains("_excelexport"))
+        string? itemId = args.Item?.Id;
+        if (string.IsNullOrEmpty(itemId)) return;
+
+        try
         {
-            ExcelExportProperties excelExportProperties = new();
-            excelExportProperties.FileName = $"Gaszaehler_{DateTime.Now.ToString("ddMMyyyy")}.xlsx";
+            // 1. Spinner aktivieren & UI aktualisieren
+            IsExporting = true;
 
-            ExcelTheme Theme = new ExcelTheme();
-            // Header
-            ExcelStyle ThemeStyleHeader = new ExcelStyle()
+            // Test Spinner sichtbar machen
+            // 2. ERZWINGEN, dass Blazor das UI JETZT sofort neu zeichnet
+            // StateHasChanged();
+            // 3. TEST: 3 Sekunden warten, um zu sehen, ob der Spinner auftaucht
+            // await Task.Delay(3000);
+
+            string dateSuffix = DateTime.Now.ToString("ddMMyyyy");
+
+            if (itemId.Contains("_excelexport", StringComparison.OrdinalIgnoreCase))
+            {
+                var excelExportProperties = new ExcelExportProperties
                 {
-                    FontName = "Calibri",
-                    FontSize = 12,
-                    Bold = true,
+                    FileName = $"Wasseranbieter_{dateSuffix}.xlsx",
+                    Theme = new ExcelTheme
+                    {
+                        Header = new ExcelStyle { FontName = "Calibri", FontSize = 12, Bold = true },
+                        Record = new ExcelStyle { FontName = "Calibri", FontSize = 10, Bold = false }
+                    }
                 };
-            Theme.Header = ThemeStyleHeader;
-            // Data
-            ExcelStyle ThemeStyleRecord = new ExcelStyle()
+
+                // 2. Optionale Optimierung: Bestimmte Spalten vor Export verstecken
+                await ToggleActionColumnsAsync(hide: true);
+
+                await sfDataGrid.ExportToExcelAsync(excelExportProperties);
+            }
+            else if (itemId.Contains("_pdfexport", StringComparison.OrdinalIgnoreCase))
+            {
+                var pdfExportProperties = new PdfExportProperties
                 {
-                    FontName = "Calibri",
-                    FontSize = 10,
-                    Bold = false,
+                    IsRepeatHeader = true,
+                    FileName = $"Wasseranbieter_{dateSuffix}.pdf",
+                    PageOrientation = Syncfusion.Blazor.Grids.PageOrientation.Landscape,
+                    Header = new PdfHeader { FromTop = 0, Height = 80, Contents = HeaderContent },
+                    Footer = new PdfFooter { FromBottom = 0, Height = 80, Contents = FooterContent },
+                    Theme = new PdfTheme
+                    {
+                        Header = new PdfThemeStyle { FontColor = "Blue", FontName = "Calibri", FontSize = 8, Bold = true }
+                    }
                 };
-            Theme.Record = ThemeStyleRecord;
 
-            excelExportProperties.Theme = Theme;
+                await ToggleActionColumnsAsync(hide: true);
 
-            await SfDataGrid.ExportToExcelAsync(excelExportProperties);
+                await sfDataGrid.ExportToPdfAsync(pdfExportProperties);
+            }
         }
-        else if (args.Item.Id.Contains("_pdfexport"))
+        catch (Exception ex)
         {
-            PdfExportProperties pdfExportProperties = new();
-            pdfExportProperties.IsRepeatHeader = true;
-            pdfExportProperties.FileName = $"Gasanbieter_{DateTime.Now.ToString("ddMMyyyy")}.pdf";
-            pdfExportProperties.PageOrientation = Syncfusion.Blazor.Grids.PageOrientation.Landscape;
-
-            PdfHeader pdfHeader = new()
-                {
-                    FromTop = 0,
-                    Height = 80,
-                    Contents = HeaderContent
-                };
-
-            PdfFooter pdfFooter = new()
-                {
-                    FromBottom = 0,
-                    Height = 80,
-                    Contents = FooterContent
-                };
-
-            PdfTheme Theme = new PdfTheme();
-
-            PdfThemeStyle HeaderThemeStyle = new PdfThemeStyle()
-                {
-                    FontColor = "Blue",
-                    FontName = "Calibri",
-                    FontSize = 8,
-                    Bold = true,
-                };
-            Theme.Header = HeaderThemeStyle;
-
-            pdfExportProperties.Theme = Theme;
-
-            pdfExportProperties.Header = pdfHeader;
-            pdfExportProperties.Footer = pdfFooter;
-
-            await SfDataGrid.ExportToPdfAsync(pdfExportProperties);
+            // Hier optionales Logging oder Benutzer-Fehlermeldung integrieren
+            Console.WriteLine($"Export fehlgeschlagen: {ex.Message}");
         }
-        else if (args.Item.Id.Contains("XmlExport"))
+        finally
         {
-            Console.Write("Export to Xml function");        // wird nicht genutzt
+            // 3. Spalten wieder einblenden & Spinner deaktivieren (läuft IMMER durch)
+            await ToggleActionColumnsAsync(hide: false);
+            IsExporting = false;
+        }
+    }
+
+    // Hilfsmethode zum Ein-/Ausblenden von Grid-Spalten (z.B. "Aktionen" oder "Id")
+    private async Task ToggleActionColumnsAsync(bool hide)
+    {
+        // Nutzen Sie die Field-Namen Ihrer Spalten, die nicht exportiert werden sollen
+        var columnsToToggle = new[] { "Id", "Actions" };
+
+        foreach (var field in columnsToToggle)
+        {
+            if (hide)
+            {
+                await sfDataGrid.HideColumnAsync(field);
+            }
+            else
+            {
+                await sfDataGrid.ShowColumnAsync(field);
+            }
         }
     }
     #endregion
 
-    // #region ActionBeginHandler
-    // /// <summary>
-    // /// ActionBeginHandler
-    // /// </summary>
-    // /// <param name="args"></param>
-    // public void ActionBeginHandler(ActionEventArgs<Water_CounterModel> args)
-    // {
-    //     // not save
-    //     if (!args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Save))
-    //     {
-    //         // Add
-    //         if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Add))
-    //         {
-    //             if (DropDownValueSupplier == 0)
-    //             {
-    //                 if ((supplierDataList != null) && (supplierDataList.Count > 0))
-    //                 {
-    //                     DropDownValueSupplier = supplierData.Id; // ausgewählter Anbieter über Auswahlbox einlesen
-    //                 }
-    //             }
-    //         }
-    //         // Edit
-    //         else if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.BeginEdit))
-    //         {
-    //             DropDownValueSupplier = args.Data.ID_Anbieter;
-    //             temperatureOutside = args.Data.Temperatur_aussen;
-    //             temperatureInside = args.Data.Temperatur_innen;
-    //         }
-    //     }
-    // }
-    // #endregion
-
     #region ActionCompleteHandler
     /// <summary>
-    /// ActionCompleteHandler
+    /// Action Complete Handler für das Grid. Behandelt das Speichern, Bearbeiten und Löschen von Datensätzen.
     /// </summary>
     /// <param name="args"></param>
     public async Task ActionCompleteHandler(ActionEventArgs<Water_CounterModel> args)
     {
-        if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Save))
+        if (args?.Data is null) return;
+
+        switch (args.RequestType)
         {
-            if (args.Action == "Add")
-            {
-                save = true;
+            case Syncfusion.Blazor.Grids.Action.Save:
+                counterData = args.Data;
 
-                counterData = args?.Data;
-
-                // 1. Crash-Schutz: Wenn keine Daten da sind, sofort abbrechen
-                if (counterData == null) return;
-
-                // 2. Ablesetag auf 00:00:00 Uhr setzen
-                counterData.Ablesetag = counterData.Ablesetag.Date;
-
-                // 3. Uhrzeit korrigieren (Kombiniert das Datum vom Ablesetag mit der reinen Uhrzeit)
-                var timeOfDay = counterData.Uhrzeit.GetValueOrDefault().TimeOfDay;
-                counterData.Uhrzeit = counterData.Ablesetag.Add(timeOfDay);
-
-                // Loxone-Temperaturen schreiben
-                counterData.Temperatur_aussen = temperatureOutside; // Loxone Temperatur Aussen aus SfNumericTextbox auslesen
-                counterData.Temperatur_innen = temperatureInside; // Temperatur Innen aus SfNumericTextbox auslesen
-
-                // Anbieterdaten schreiben
-                if (DropDownValueSupplier != null)
+                if (args.Action == "Add")
                 {
-                    counterData.ID_Anbieter = Convert.ToInt32(DropDownValueSupplier);
+                    currentOperation = GridOperation.Add;
+                    OpenDialog("Datensatz speichern ?", "130px", "220px", true);
+                }
+                else if (args.Action == "Edit")
+                {
+                    currentOperation = GridOperation.Edit;
+                    OpenDialog("Datensatz ändern ?", "130px", "220px", true);
+                }
+                break;
 
-                    if (counterData.ID_Anbieter != 0)
+            case Syncfusion.Blazor.Grids.Action.Delete:
+                if (args.Data.ID_Tag <= 0)
+                {
+                    if (gwsP is not null)
                     {
-                        string? supplierName = supplierDataList?.Where(x => x.Id == counterData.ID_Anbieter)
-                                                                .Select(a => a.Anbieter)
-                                                                .FirstOrDefault();
-                        counterData.Anbieter = (supplierName != null) ? supplierName : "unbekannt";    // Anbietername auslesen oder auf "unbekannt" setzen
+                        counterList = await gwsP.LoadDataAsync<Water_CounterModel>(urlCounter);
+                    }
+                    ShowToast(false, "Datensatz nicht gelöscht!");
+                }
+                else
+                {
+                    if (gwsP is not null)
+                    {
+                        counterData = await gwsP.DeleteDataAsync<Water_CounterModel>(urlCounter, args.Data.ID_Tag.ToString());
+                        ShowToast(true, "Datensatz gelöscht!");
                     }
                 }
 
-                OpenDialog("Datensatz speichern ?", "130px", "220px", true);
-            }
-            else if (args.Action == "Edit")
-            {
-                if (DropDownValueSupplier != null && DropDownValueSupplier!= args.Data.ID_Anbieter)
+                if (sfDataGrid is not null)
                 {
-                    args.Data.ID_Anbieter = DropDownValueSupplier.GetValueOrDefault();
-                    string? supplierName = supplierDataList?.Where(x => x.Id == DropDownValueSupplier)
-                                                                .Select(a => a.Anbieter)
-                                                                .FirstOrDefault();
-                    args.Data.Anbieter = supplierName;
+                    await sfDataGrid.Refresh();
                 }
-                
-                update = true;
-                counterData = args.Data;
-                OpenDialog("Datensatz ändern ?", "130px", "220px", true);
-            }
-        }
-        else if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Delete))
-        {
-            if (args.Data?.ID_Tag == 0)
-            {
-                counterList = await gwsP!.LoadDataAsync<Water_CounterModel>(urlMeter + Convert.ToString(supplierData!.Id));
-                ShowToastMessage(false, "Datensatz nicht gelöscht!");
-            }
-            else
-            {
-                // Datensatz löschen
-                // Ablesetag für DELETE formatieren URL : 2021.10.24
-                string readingDay = $"{args.Data.Ablesetag.Year}.{args.Data.Ablesetag.Month}.{args.Data.Ablesetag.Day}";
-                counterData = await gwsP!.DeleteDataAsync<Water_CounterModel>(urlMeterDay, readingDay);
-                ShowToastMessage(true, "Datensatz gelöscht!");
-            }
-            SfDataGrid?.Refresh();
+                break;
         }
     }
     #endregion
 
     #region CancelClick
     /// <summary>
-    /// CancelClick
+    /// Abbrechen-Button im Dialog wurde geklickt, schließt den Dialog und setzt den aktuellen Operationstyp zurück.
     /// </summary>
     private async Task CancelClick()
     {
+        // Schließt den Dialog sofort visuell
         DialogVisible = false;
-        dayChanged = false;
-        counterList = await gwsP!.LoadDataAsync<Water_CounterModel>(urlMeter + Convert.ToString(supplierData!.Id));  // Daten neu laden
-        SfDataGrid?.Refresh();
+
+        // Setzt den aktuellen Operationstyp zurück, um sicherzustellen, dass keine Aktion mehr aussteht
+        currentOperation = GridOperation.None;
+
+        // 3. Setzt die temporäre Datenstruktur zurück
+        counterData = null;
+
+        // 4. DIE RETTUNG: Daten frisch von der API laden, um die UI-Änderungen zu verwerfen
+        if (gwsP is not null && supplierData is not null)
+        {
+            // Nutzen Sie hier die URL-Variable, die Sie auch beim initialen Laden verwenden (z.B. urlCounter)
+            // Lädt gezielt die Zählerstände für den aktuell ausgewählten Anbieter neu
+            counterList = await gwsP.LoadDataAsync<Water_CounterModel>($"{urlCounter}{supplierData.Id}");
+        }
+
+        // 5. Grid zwingen, die frischen Daten anzuzeigen
+        if (sfDataGrid is not null)
+        {
+            await sfDataGrid.Refresh();
+        }
     }
     #endregion
 
@@ -792,129 +830,106 @@
     {
         DialogVisible = false;
 
-        if (save) // Datensatz speichern
-        {
-            save = false;
-            if (counterData != null)
-            {
-                apiResponse = await gwsP!.PostDataAsync<Water_CounterModel>(urlMeterDay, counterData);  // POST
+        if (gwsP is null || counterData is null || currentOperation == GridOperation.None) return;
 
-                if (apiResponse.MyHttpStatusCode == HttpStatusCode.Created)
+        try
+        {
+            bool isSuccess = false;
+            string successMessage = string.Empty;
+            string defaultErrorMessage = "Aktion konnte nicht ausgeführt werden.";
+
+            switch (currentOperation)
+            {
+                case GridOperation.Add:
+                    apiResponse = await gwsP.PostDataAsync<Water_CounterModel>(urlCounterDay, counterData);
+                    isSuccess = apiResponse?.MyHttpStatusCode == HttpStatusCode.Created;
+                    successMessage = "Datensatz erfolgreich gespeichert!";
+                    defaultErrorMessage = "Datensatz konnte nicht gespeichert werden.";
+                    break;
+
+                case GridOperation.Edit:
+                    string url = $"{urlCounterDay.TrimEnd('/')}/id/{counterData.ID_Tag}";
+                    apiResponse = await gwsP.UpdateDataAsync<Water_CounterModel>(url, counterData);
+                    isSuccess = apiResponse?.MyHttpStatusCode == HttpStatusCode.NoContent;
+                    successMessage = "Datensatz erfolgreich aktualisiert!";
+                    defaultErrorMessage = "Datensatz konnte nicht aktualisiert werden.";
+                    break;
+            }
+
+            if (isSuccess)
+            {
+                ShowToast(true, successMessage);
+                counterList = await gwsP.LoadDataAsync<Water_CounterModel>($"{urlCounter}{supplierData!.Id}");
+            }
+            else
+            {
+                // Dynamische Fehlerursache aus MyResponseString ermitteln
+                string errorMessage = defaultErrorMessage;
+
+                if (apiResponse is not null && !string.IsNullOrWhiteSpace(apiResponse.MyResponseString))
                 {
-                    ShowToastMessage(true, "Datensatz gespeichert (created)!");
-                    counterList = await gwsP.LoadDataAsync<Water_CounterModel>(urlMeter + Convert.ToString(supplierData!.Id));
+                    // Wenn die API direkt Text zurückgibt, nutzen wir ihn.
+                    // Falls es JSON ist (z.B. bei Validierungsfehlern), könnte man es hier parsen.
+                    errorMessage = $"Fehler ({apiResponse.MyHttpStatusCode}): {apiResponse.MyResponseString}";
                 }
-                else
+
+                ShowToast(false, errorMessage);
+
+                // WICHTIG: Wenn das EDITIEREN fehlschlägt, müssen wir die manipulierten
+                // RAM-Objekte im Grid ebenfalls mit den alten Serverdaten überschreiben!
+                if (currentOperation == GridOperation.Edit)
                 {
-                    ShowToastMessage(false, "Datensatz nicht gespeichert!");
+                    counterList = await gwsP.LoadDataAsync<Water_CounterModel>($"{urlCounter}{supplierData!.Id}");
                 }
             }
-        }
-        else if (update) // Datensatz updaten
-        {
-            update = false;
 
-            if (counterData != null)
+            if (sfDataGrid is not null)
             {
-                if (dayChanged)
-                {
-                    counterData.Uhrzeit = new DateTime(counterData.Ablesetag.Year, counterData.Ablesetag.Month, counterData.Ablesetag.Day, counterData.Uhrzeit!.Value.Hour, counterData.Uhrzeit!.Value.Minute,0);
-                    dayChanged = false;
-                }
-                // Format Ablesetag : 2021.10.24
-                //string readingDay = $"{counterData.Ablesetag.Year}.{counterData.Ablesetag.Month}.{counterData.Ablesetag.Day}";
-                string readingDayId = $"{counterData.ID_Tag}";
-                string url = urlMeterDay + "id/" + readingDayId;
-
-                apiResponse = await gwsP!.UpdateDataAsync<Water_CounterModel>(url, counterData);  // Put
-                if (apiResponse.MyHttpStatusCode == HttpStatusCode.NoContent)
-                {
-                    ShowToastMessage(true, "Datensatz aktualisiert!");
-                }
-                else if (apiResponse.MyHttpStatusCode == HttpStatusCode.NotFound)
-                {
-                    ShowToastMessage(false, $"Datensatz nicht vorhanden! ({readingDayId})");
-                    counterList = await gwsP.LoadDataAsync<Water_CounterModel>(urlMeter + Convert.ToString(supplierData!.Id));
-                }
+                await sfDataGrid.Refresh();
             }
         }
-        dayChanged = false;
-        SfDataGrid?.Refresh();
-    }
-    #endregion
-
-    #region ValueSelectHandler
-    /// <summary>
-    /// Ablesetage des ausgewählten Anbieters auslesen
-    /// </summary>
-    /// <param name="args"></param>
-    private async Task ValueSelectHandler(SelectEventArgs<Water_SupplierDataModel> args)
-    {
-        supplierData = args.ItemData;
-
-        if (supplierData.Id > 0)
+        catch (Exception ex)
         {
-            // Spinner
-            this.spinnerVisibleProperty = true;
+            ShowToast(false, $"Netzwerkfehler: {ex.Message}");
 
-            success = await GetSetMyAppConfig.SetMyAppSettings.WriteSettingsAsync(myAppSettings, "Supplier_Id.Water", supplierData.Id.ToString());
-
-            // Start-Zeitpunkt/Ende-Zeitpunkt auslesen
-            StartDate = args.ItemData.Zeitraum_Start ?? DateTime.Now;
-            EndDate = args.ItemData.Zeitraum_Ende ?? DateTime.Now;
-
-            counterList = await gwsP!.LoadDataAsync<Water_CounterModel>(urlMeter + Convert.ToString(supplierData.Id)); // Daten des neu ausgewählten Anbieter laden
-            if (counterList == null || !counterList.Any())
+            // Auch bei einem Netzwerkfehler während des Edtierens das Grid zurücksetzen
+            if (currentOperation == GridOperation.Edit && supplierData is not null)
             {
-                OpenDialog("Keine Wasser-Zählerstände vorhanden!", "60px", "380px", false);
+                counterList = await gwsP.LoadDataAsync<Water_CounterModel>($"{urlCounter}{supplierData.Id}");
+                if (sfDataGrid is not null) await sfDataGrid.Refresh();
             }
-           
-            SfDataGrid?.Refresh();
-
-            // Spinner
-            await Task.Delay(200);
-            this.spinnerVisibleProperty = false;
         }
-    }
-    #endregion
-
-    #region ShowToastMessage
-    /// <summary>
-    /// ShowToastMessage
-    /// </summary>
-    /// <param name="success"></param>
-    /// <param name="message"></param>
-    /// <returns></returns>
-    private void ShowToastMessage(bool success, string message)
-    {
-        if (success)
+        finally
         {
-            ShowToast("Erfolg!", message, "e-toast-success", "e-circle-check");
-        }
-        else
-        {
-            ShowToast("Fehler!", message, "e-toast-danger", "e-circle-close");
+            currentOperation = GridOperation.None;
+            counterData = null; // Sauber den Zustand nullen
         }
     }
     #endregion
 
     #region ShowToast
     /// <summary>
-    /// ShowToast
+    /// Anzeige einer Toast-Nachricht basierend auf dem Erfolg oder Misserfolg einer Aktion.
     /// </summary>
     /// <param name="title"></param>
     /// <param name="content"></param>
     /// <param name="cssClass"></param>
     /// <param name="icon"></param>
-    private void ShowToast(string title, string content, string cssClass, string icon)
+    private void ShowToast(bool success, string message)
     {
-        this.ToastService.Open(new ToastOption()
-            {
-                Title = title,
-                Content = content,
-                CssClass = cssClass,
-                Icon = icon,
-            });
+        var (title, cssClass, icon) = success switch
+        {
+            true => ("Erfolg", "e-toast-success", "e-circle-check"),
+            false => ("Fehler", "e-toast-danger", "e-circle-close")
+        };
+
+        this.ToastService.Open(new()
+        {
+            Title = title,
+            Content = message ?? string.Empty,
+            CssClass = cssClass,
+            Icon = icon,
+        });
     }
     #endregion
 
@@ -941,17 +956,17 @@
     /// <returns></returns>
     public string GetTooltipContent(string headerText)
     {
-        return ColumnDescriptions.ContainsKey(headerText) ? ColumnDescriptions[headerText] : "No description available.";
+        return ColumnDescriptions.ContainsKey(headerText) ? ColumnDescriptions[headerText] : "Keine Beschreibung vorhanden";
     }
     #endregion
 
     #region OpenDialog
     /// <summary>
-    /// CloseDialog
+    /// OpenDialog
     /// </summary>
     private void OpenDialog(string header, string height, string width, bool showButtons)
     {
-        Header = header;
+        this.header = header;
         dialogHeight = height;
         dialogWidth = width;
         showDialogButtons = showButtons;
@@ -961,16 +976,14 @@
 
     #region GetDialogHeader
     /// <summary>
-    /// GetDialogHeader
+    /// Dialog-Header generieren. Wenn kein Kostenmodell vorhanden ist, wird ein Standardtext angezeigt.
     /// </summary>
     /// <param name="counter"></param>
     /// <returns></returns>
-    public string GetDialogHeader(Water_CounterModel counter)
-    {
-        return counter.ID_Tag == 0
-            ? "Ablesetag: neuer Tag"
-            : "Ablesetag: " + counter.Ablesetag.ToString("dd.MM.yyyy");
-    }
+    public string GetDialogHeader(Water_CounterModel? counter) =>
+       counter is not { ID_Tag: > 0 }
+           ? "Ablesetag: neuer Tag"
+           : $"Ablesetag: {counter.Ablesetag.ToString("dd.MM.yyyy")}";
     #endregion
 
     #region RowCreatingHandler
@@ -980,11 +993,45 @@
     /// <param name="args"></param>
     public void RowCreatingHandler(RowCreatingEventArgs<Water_CounterModel> args)
     {
-            if(supplierData != null)
-            {
-                // copy data
-                DropDownValueSupplier = supplierData.Id;
-            }
+        // Best Practice: Sicherer Null-Check
+        if (args?.Data is null) return;
+
+        // 1. Anbieter-Daten direkt zuweisen
+        if (supplierData != null)
+        {
+            DropDownValueSupplier = supplierData.Id;
+            args.Data.ID_Anbieter = supplierData.Id;
+
+            // Optimierung: Sie nutzen oben bereits supplierData. Wenn dort der Name (Anbieter)
+            // bereits enthalten ist, können Sie sich die LINQ-Suche auf supplierList komplett sparen:
+            args.Data.Anbieter = supplierData.Anbieter ?? "unbekannt";
+        }
+
+        // 2. Datum und Uhrzeit vorbelegen
+        args.Data.Ablesetag = DateTime.Today;
+        args.Data.Uhrzeit = DateTime.Now;
+
+        // 3. Letzten Eintrag holen und Werte vorbelegen
+        var lastCounter = counterList?.LastOrDefault();
+        if (lastCounter != null)
+        {
+            args.Data.Zaehlerstand = lastCounter.Zaehlerstand;
+            args.Data.Zaehlerstand_aussen = lastCounter.Zaehlerstand_aussen;
+            args.Data.Temperatur_aussen = lastCounter.Temperatur_aussen;
+            args.Data.Temperatur_innen = lastCounter.Temperatur_innen;
+            args.Data.Bemerkungen = lastCounter.Bemerkungen;
+
+            // Optimierung: Redundanten Null-Check (?) entfernt, da args.Data oben geprüft wurde.
+            // Berücksichtigung Ihres Signalwerts (99) für den Fall, dass die letzte Temperatur NULL war:
+            temperatureOutside = args.Data.Temperatur_aussen ?? 99;
+            temperatureInside = args.Data.Temperatur_innen ?? 99;
+        }
+        else
+        {
+            // Falls die Liste komplett leer ist, Startwerte für die UI-Variablen setzen
+            temperatureOutside = 99;
+            temperatureInside = 99;
+        }
     }
     #endregion
 
@@ -995,17 +1042,14 @@
     /// <param name="args"></param>
     public void RowEditingHandler(RowEditingEventArgs<Water_CounterModel> args)
     {
-        // copy data
-        DropDownValueSupplier = args.Data.ID_Anbieter;
-        temperatureOutside = args.Data.Temperatur_aussen;
-        temperatureInside = args.Data.Temperatur_innen;
-    }
-    #endregion
+        // Best Practice: Null-Check für die Argumente und Daten
+        if (args?.Data is null) return;
 
-     #region DayChangedHandler
-    public void DayChangedHandler(ChangedEventArgs<DateTime> args)
-    {
-        dayChanged = true;
+        // Daten aus Dropdown "Anbieter" auslesen und Anbieter-Feld in Grid vorbesetzen
+        DropDownValueSupplier = args.Data.ID_Anbieter;
+
+        temperatureOutside = args.Data?.Temperatur_aussen ?? 99;
+        temperatureInside = args.Data?.Temperatur_innen ?? 99;
     }
     #endregion
 }

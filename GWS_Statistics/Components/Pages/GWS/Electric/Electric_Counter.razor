@@ -654,9 +654,9 @@ else
             {
                 // 2. Einstellungen asynchron speichern
                 success = await GetSetMyAppConfig.SetMyAppSettings.WriteSettingsAsync(
-                    myAppSettings,
-                    "Supplier_Id.Electric",
-                    supplierData.Id.ToString()
+                                    myAppSettings,
+                                    "Supplier_Id.Electric",
+                                    supplierData.Id.ToString()
                 );
 
                 // Direkt aus den validierten Event-Daten auslesen
@@ -664,7 +664,7 @@ else
                 EndDate = supplierData.Zeitraum_Ende;
 
                 // 3. String-Interpolation statt Plus-Operator
-                counterList = await gwsP.LoadDataAsync<Electric_CounterModel>(urlCounter + Convert.ToString(supplierData.Id));
+                counterList = await gwsP!.LoadDataAsync<Electric_CounterModel>(urlCounter + Convert.ToString(supplierData.Id));
 
                 if (counterList?.Any() != true)
                 {
@@ -997,7 +997,7 @@ else
     /// <returns></returns>
     public string GetTooltipContent(string headerText)
     {
-        return ColumnDescriptions.ContainsKey(headerText) ? ColumnDescriptions[headerText] : "No description available.";
+        return ColumnDescriptions.ContainsKey(headerText) ? ColumnDescriptions[headerText] : "Keine Beschreibung vorhanden";
     }
     #endregion
 
