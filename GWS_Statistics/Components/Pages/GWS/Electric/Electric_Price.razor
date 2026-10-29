@@ -471,6 +471,8 @@ else
         {
             // Einstellungen laden
             settings = await GetSetMyAppConfig.GetMyAppSettings.ReadSettingsAsync(myAppSettings);
+            if (settings == null) return;
+
             gwsP = new GWSProcessor(myHttpClient, settings!.GWSUri);
 
             supplierList = await gwsP.LoadDataAsync<Electric_SupplierDataModel>(urlSupplier);
@@ -533,7 +535,7 @@ else
     private async Task ValueSelectHandler(SelectEventArgs<Electric_SupplierDataModel>? args)
     {
         // 1. Null-Check für die Event-Argumente
-        if (args?.ItemData == null) return;
+        if (args?.ItemData == null || gwsP == null) return;
 
         supplierData = args.ItemData;
 
@@ -555,15 +557,18 @@ else
                 EndDate = supplierData.Zeitraum_Ende;
 
                 // 3. String-Interpolation statt Plus-Operator
-                costsList = await gwsP!.LoadDataAsync<Electric_CostModel>($"{urlCostSupplier}{supplierData.Id}");
+                costsList = await gwsP.LoadDataAsync<Electric_CostModel>($"{urlCostSupplier}{supplierData.Id}");
 
-                if (costsList?.Any() != true)
+                if (costsList == null || !costsList.Any())
                 {
                     OpenDialog("Keine Strom-Preise vorhanden!", "60px", "380px", false);
                 }
 
                 // 4. Null-Conditional Operator für das Grid-Refresh
-                sfDataGrid?.Refresh();
+                if (sfDataGrid != null)
+                {
+                    await sfDataGrid.Refresh();
+                }
             }
             finally
             {
