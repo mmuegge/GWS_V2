@@ -1,6 +1,8 @@
 using GWS_Api.Models;
 using GWS_Api.Models.Water;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
+using System.Diagnostics.Metrics;
 
 namespace GWS_Api.Repositories.Water
 {
@@ -23,14 +25,20 @@ namespace GWS_Api.Repositories.Water
         }
         public async Task<WaterCounter?> AddCounterAsync(WaterCounter zaehlerstand)
         {
+            // Sicherheitsnetz: Null-Prüfung wie bei den anderen Methoden
+            ArgumentNullException.ThrowIfNull(zaehlerstand);
+
             // prüfen ob Ablesedatum in der Zukunft liegt
-            DateTime heute = DateTime.Now;
-            if (zaehlerstand.Ablesetag > heute)
+            if (zaehlerstand.Ablesetag > DateTime.Now)
             {
                 return null;
             }
-            // prüfen ob Ablesetag schon vorhanden ist
-            int count = await _context.Wasser_zaehlerstand.Where(m => m.Ablesetag == zaehlerstand.Ablesetag).CountAsync();
+
+            // BEHOBEN: Prüfen, ob der Ablesetag FÜR DIESEN SPEZIFISCHEN LIEFERANTEN/ZÄHLER schon vorhanden ist
+            int count = await _context.Wasser_zaehlerstand
+                .Where(m => m.Ablesetag == zaehlerstand.Ablesetag && m.ID_Anbieter == zaehlerstand.ID_Anbieter)
+                .CountAsync();
+
             if (count > 0)
             {
                 return null;
@@ -62,86 +70,278 @@ namespace GWS_Api.Repositories.Water
         #region DELETE
         public async Task DeleteSupplierAsync(WaterTarif supplier)
         {
-            var result = await _context.Wasser_tarif.FirstOrDefaultAsync(m => m.Id == supplier.Id);
-            if (result == null)
-            {
-                throw new ArgumentNullException(nameof(supplier));
-            }
+            ArgumentNullException.ThrowIfNull(supplier);
+
+            var result = await _context.Wasser_tarif.FirstOrDefaultAsync(m => m.Id == supplier.Id)
+                            ?? throw new KeyNotFoundException($"Tarif mit ID {supplier.Id} nicht gefunden.");
+
             _context.Remove(result);
         }
         public async Task DeleteCounterAsync(WaterCounter counter)
         {
-            var result = await _context.Wasser_zaehlerstand.FirstOrDefaultAsync(m => m.Ablesetag == counter.Ablesetag);
-            if (result == null)
-            {
-                throw new ArgumentNullException(nameof(counter));
-            }
+            ArgumentNullException.ThrowIfNull(counter);
+
+            var result = await _context.Wasser_zaehlerstand
+                .FirstOrDefaultAsync(m => m.ID_Tag == counter.ID_Tag) // <-- Hier deine echte ID-Spalte eintragen!
+                ?? throw new KeyNotFoundException($"Zählerstand mit ID {counter.ID_Tag} nicht gefunden.");
+
             _context.Remove(result);
         }
         public async Task DeletePaymentAsync(WaterPayment payment)
         {
-            var result = await _context.Wasser_zahlungen.FirstOrDefaultAsync(m => m.Zahlungen == payment.Zahlungen);
-            if (result == null)
-            {
-                throw new ArgumentNullException(nameof(payment));
-            }
+            ArgumentNullException.ThrowIfNull(payment);
+
+            // FEHLER BEHOBEN: Wir suchen jetzt exakt nach der ID_Zahlung statt nach dem Geldbetrag!
+            var result = await _context.Wasser_zahlungen.FirstOrDefaultAsync(m => m.ID_Zahlung == payment.ID_Zahlung)
+                 ?? throw new KeyNotFoundException($"Zahlung mit ID {payment.ID_Zahlung} nicht gefunden.");
+
             _context.Remove(result);
         }
         public async Task DeleteCostAsync(WaterCost cost)
         {
-            var result = await _context.Wasser_kosten.FirstOrDefaultAsync(m => m.Id == cost.Id);
-            if (result == null)
-            {
-                throw new ArgumentNullException(nameof(cost));
-            }
+            ArgumentNullException.ThrowIfNull(cost);
+
+            var result = await _context.Wasser_kosten.FirstOrDefaultAsync(m => m.Id == cost.Id)
+                            ?? throw new KeyNotFoundException($"Kosten-Eintrag mit ID {cost.Id} nicht gefunden.");
+
             _context.Remove(result);
         }
         public async Task DeleteCounterChangeAsync(WaterCounterChange counterChange)
         {
-            var result = await _context.Wasser_zaehlerwechsel.FirstOrDefaultAsync(m => m.Id == counterChange.Id) ?? throw new ArgumentNullException(nameof(counterChange));
+            ArgumentNullException.ThrowIfNull(counterChange);
+
+            var result = await _context.Wasser_zaehlerwechsel.FirstOrDefaultAsync(m => m.Id == counterChange.Id)
+                            ?? throw new KeyNotFoundException($"Zählerwechsel mit ID {counterChange.Id} nicht gefunden.");
             _context.Remove(result);
         }
         #endregion
+
+        //#region GET
+        //public async Task<WaterTarif?> GetSupplierByIdAsync(int supplierId)
+        //{
+        //    return await _context.Wasser_tarif.FirstOrDefaultAsync(m => m.Id == supplierId);
+        //}
+        //public async Task<IEnumerable<WaterTarif>> GetSuppliersAsync()
+        //{
+        //    return await _context.Wasser_tarif.ToListAsync();
+        //}
+        //public async Task<IEnumerable<WaterCounter?>> GetCountersAsync()
+        //{
+        //    var counters = await _context.Wasser_zaehlerstand.ToListAsync();
+        //    var tarifList = await _context.Wasser_tarif.ToListAsync();
+        //    var supplierName = string.Empty;
+        //    int id = 0;
+        //    foreach (var counter in counters)
+        //    {
+        //        if (counter.ID_Anbieter != id)
+        //        {
+        //            id = counter.ID_Anbieter;
+        //            supplierName = tarifList.Where(m => m.Id == counter.ID_Anbieter).Select(x => x.Anbieter).FirstOrDefault();
+        //        }
+        //        counter.Anbieter = supplierName;
+        //    }
+        //    return await Task.FromResult(counters);
+        //}
+        //public async Task<IEnumerable<WaterCounter?>> GetCountersBySupplierAsync(int supplierId)
+        //{
+        //    var result = await _context.Wasser_zaehlerstand.Where(m => m.ID_Anbieter == supplierId).ToListAsync();
+
+        //    if (result != null)
+        //    {
+        //        var supplierName = await _context.Wasser_tarif.Where(m => m.Id == supplierId).Select(x => x.Anbieter).FirstOrDefaultAsync();
+        //        foreach (var counter in result)
+        //        {
+        //            counter.Anbieter = supplierName;
+        //        }
+        //    }
+        //    return await Task.FromResult(result!);
+        //}
+
+        //public async Task<WaterCounter?> GetCounterByIdAsync(int id)
+        //{
+        //    var counter = await _context.Wasser_zaehlerstand.FirstOrDefaultAsync(m => m.ID_Tag == id);
+        //    if (counter != null)
+        //    {
+        //        var tarif = await _context.Wasser_tarif.FirstOrDefaultAsync(m => m.Id == counter.ID_Anbieter);
+        //        counter.Anbieter = tarif!.Anbieter;
+        //    }
+        //    return await Task.FromResult(counter);
+        //}
+
+        //public async Task<WaterCounter?> GetCounterByDateAsync(DateTime date)
+        //{
+        //    var counter = await _context.Wasser_zaehlerstand.FirstOrDefaultAsync(m => m.Ablesetag == date);
+        //    if (counter != null)
+        //    {
+        //        var tarif = await _context.Wasser_tarif.FirstOrDefaultAsync(m => m.Id == counter.ID_Anbieter);
+        //        counter.Anbieter = tarif!.Anbieter;
+        //    }
+        //    return await Task.FromResult(counter);
+        //}
+        //public async Task<IEnumerable<WaterPayment?>> GetPaymentsAsync()
+        //{
+        //    var payments = await _context.Wasser_zahlungen.ToListAsync();
+        //    var tarifList = await _context.Wasser_tarif.ToListAsync();
+        //    var supplierName = string.Empty;
+
+        //    int id = 0;
+        //    foreach (var payment in payments)
+        //    {
+        //        if (payment.ID_Anbieter != id)
+        //        {
+        //            id = payment.ID_Anbieter;
+        //            supplierName = tarifList.Where(m => m.Id == payment.ID_Anbieter).Select(x => x.Anbieter).FirstOrDefault();
+        //        }
+        //        payment.Anbieter = supplierName;
+        //    }
+        //    return await Task.FromResult(payments);
+        //}
+        //public async Task<IEnumerable<WaterPayment?>> GetPaymentsBySupplierAsync(int supplierId)
+        //{
+        //    var result = await _context.Wasser_zahlungen.Where(m => m.ID_Anbieter == supplierId).ToListAsync();
+
+        //    if (result != null)
+        //    {
+        //        var supplierName = await _context.Wasser_tarif.Where(m => m.Id == supplierId).Select(x => x.Anbieter).FirstOrDefaultAsync();
+        //        foreach (var payment in result)
+        //        {
+        //            payment.Anbieter = supplierName;
+        //        }
+        //    }
+        //    return await Task.FromResult(result!);
+        //}
+        //public async Task<WaterPayment?> GetPaymentByIdAsync(int paymentId)
+        //{
+        //    var payment = await _context.Wasser_zahlungen.FirstOrDefaultAsync(m => m.ID_Zahlung == paymentId);
+
+        //    return await Task.FromResult(payment);
+        //}
+        //public async Task<IEnumerable<PaymentMethod?>> GetPaymentMethodsAsync()
+        //{
+        //    List<PaymentMethod> paymentMethods = await _context.Zahlungsarten.ToListAsync();
+
+        //    return await Task.FromResult(paymentMethods);
+        //}
+        //public async Task<IEnumerable<WaterCost?>> GetCostsAsync()
+        //{
+        //    List<WaterCost> costs = await _context.Wasser_kosten.ToListAsync();
+
+        //    return await Task.FromResult(costs);
+        //}
+        //public async Task<IEnumerable<WaterCounterChange?>> GetCounterChangesAsync()
+        //{
+        //    List<WaterCounterChange> counterChanges = await _context.Wasser_zaehlerwechsel.ToListAsync();
+
+        //    return await Task.FromResult(counterChanges);
+        //}
+        //public async Task<WaterCounterChange?> GetCounterChangeByIdAsync(int counterChangeId)
+        //{
+        //    var counterChange = await _context.Wasser_zaehlerwechsel.FirstOrDefaultAsync(m => m.Id == counterChangeId);
+
+        //    return await Task.FromResult(counterChange);
+        //}
+        //public async Task<IEnumerable<WaterCost?>> GetCostsBySupplierIdAsync(int supplierId)
+        //{
+        //    var result = await _context.Wasser_kosten.Where(m => m.Id_Anbieter == supplierId).ToListAsync();
+
+        //    if (result != null)
+        //    {
+        //        var supplierName = await _context.Wasser_tarif.Where(m => m.Id == supplierId).Select(x => x.Anbieter).FirstOrDefaultAsync();
+        //        foreach (var costs in result)
+        //        {
+        //            costs.Anbieter = supplierName;
+        //        }
+        //    }
+        //    return await Task.FromResult(result!);
+        //}
+        //public async Task<WaterCost?> GetCostByIdAsync(int costId)
+        //{
+        //    var cost = await _context.Wasser_kosten.FirstOrDefaultAsync(m => m.Id == costId);
+
+        //    return await Task.FromResult(cost);
+        //}
+        //public async Task<IEnumerable<WaterCounterChange?>> GetCounterChangesBySupplierAsync(int supplierId)
+        //{
+        //    var result = await _context.Wasser_zaehlerwechsel.Where(m => m.Id_Anbieter == supplierId).ToListAsync();
+
+        //    if (result != null)
+        //    {
+        //        var supplierName = await _context.Wasser_tarif.Where(m => m.Id == supplierId).Select(x => x.Anbieter).FirstOrDefaultAsync();
+        //        foreach (var counterChange in result)
+        //        {
+        //            counterChange.Anbieter = supplierName;
+        //        }
+        //    }
+        //    return await Task.FromResult(result!);
+        //}
+        //public async Task<WaterCounterChange?> UpdateCounterChangeAsync(WaterCounterChange counterChange)
+        //{
+        //    var result = await _context.Wasser_zaehlerwechsel.FirstOrDefaultAsync(m => m.Id == counterChange.Id);
+
+        //    if (result != null)
+        //    {
+        //        result.Id = counterChange.Id;
+        //        result.Id_Anbieter = counterChange.Id_Anbieter;
+        //        result.Anbieter = counterChange.Anbieter;
+        //        result.Wechsel_Datum = counterChange.Wechsel_Datum;
+        //        result.Zaehlerstand_alt = counterChange.Zaehlerstand_alt;
+        //        result.Zaehlerstand_neu = counterChange.Zaehlerstand_neu;
+        //        result.Zaehlerstand_aussen_alt = counterChange.Zaehlerstand_aussen_alt;
+        //        result.Zaehlerstand_aussen_neu = counterChange.Zaehlerstand_aussen_neu;
+        //        result.Bemerkung = counterChange.Bemerkung;
+        //    }
+
+        //    return await Task.FromResult(result);
+        //}
+        //#endregion
 
         #region GET
         public async Task<WaterTarif?> GetSupplierByIdAsync(int supplierId)
         {
             return await _context.Wasser_tarif.FirstOrDefaultAsync(m => m.Id == supplierId);
         }
+
         public async Task<IEnumerable<WaterTarif>> GetSuppliersAsync()
         {
             return await _context.Wasser_tarif.ToListAsync();
         }
+
         public async Task<IEnumerable<WaterCounter?>> GetCountersAsync()
         {
             var counters = await _context.Wasser_zaehlerstand.ToListAsync();
-            var tarifList = await _context.Wasser_tarif.ToListAsync();
-            var supplierName = string.Empty;
-            int id = 0;
+
+            // Wir erstellen ein schnelles Dictionary für die Namenssuche (Key: Id, Value: Anbietername)
+            var tarifDict = await _context.Wasser_tarif
+                .ToDictionaryAsync(x => x.Id, x => x.Anbieter);
+
             foreach (var counter in counters)
             {
-                if (counter.ID_Anbieter != id)
+                // Sicherer Zugriff: Falls die ID im Dictionary existiert, Namen zuweisen
+                if (tarifDict.TryGetValue(counter.ID_Anbieter, out var name))
                 {
-                    id = counter.ID_Anbieter;
-                    supplierName = tarifList.Where(m => m.Id == counter.ID_Anbieter).Select(x => x.Anbieter).FirstOrDefault();
+                    counter.Anbieter = name;
                 }
-                counter.Anbieter = supplierName;
             }
-            return await Task.FromResult(counters);
+            return counters;
         }
+
         public async Task<IEnumerable<WaterCounter?>> GetCountersBySupplierAsync(int supplierId)
         {
             var result = await _context.Wasser_zaehlerstand.Where(m => m.ID_Anbieter == supplierId).ToListAsync();
 
-            if (result != null)
+            var supplierName = await _context.Wasser_tarif
+                .Where(m => m.Id == supplierId)
+                .Select(x => x.Anbieter)
+                .FirstOrDefaultAsync();
+
+            if (supplierName != null)
             {
-                var supplierName = await _context.Wasser_tarif.Where(m => m.Id == supplierId).Select(x => x.Anbieter).FirstOrDefaultAsync();
                 foreach (var counter in result)
                 {
                     counter.Anbieter = supplierName;
                 }
             }
-            return await Task.FromResult(result!);
+            return result;
         }
 
         public async Task<WaterCounter?> GetCounterByIdAsync(int id)
@@ -150,9 +350,9 @@ namespace GWS_Api.Repositories.Water
             if (counter != null)
             {
                 var tarif = await _context.Wasser_tarif.FirstOrDefaultAsync(m => m.Id == counter.ID_Anbieter);
-                counter.Anbieter = tarif!.Anbieter;
+                counter.Anbieter = tarif?.Anbieter ?? string.Empty; // Null-safe abgesichert
             }
-            return await Task.FromResult(counter);
+            return counter;
         }
 
         public async Task<WaterCounter?> GetCounterByDateAsync(DateTime date)
@@ -161,132 +361,217 @@ namespace GWS_Api.Repositories.Water
             if (counter != null)
             {
                 var tarif = await _context.Wasser_tarif.FirstOrDefaultAsync(m => m.Id == counter.ID_Anbieter);
-                counter.Anbieter = tarif!.Anbieter;
+                counter.Anbieter = tarif?.Anbieter ?? string.Empty;
             }
-            return await Task.FromResult(counter);
+            return counter;
         }
+
         public async Task<IEnumerable<WaterPayment?>> GetPaymentsAsync()
         {
             var payments = await _context.Wasser_zahlungen.ToListAsync();
-            var tarifList = await _context.Wasser_tarif.ToListAsync();
-            var supplierName = string.Empty;
 
-            int id = 0;
+            // Auch hier: Dictionary-Optimierung statt unzuverlässiger Sortierungsschleife
+            var tarifDict = await _context.Wasser_tarif
+                .ToDictionaryAsync(x => x.Id, x => x.Anbieter);
+
             foreach (var payment in payments)
             {
-                if (payment.ID_Anbieter != id)
+                if (tarifDict.TryGetValue(payment.ID_Anbieter, out var name))
                 {
-                    id = payment.ID_Anbieter;
-                    supplierName = tarifList.Where(m => m.Id == payment.ID_Anbieter).Select(x => x.Anbieter).FirstOrDefault();
+                    payment.Anbieter = name;
                 }
-                payment.Anbieter = supplierName;
             }
-            return await Task.FromResult(payments);
+            return payments;
         }
+
         public async Task<IEnumerable<WaterPayment?>> GetPaymentsBySupplierAsync(int supplierId)
         {
             var result = await _context.Wasser_zahlungen.Where(m => m.ID_Anbieter == supplierId).ToListAsync();
 
-            if (result != null)
+            var supplierName = await _context.Wasser_tarif
+                .Where(m => m.Id == supplierId)
+                .Select(x => x.Anbieter)
+                .FirstOrDefaultAsync();
+
+            if (supplierName != null)
             {
-                var supplierName = await _context.Wasser_tarif.Where(m => m.Id == supplierId).Select(x => x.Anbieter).FirstOrDefaultAsync();
                 foreach (var payment in result)
                 {
                     payment.Anbieter = supplierName;
                 }
             }
-            return await Task.FromResult(result!);
+            return result;
         }
+
         public async Task<WaterPayment?> GetPaymentByIdAsync(int paymentId)
         {
+            // Hier hat das Zuweisen des Anbieternamens komplett gefehlt! Nachgeholt:
             var payment = await _context.Wasser_zahlungen.FirstOrDefaultAsync(m => m.ID_Zahlung == paymentId);
-
-            return await Task.FromResult(payment);
+            if (payment != null)
+            {
+                var tarif = await _context.Wasser_tarif.FirstOrDefaultAsync(m => m.Id == payment.ID_Anbieter);
+                payment.Anbieter = tarif?.Anbieter ?? string.Empty;
+            }
+            return payment;
         }
+
         public async Task<IEnumerable<PaymentMethod?>> GetPaymentMethodsAsync()
         {
-            List<PaymentMethod> paymentMethods = await _context.Zahlungsarten.ToListAsync();
-
-            return await Task.FromResult(paymentMethods);
+            return await _context.Zahlungsarten.ToListAsync();
         }
+
         public async Task<IEnumerable<WaterCost?>> GetCostsAsync()
         {
-            List<WaterCost> costs = await _context.Wasser_kosten.ToListAsync();
-
-            return await Task.FromResult(costs);
+            return await _context.Wasser_kosten.ToListAsync();
         }
+
         public async Task<IEnumerable<WaterCounterChange?>> GetCounterChangesAsync()
         {
-            List<WaterCounterChange> counterChanges = await _context.Wasser_zaehlerwechsel.ToListAsync();
-
-            return await Task.FromResult(counterChanges);
+            return await _context.Wasser_zaehlerwechsel.ToListAsync();
         }
+
         public async Task<WaterCounterChange?> GetCounterChangeByIdAsync(int counterChangeId)
         {
-            var counterChange = await _context.Wasser_zaehlerwechsel.FirstOrDefaultAsync(m => m.Id == counterChangeId);
-
-            return await Task.FromResult(counterChange);
+            return await _context.Wasser_zaehlerwechsel.FirstOrDefaultAsync(m => m.Id == counterChangeId);
         }
+
         public async Task<IEnumerable<WaterCost?>> GetCostsBySupplierIdAsync(int supplierId)
         {
             var result = await _context.Wasser_kosten.Where(m => m.Id_Anbieter == supplierId).ToListAsync();
 
-            if (result != null)
+            var supplierName = await _context.Wasser_tarif
+                .Where(m => m.Id == supplierId)
+                .Select(x => x.Anbieter)
+                .FirstOrDefaultAsync();
+
+            if (supplierName != null)
             {
-                var supplierName = await _context.Wasser_tarif.Where(m => m.Id == supplierId).Select(x => x.Anbieter).FirstOrDefaultAsync();
                 foreach (var costs in result)
                 {
                     costs.Anbieter = supplierName;
                 }
             }
-            return await Task.FromResult(result!);
+            return result;
         }
+
         public async Task<WaterCost?> GetCostByIdAsync(int costId)
         {
-            var cost = await _context.Wasser_kosten.FirstOrDefaultAsync(m => m.Id == costId);
-
-            return await Task.FromResult(cost);
+            return await _context.Wasser_kosten.FirstOrDefaultAsync(m => m.Id == costId);
         }
+
         public async Task<IEnumerable<WaterCounterChange?>> GetCounterChangesBySupplierAsync(int supplierId)
         {
             var result = await _context.Wasser_zaehlerwechsel.Where(m => m.Id_Anbieter == supplierId).ToListAsync();
 
-            if (result != null)
+            var supplierName = await _context.Wasser_tarif
+                .Where(m => m.Id == supplierId)
+                .Select(x => x.Anbieter)
+                .FirstOrDefaultAsync();
+
+            if (supplierName != null)
             {
-                var supplierName = await _context.Wasser_tarif.Where(m => m.Id == supplierId).Select(x => x.Anbieter).FirstOrDefaultAsync();
                 foreach (var counterChange in result)
                 {
                     counterChange.Anbieter = supplierName;
                 }
             }
-            return await Task.FromResult(result!);
+            return result;
         }
-        public async Task<WaterCounterChange?> UpdateCounterChangeAsync(WaterCounterChange counterChange)
-        {
-            var result = await _context.Wasser_zaehlerwechsel.FirstOrDefaultAsync(m => m.Id == counterChange.Id);
 
-            if (result != null)
-            {
-                result.Id = counterChange.Id;
-                result.Id_Anbieter = counterChange.Id_Anbieter;
-                result.Anbieter = counterChange.Anbieter;
-                result.Wechsel_Datum = counterChange.Wechsel_Datum;
-                result.Zaehlerstand_alt = counterChange.Zaehlerstand_alt;
-                result.Zaehlerstand_neu = counterChange.Zaehlerstand_neu;
-                result.Zaehlerstand_aussen_alt = counterChange.Zaehlerstand_aussen_alt;
-                result.Zaehlerstand_aussen_neu = counterChange.Zaehlerstand_aussen_neu;
-                result.Bemerkung = counterChange.Bemerkung;
-            }
-
-            return await Task.FromResult(result);
-        }
         #endregion
+
+
+        //#region UPDATE
+        //public async Task<WaterTarif?> UpdateSupplierAsync(WaterTarif supplier)
+        //{
+        //    var result = await _context.Wasser_tarif.FirstOrDefaultAsync(m => m.Id == supplier.Id);
+
+        //    if (result != null)
+        //    {
+        //        result.Anbieter = supplier.Anbieter;
+        //        result.Tarif = supplier.Tarif;
+        //        result.Zaehlernummer = supplier.Zaehlernummer;
+        //        result.Kuendigungsfrist = supplier.Kuendigungsfrist;
+        //        result.Zeitraum_Start = supplier.Zeitraum_Start;
+        //        result.Zeitraum_Ende = supplier.Zeitraum_Ende;
+        //        result.Start_Zaehlerstand = supplier.Start_Zaehlerstand;
+        //        result.Ende_Zaehlerstand = supplier.Ende_Zaehlerstand;
+        //        result.Start_Zaehlerstand_aussen = supplier.Start_Zaehlerstand_aussen;
+        //        result.Ende_Zaehlerstand_aussen = supplier.Ende_Zaehlerstand_aussen;
+        //        result.Trinkwasserpreis = supplier.Trinkwasserpreis;
+        //        result.Verbrauch_Trinkwasser = supplier.Verbrauch_Trinkwasser;
+        //        result.Abwasserpreis = supplier.Abwasserpreis;
+        //        result.Verbrauch_Abwasser = supplier.Verbrauch_Abwasser;
+        //        result.Grundpreis = supplier.Grundpreis;
+        //        result.Zaehlermiete = supplier.Zaehlermiete;
+        //        result.Bemerkung = supplier.Bemerkung;
+        //        return result;
+        //    }
+        //    return null;
+        //}
+        //public async Task<WaterCounter?> UpdateCounterAsync(WaterCounter zaehlerstand)
+        //{
+        //    var result = await _context.Wasser_zaehlerstand.FirstOrDefaultAsync(m => m.ID_Tag == zaehlerstand.ID_Tag);
+
+        //    if (result != null)
+        //    {
+        //        result.ID_Anbieter = zaehlerstand.ID_Anbieter;
+        //        result.Anbieter = zaehlerstand.Anbieter;
+        //        result.Ablesetag = zaehlerstand.Ablesetag;
+        //        result.Zaehlerstand = zaehlerstand.Zaehlerstand;
+        //        result.Uhrzeit = zaehlerstand.Uhrzeit;
+        //        result.Temperatur_aussen = zaehlerstand.Temperatur_aussen;
+        //        result.Temperatur_innen = zaehlerstand.Temperatur_innen;
+        //        result.Bemerkungen = zaehlerstand.Bemerkungen;
+        //        result.Zaehlerstand_aussen = zaehlerstand.Zaehlerstand_aussen;
+        //        return result;
+        //    }
+        //    return null;
+        //}
+        //public async Task<WaterPayment?> UpdatePaymentAsync(WaterPayment payment)
+        //{
+        //    var result = await _context.Wasser_zahlungen.FirstOrDefaultAsync(m => m.ID_Zahlung == payment.ID_Zahlung);
+
+        //    if (result != null)
+        //    {
+        //        result.ID_Zahlung = payment.ID_Zahlung;
+        //        result.ID_Anbieter = payment.ID_Anbieter;
+        //        result.Anbieter = payment.Anbieter;
+        //        result.Datum = payment.Datum;
+        //        result.Zahlungsart = payment.Zahlungsart;
+        //        result.Zahlungen = payment.Zahlungen;
+        //        result.Bemerkungen = payment.Bemerkungen;
+        //        return result;
+        //    }
+        //    return null;
+        //}
+        //public async Task<WaterCost?> UpdateCostAsync(WaterCost cost)
+        //{
+        //    var result = await _context.Wasser_kosten.FirstOrDefaultAsync(m => m.Id == cost.Id);
+
+        //    if (result != null)
+        //    {
+        //        result.Id = cost.Id;
+        //        result.Id_Anbieter = cost.Id_Anbieter;
+        //        result.Anbieter = cost.Anbieter;
+        //        result.Grundpreis = cost.Grundpreis;
+        //        result.Trinkwasserpreis = cost.Trinkwasserpreis;
+        //        result.Abwasserpreis = cost.Abwasserpreis;
+        //        result.Zaehlermiete = cost.Zaehlermiete;
+        //        result.Bemerkung = cost.Bemerkung;
+        //        return result;
+        //    }
+
+        //    return null;
+        //}
+        //#endregion
 
         #region UPDATE
         public async Task<WaterTarif?> UpdateSupplierAsync(WaterTarif supplier)
         {
-            var result = await _context.Wasser_tarif.FirstOrDefaultAsync(m => m.Id == supplier.Id);
+            ArgumentNullException.ThrowIfNull(supplier);
 
+            var result = await _context.Wasser_tarif.FirstOrDefaultAsync(m => m.Id == supplier.Id);
             if (result != null)
             {
                 result.Anbieter = supplier.Anbieter;
@@ -310,10 +595,12 @@ namespace GWS_Api.Repositories.Water
             }
             return null;
         }
+
         public async Task<WaterCounter?> UpdateCounterAsync(WaterCounter zaehlerstand)
         {
-            var result = await _context.Wasser_zaehlerstand.FirstOrDefaultAsync(m => m.ID_Tag == zaehlerstand.ID_Tag);
+            ArgumentNullException.ThrowIfNull(zaehlerstand);
 
+            var result = await _context.Wasser_zaehlerstand.FirstOrDefaultAsync(m => m.ID_Tag == zaehlerstand.ID_Tag);
             if (result != null)
             {
                 result.ID_Anbieter = zaehlerstand.ID_Anbieter;
@@ -329,13 +616,14 @@ namespace GWS_Api.Repositories.Water
             }
             return null;
         }
+
         public async Task<WaterPayment?> UpdatePaymentAsync(WaterPayment payment)
         {
-            var result = await _context.Wasser_zahlungen.FirstOrDefaultAsync(m => m.ID_Zahlung == payment.ID_Zahlung);
+            ArgumentNullException.ThrowIfNull(payment);
 
+            var result = await _context.Wasser_zahlungen.FirstOrDefaultAsync(m => m.ID_Zahlung == payment.ID_Zahlung);
             if (result != null)
             {
-                result.ID_Zahlung = payment.ID_Zahlung;
                 result.ID_Anbieter = payment.ID_Anbieter;
                 result.Anbieter = payment.Anbieter;
                 result.Datum = payment.Datum;
@@ -346,13 +634,14 @@ namespace GWS_Api.Repositories.Water
             }
             return null;
         }
+
         public async Task<WaterCost?> UpdateCostAsync(WaterCost cost)
         {
-            var result = await _context.Wasser_kosten.FirstOrDefaultAsync(m => m.Id == cost.Id);
+            ArgumentNullException.ThrowIfNull(cost);
 
+            var result = await _context.Wasser_kosten.FirstOrDefaultAsync(m => m.Id == cost.Id);
             if (result != null)
             {
-                result.Id = cost.Id;
                 result.Id_Anbieter = cost.Id_Anbieter;
                 result.Anbieter = cost.Anbieter;
                 result.Grundpreis = cost.Grundpreis;
@@ -362,31 +651,87 @@ namespace GWS_Api.Repositories.Water
                 result.Bemerkung = cost.Bemerkung;
                 return result;
             }
+            return null;
+        }
 
+        // HIER EINRICHTEN: Aus der GET-Region hierher verschoben und aufgeräumt
+        public async Task<WaterCounterChange?> UpdateCounterChangeAsync(WaterCounterChange counterChange)
+        {
+            ArgumentNullException.ThrowIfNull(counterChange);
+
+            var result = await _context.Wasser_zaehlerwechsel.FirstOrDefaultAsync(m => m.Id == counterChange.Id);
+            if (result != null)
+            {
+                result.Id_Anbieter = counterChange.Id_Anbieter;
+                result.Anbieter = counterChange.Anbieter;
+                result.Wechsel_Datum = counterChange.Wechsel_Datum;
+                result.Zaehlerstand_alt = counterChange.Zaehlerstand_alt;
+                result.Zaehlerstand_neu = counterChange.Zaehlerstand_neu;
+                result.Zaehlerstand_aussen_alt = counterChange.Zaehlerstand_aussen_alt;
+                result.Zaehlerstand_aussen_neu = counterChange.Zaehlerstand_aussen_neu;
+                result.Bemerkung = counterChange.Bemerkung;
+                return result;
+            }
             return null;
         }
         #endregion
 
+
+        //public async Task<bool> SaveChangesAsync()
+        //{
+        //    return (await _context.SaveChangesAsync() >= 0);    // return count of state entries written to DB
+        //}
+
+        //// nur zum Testen
+        //public async Task<IEnumerable<WaterTarif>> Search(string tarif, double? zaehlermiete)
+        //{
+        //    IQueryable<WaterTarif> query = _context.Wasser_tarif;
+        //    if (!string.IsNullOrEmpty(tarif))
+        //    {
+        //        //query = query.Where(m => m.Tarif.Contains(tarif) || m.Grundpreis == 0.0);
+        //        query = query.Where(m => m.Tarif!.Contains(tarif));
+        //    }
+        //    if (zaehlermiete != null)
+        //    {
+        //        query = query.Where(m => m.Zaehlermiete == zaehlermiete);
+        //    }
+        //    return await query.ToListAsync();
+
+        //}
+
+        // Zwingend erforderlich, damit EF Core die obigen Updates an die MySQL-DB schickt
         public async Task<bool> SaveChangesAsync()
         {
-            return (await _context.SaveChangesAsync() >= 0);    // return count of state entries written to DB
+            try
+            {
+                // Wir führen das Speichern aus. 
+                // Ob 0 oder mehr Zeilen geändert wurden, ist für den reinen Erfolg egal.
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch (Exception)
+            {
+                // Nur wenn die Datenbank wirklich einen Fehler wirft, geben wir false zurück
+                return false;
+            }
         }
 
         // nur zum Testen
         public async Task<IEnumerable<WaterTarif>> Search(string tarif, double? zaehlermiete)
         {
             IQueryable<WaterTarif> query = _context.Wasser_tarif;
+
             if (!string.IsNullOrEmpty(tarif))
             {
-                //query = query.Where(m => m.Tarif.Contains(tarif) || m.Grundpreis == 0.0);
                 query = query.Where(m => m.Tarif!.Contains(tarif));
             }
+
             if (zaehlermiete != null)
             {
                 query = query.Where(m => m.Zaehlermiete == zaehlermiete);
             }
-            return await query.ToListAsync();
 
+            return await query.ToListAsync();
         }
 
     }
