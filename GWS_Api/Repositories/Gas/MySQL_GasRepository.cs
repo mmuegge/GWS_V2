@@ -23,18 +23,25 @@ namespace GWS_Api.Repositories.Gas
         }
         public async Task<GasCounter?> AddCounterAsync(GasCounter zaehlerstand)
         {
+            // Sicherheitsnetz: Null-Prüfung wie bei den anderen Methoden
+            ArgumentNullException.ThrowIfNull(zaehlerstand);
+
             // prüfen ob Ablesedatum in der Zukunft liegt
-            DateTime heute = DateTime.Now;
-            if (zaehlerstand.Ablesetag > heute)
+            if (zaehlerstand.Ablesetag > DateTime.Now)
             {
                 return null;
             }
-            // prüfen ob Ablesetag schon vorhanden ist
-            int count = await _context.Gas_zaehlerstand.Where(m => m.Ablesetag == zaehlerstand.Ablesetag).CountAsync();
+
+            // BEHOBEN: Prüfen, ob der Ablesetag FÜR DIESEN SPEZIFISCHEN LIEFERANTEN/ZÄHLER schon vorhanden ist
+            int count = await _context.Gas_zaehlerstand
+                .Where(m => m.Ablesetag == zaehlerstand.Ablesetag && m.ID_Anbieter == zaehlerstand.ID_Anbieter)
+                .CountAsync();
+
             if (count > 0)
             {
                 return null;
             }
+
             var result = await _context.Gas_zaehlerstand.AddAsync(zaehlerstand);
             return result.Entity;
         }
@@ -73,61 +80,66 @@ namespace GWS_Api.Repositories.Gas
         #region DELETE
         public async Task DeleteSupplierAsync(GasTarif supplier)
         {
-            var result = await _context.Gas_tarif.FirstOrDefaultAsync(m => m.Id == supplier.Id);
-            if (result == null)
-            {
-                throw new ArgumentNullException(nameof(supplier));
-            }
-            _context.Remove(supplier);
+            ArgumentNullException.ThrowIfNull(supplier);
+
+            var result = await _context.Gas_tarif.FirstOrDefaultAsync(m => m.Id == supplier.Id)
+                            ?? throw new KeyNotFoundException($"Tarif mit ID {supplier.Id} nicht gefunden.");
+
+            _context.Remove(result);
         }
         public async Task DeleteCounterAsync(GasCounter counter)
         {
-            var result = await _context.Gas_zaehlerstand.FirstOrDefaultAsync(m => m.Ablesetag == counter.Ablesetag);
-            if (result == null)
-            {
-                throw new ArgumentNullException(nameof(counter));
-            }
+            ArgumentNullException.ThrowIfNull(counter);
+
+            var result = await _context.Gas_zaehlerstand
+                .FirstOrDefaultAsync(m => m.ID_Tag == counter.ID_Tag)
+                ?? throw new KeyNotFoundException($"Zählerstand mit ID {counter.ID_Tag} nicht gefunden.");
+
             _context.Remove(result);
         }
         public async Task DeletePaymentAsync(GasPayment payment)
         {
-            var result = await _context.Gas_zahlungen.FirstOrDefaultAsync(m => m.Zahlungen == payment.Zahlungen);
-            if (result == null)
-            {
-                throw new ArgumentNullException(nameof(payment));
-            }
+            ArgumentNullException.ThrowIfNull(payment);
+
+            var result = await _context.Gas_zahlungen.FirstOrDefaultAsync(m => m.ID_Zahlung == payment.ID_Zahlung)
+                 ?? throw new KeyNotFoundException($"Zahlung mit ID {payment.ID_Zahlung} nicht gefunden.");
+
             _context.Remove(result);
         }
         public async Task DeleteCostAsync(GasCost cost)
         {
-            var result = await _context.Gas_kosten.FirstOrDefaultAsync(m => m.Id == cost.Id);
-            if (result == null)
-            {
-                throw new ArgumentNullException(nameof(cost));
-            }
+            ArgumentNullException.ThrowIfNull(cost);
+
+            var result = await _context.Gas_kosten.FirstOrDefaultAsync(m => m.Id == cost.Id)
+                            ?? throw new KeyNotFoundException($"Kosten-Eintrag mit ID {cost.Id} nicht gefunden.");
+
             _context.Remove(result);
         }
         public async Task DeleteBoilerDataAsync(GasBoiler boilerData)
         {
-            var result = await _context.Gas_therme.FirstOrDefaultAsync(m => m.Id == boilerData.Id);
-            if (result == null)
-            {
-                throw new ArgumentNullException(nameof(boilerData));
-            }
+            ArgumentNullException.ThrowIfNull(boilerData);
+
+            var result = await _context.Gas_therme.FirstOrDefaultAsync(m => m.Id == boilerData.Id)
+                            ?? throw new KeyNotFoundException($"Kosten-Eintrag mit ID {boilerData.Id} nicht gefunden.");
+
             _context.Remove(result);
         }
         public async Task DeleteEnergieEfficiencyAsync(Efficiency eff)
         {
-            var result = await _context.Energie_effizienz.FirstOrDefaultAsync(m => m.Id == eff.Id);
-            if (result == null)
-            {
-                throw new ArgumentNullException(nameof(eff));
-            }
+            ArgumentNullException.ThrowIfNull(eff);
+
+            var result = await _context.Gas_therme.FirstOrDefaultAsync(m => m.Id == eff.Id)
+                            ?? throw new KeyNotFoundException($"Effizienz-Eintrag mit ID {eff.Id} nicht gefunden.");
+
             _context.Remove(result);
+
         }
         public async Task DeleteCounterChangeAsync(GasCounterChange counterChange)
         {
-            var result = await _context.Gas_zaehlerwechsel.FirstOrDefaultAsync(m => m.Id == counterChange.Id) ?? throw new ArgumentNullException(nameof(counterChange));
+            ArgumentNullException.ThrowIfNull(counterChange);
+
+            var result = await _context.Gas_zaehlerwechsel.FirstOrDefaultAsync(m => m.Id == counterChange.Id)
+                            ?? throw new KeyNotFoundException($"Zählerwechsel mit ID {counterChange.Id} nicht gefunden.");
             _context.Remove(result);
         }
         #endregion
@@ -144,183 +156,175 @@ namespace GWS_Api.Repositories.Gas
         public async Task<IEnumerable<GasCounter?>> GetCountersAsync()
         {
             var counters = await _context.Gas_zaehlerstand.ToListAsync();
-            var tarifList = await _context.Gas_tarif.ToListAsync();
-            var supplierName = string.Empty;
-            int id = 0;
+
+            // Wir erstellen ein schnelles Dictionary für die Namenssuche (Key: Id, Value: Anbietername)
+            var tarifDict = await _context.Gas_tarif
+                .ToDictionaryAsync(x => x.Id, x => x.Anbieter);
 
             foreach (var counter in counters)
             {
-                if (counter.ID_Anbieter != id)
+                // Sicherer Zugriff: Falls die ID im Dictionary existiert, Namen zuweisen
+                if (tarifDict.TryGetValue(counter.ID_Anbieter, out var name))
                 {
-                    id = counter.ID_Anbieter;
-                    supplierName = tarifList.Where(m => m.Id == counter.ID_Anbieter).Select(x => x.Anbieter).FirstOrDefault();
+                    counter.Anbieter = name ?? string.Empty; // Null-safe abgesichert;
                 }
-                counter.Anbieter = supplierName;
             }
-            return await Task.FromResult(counters);
+            return counters;
         }
-
         public async Task<IEnumerable<GasCounter?>> GetCountersBySupplierAsync(int supplierId)
         {
             var result = await _context.Gas_zaehlerstand.Where(m => m.ID_Anbieter == supplierId).ToListAsync();
 
-            if (result != null)
+            var supplierName = await _context.Gas_tarif
+                .Where(m => m.Id == supplierId)
+                .Select(x => x.Anbieter)
+                .FirstOrDefaultAsync();
+
+            if (supplierName != null)
             {
-                var supplierName = await _context.Gas_tarif.Where(m => m.Id == supplierId).Select(x => x.Anbieter).FirstOrDefaultAsync();
                 foreach (var counter in result)
                 {
-                    counter.Anbieter = supplierName;
+                    counter.Anbieter = supplierName ?? string.Empty; // Null-safe abgesichert;
                 }
             }
-            return await Task.FromResult(result!);
+            return result;
         }
-
         public async Task<GasCounter?> GetCounterByIdAsync(int id)
         {
             var counter = await _context.Gas_zaehlerstand.FirstOrDefaultAsync(m => m.ID_Tag == id);
             if (counter != null)
             {
                 var tarif = await _context.Gas_tarif.FirstOrDefaultAsync(m => m.Id == counter.ID_Anbieter);
-                counter.Anbieter = tarif!.Anbieter;
+                counter.Anbieter = tarif!.Anbieter ?? string.Empty;
             }
-            return await Task.FromResult(counter);
+            return counter;
         }
-
         public async Task<GasCounter?> GetCounterByDateAsync(DateTime date)
         {
             var counter = await _context.Gas_zaehlerstand.FirstOrDefaultAsync(m => m.Ablesetag == date);
             if (counter != null)
             {
                 var tarif = await _context.Gas_tarif.FirstOrDefaultAsync(m => m.Id == counter.ID_Anbieter);
-                counter.Anbieter = tarif!.Anbieter;
+                counter.Anbieter = tarif!.Anbieter ?? string.Empty;
             }
-            return await Task.FromResult(counter);
+            return counter;
         }
         public async Task<IEnumerable<GasPayment?>> GetPaymentsAsync()
         {
             var payments = await _context.Gas_zahlungen.ToListAsync();
-            var tarifList = await _context.Gas_tarif.ToListAsync();
-            var supplierName = string.Empty;
-            int id = 0;
+
+            // Auch hier: Dictionary-Optimierung statt unzuverlässiger Sortierungsschleife
+            var tarifDict = await _context.Gas_tarif
+                .ToDictionaryAsync(x => x.Id, x => x.Anbieter);
 
             foreach (var payment in payments)
             {
-                if (payment.ID_Anbieter != id)
+                if (tarifDict.TryGetValue(payment.ID_Anbieter, out var name))
                 {
-                    id = payment.ID_Anbieter;
-                    supplierName = tarifList.Where(m => m.Id == payment.ID_Anbieter).Select(x => x.Anbieter).FirstOrDefault();
+                    payment.Anbieter = name ?? string.Empty; // Null-safe abgesichert;
                 }
-                payment.Anbieter = supplierName;
             }
-            return await Task.FromResult(payments);
+            return payments;
         }
         public async Task<IEnumerable<GasPayment?>> GetPaymentsBySupplierAsync(int supplierId)
         {
             var result = await _context.Gas_zahlungen.Where(m => m.ID_Anbieter == supplierId).ToListAsync();
 
-            if (result != null)
+            var supplierName = await _context.Gas_tarif
+                .Where(m => m.Id == supplierId)
+                .Select(x => x.Anbieter)
+                .FirstOrDefaultAsync();
+
+            if (supplierName != null)
             {
-                var supplierName = await _context.Gas_tarif.Where(m => m.Id == supplierId).Select(x => x.Anbieter).FirstOrDefaultAsync();
                 foreach (var payment in result)
                 {
-                    payment.Anbieter = supplierName;
+                    payment.Anbieter = supplierName ?? string.Empty; // Null-safe abgesichert;
                 }
             }
-            return await Task.FromResult(result!);
+            return result;
         }
         public async Task<GasPayment?> GetPaymentByIdAsync(int paymentId)
         {
             var payment = await _context.Gas_zahlungen.FirstOrDefaultAsync(m => m.ID_Zahlung == paymentId);
-            //if (payment != null)
-            //{
-
-            //    List<PaymentMethod> paymentMethods = await _context.Zahlungsarten.ToListAsync();
-            //    var method = await _context.Zahlungsarten.FirstOrDefaultAsync(m => m.ID_Zahlungsart == paymentId);
-            //    payment.Zahlungsart = method.Zahlungsart;
-            //}
-            return await Task.FromResult(payment);
+            if (payment != null)
+            {
+                var tarif = await _context.Gas_tarif.FirstOrDefaultAsync(m => m.Id == payment.ID_Anbieter);
+                payment.Anbieter = tarif?.Anbieter ?? string.Empty;
+            }
+            return payment;
         }
         public async Task<IEnumerable<PaymentMethod?>> GetPaymentMethodsAsync()
         {
-            var paymentMethods = await _context.Zahlungsarten.ToListAsync();
-
-            return await Task.FromResult(paymentMethods);
+            return await _context.Zahlungsarten.ToListAsync();
         }
         public async Task<IEnumerable<GasCost?>> GetCostsBySupplierIdAsync(int supplierId)
         {
             var result = await _context.Gas_kosten.Where(m => m.Id_Anbieter == supplierId).ToListAsync();
 
-            if (result != null)
+            var supplierName = await _context.Gas_tarif
+                .Where(m => m.Id == supplierId)
+                .Select(x => x.Anbieter)
+                .FirstOrDefaultAsync();
+
+            if (supplierName != null)
             {
-                var supplierName = await _context.Gas_tarif.Where(m => m.Id == supplierId).Select(x => x.Anbieter).FirstOrDefaultAsync();
                 foreach (var costs in result)
                 {
-                    costs.Anbieter = supplierName;
+                    costs.Anbieter = supplierName ?? string.Empty; // Null-safe abgesichert;
                 }
             }
-            return await Task.FromResult(result!);
+            return result;
         }
         public async Task<IEnumerable<GasCost?>> GetCostsAsync()
         {
-            var costs = await _context.Gas_kosten.ToListAsync();
-
-            return await Task.FromResult(costs);
+            return await _context.Gas_kosten.ToListAsync();
         }
         public async Task<GasCost?> GetCostByIdAsync(int costId)
         {
-            var cost = await _context.Gas_kosten.FirstOrDefaultAsync(m => m.Id == costId);
-
-            return await Task.FromResult(cost);
+            return await _context.Gas_kosten.FirstOrDefaultAsync(m => m.Id == costId);
         }
         public async Task<IEnumerable<GasCounterChange?>> GetCounterChangesAsync()
         {
-            var counterChanges = await _context.Gas_zaehlerwechsel.ToListAsync();
-
-            return await Task.FromResult(counterChanges);
+            return await _context.Gas_zaehlerwechsel.ToListAsync();
         }
         public async Task<GasCounterChange?> GetCounterChangeByIdAsync(int counterChangeId)
         {
-            var counterChange = await _context.Gas_zaehlerwechsel.FirstOrDefaultAsync(m => m.Id == counterChangeId);
-
-            return await Task.FromResult(counterChange);
+            return await _context.Gas_zaehlerwechsel.FirstOrDefaultAsync(m => m.Id == counterChangeId);
         }
         public async Task<IEnumerable<GasCounterChange?>> GetCounterChangesBySupplierAsync(int supplierId)
         {
             var result = await _context.Gas_zaehlerwechsel.Where(m => m.Id_Anbieter == supplierId).ToListAsync();
 
-            if (result != null)
+            var supplierName = await _context.Gas_tarif
+                .Where(m => m.Id == supplierId)
+                .Select(x => x.Anbieter)
+                .FirstOrDefaultAsync();
+
+            if (supplierName != null)
             {
-                var supplierName = await _context.Gas_tarif.Where(m => m.Id == supplierId).Select(x => x.Anbieter).FirstOrDefaultAsync();
                 foreach (var counterChange in result)
                 {
-                    counterChange.Anbieter = supplierName;
+                    counterChange.Anbieter = supplierName ?? string.Empty;
                 }
             }
-            return await Task.FromResult(result!);
+            return result;
         }
         public async Task<IEnumerable<GasBoiler?>> GetBoilerDataAsync()
         {
-            var boilerData = await _context.Gas_therme.ToListAsync();
-
-            return await Task.FromResult(boilerData);
+            return await _context.Gas_therme.ToListAsync();
         }
         public async Task<GasBoiler?> GetBoilerDataByIdAsync(int id)
         {
-            var boilerData = await _context.Gas_therme.FirstOrDefaultAsync(m => m.Id == id);
-
-            return await Task.FromResult(boilerData);
+            return await _context.Gas_therme.FirstOrDefaultAsync(m => m.Id == id);
         }
         public async Task<IEnumerable<Efficiency>> GetEnergieEfficiencyAsync()
         {
-            var eff = await _context.Energie_effizienz.ToListAsync();
-
-            return await Task.FromResult(eff);
+            return await _context.Energie_effizienz.ToListAsync();
         }
         public async Task<Efficiency?> GetEnergieEfficiencyByIdAsync(int id)
         {
-            var eff = await _context.Energie_effizienz.FirstOrDefaultAsync(m => m.Id == id);
-
-            return await Task.FromResult(eff);
+            return await _context.Energie_effizienz.FirstOrDefaultAsync(m => m.Id == id);
         }
         #endregion
 
@@ -328,7 +332,6 @@ namespace GWS_Api.Repositories.Gas
         public async Task<GasTarif?> UpdateSupplierAsync(GasTarif supplier)
         {
             var result = await _context.Gas_tarif.FirstOrDefaultAsync(m => m.Id == supplier.Id);
-
             if (result != null)
             {
                 result.Anbieter = supplier.Anbieter;
@@ -353,7 +356,6 @@ namespace GWS_Api.Repositories.Gas
         public async Task<GasCounter?> UpdateCounterAsync(GasCounter zaehlerstand)
         {
             var result = await _context.Gas_zaehlerstand.FirstOrDefaultAsync(m => m.ID_Tag == zaehlerstand.ID_Tag);
-
             if (result != null)
             {
                 result.ID_Anbieter = zaehlerstand.ID_Anbieter;
@@ -371,7 +373,6 @@ namespace GWS_Api.Repositories.Gas
         public async Task<GasPayment?> UpdatePaymentAsync(GasPayment payment)
         {
             var result = await _context.Gas_zahlungen.FirstOrDefaultAsync(m => m.ID_Zahlung == payment.ID_Zahlung);
-
             if (result != null)
             {
                 result.ID_Zahlung = payment.ID_Zahlung;
@@ -388,7 +389,6 @@ namespace GWS_Api.Repositories.Gas
         public async Task<GasCost?> UpdateCostAsync(GasCost cost)
         {
             var result = await _context.Gas_kosten.FirstOrDefaultAsync(m => m.Id == cost.Id);
-
             if (result != null)
             {
                 result.Id = cost.Id;
@@ -398,14 +398,13 @@ namespace GWS_Api.Repositories.Gas
                 result.Arbeitspreis = cost.Arbeitspreis;
                 result.Zaehlermiete = cost.Zaehlermiete;
                 result.Bemerkung = cost.Bemerkung;
+                return result;
             }
-
-            return await Task.FromResult(result);
+            return null;
         }
         public async Task<GasBoiler?> UpdateBoilerDataAsync(GasBoiler boilerData)
         {
             var result = await _context.Gas_therme.FirstOrDefaultAsync(m => m.Id == boilerData.Id);
-
             if (result != null)
             {
                 result.Id = boilerData.Id;
@@ -415,14 +414,13 @@ namespace GWS_Api.Repositories.Gas
                 result.Warmwasser_Verbrauch = boilerData.Warmwasser_Verbrauch;
                 result.Strom_Verbrauch = boilerData.Strom_Verbrauch;
                 result.Bemerkung = boilerData.Bemerkung;
+                return result;
             }
-
-            return await Task.FromResult(result);
+            return null;
         }
         public async Task<Efficiency?> UpdateEnergieEfficiencyAsync(Efficiency eff)
         {
             var result = await _context.Energie_effizienz.FirstOrDefaultAsync(m => m.Id == eff.Id);
-
             if (result != null)
             {
                 result.Id = eff.Id;
@@ -430,14 +428,13 @@ namespace GWS_Api.Repositories.Gas
                 result.Energiebedarf = eff.Energiebedarf;
                 result.Farbcode = eff.Farbcode;
                 result.Bemerkung = eff.Bemerkung;
+                return result;
             }
-
-            return await Task.FromResult(result);
+            return null;
         }
         public async Task<GasCounterChange?> UpdateCounterChangeAsync(GasCounterChange counterChange)
         {
             var result = await _context.Gas_zaehlerwechsel.FirstOrDefaultAsync(m => m.Id == counterChange.Id);
-
             if (result != null)
             {
                 result.Id = counterChange.Id;
@@ -447,38 +444,47 @@ namespace GWS_Api.Repositories.Gas
                 result.Zaehlerstand_alt = counterChange.Zaehlerstand_alt;
                 result.Zaehlerstand_neu = counterChange.Zaehlerstand_neu;
                 result.Bemerkung = counterChange.Bemerkung;
+                return result;
             }
-
-            return await Task.FromResult(result);
+            return null;
         }
         #endregion
 
-        #region SaveChangesAsync
-        /// <summary>
-        /// SaveChanges
-        /// </summary>
-        /// <returns></returns>
+        #region SaveChanges
+        // Zwingend erforderlich, damit EF Core die obigen Updates an die MySQL-DB schickt
         public async Task<bool> SaveChangesAsync()
         {
-            return (await _context.SaveChangesAsync() >= 0);    // return count of state entries written to DB
+            try
+            {
+                // Wir führen das Speichern aus. 
+                // Ob 0 oder mehr Zeilen geändert wurden, ist für den reinen Erfolg egal.
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch (Exception)
+            {
+                // Nur wenn die Datenbank wirklich einen Fehler wirft, geben wir false zurück
+                return false;
+            }
         }
-        #endregion
 
         // nur zum Testen
-        public async Task<IEnumerable<GasTarif?>> SearchGas(string gasTarif, double? zaehlermiete)
+        public async Task<IEnumerable<GasTarif>> Search(string tarif, double? zaehlermiete)
         {
-            var query = _context.Gas_tarif;
-            if (!string.IsNullOrEmpty(gasTarif))
-            {
-                //query = query.Where(m => m.Tarif.Contains(tarif) || m.Grundpreis == 0.0);
-                //var lulli = query.Where(m => m.Tarif.Contains(gasTarif));
-            }
-            // if (zaehlermiete != null)
-            // {
-            //   query = query.Where(m => m.Zaehlermiete == zaehlermiete);
-            // }
-            return await query.ToListAsync();
+            IQueryable<GasTarif> query = _context.Gas_tarif;
 
+            if (!string.IsNullOrEmpty(tarif))
+            {
+                query = query.Where(m => m.Tarif!.Contains(tarif));
+            }
+
+            if (zaehlermiete != null)
+            {
+                query = query.Where(m => m.Zaehlermiete == zaehlermiete);
+            }
+
+            return await query.ToListAsync();
         }
+        #endregion
     }
 }

@@ -1,5 +1,6 @@
 using GWS_Api.Models;
 using GWS_Api.Models.Electric;
+using GWS_Api.Models.Water;
 using Microsoft.EntityFrameworkCore;
 
 namespace GWS_Api.Repositories.Electric
@@ -19,14 +20,20 @@ namespace GWS_Api.Repositories.Electric
         }
         public async Task<ElectricCounter?> AddCounterAsync(ElectricCounter zaehlerstand)
         {
+            // Sicherheitsnetz: Null-Prüfung wie bei den anderen Methoden
+            ArgumentNullException.ThrowIfNull(zaehlerstand);
+
             // prüfen ob Ablesedatum in der Zukunft liegt
-            DateTime heute = DateTime.Now;
-            if (zaehlerstand.Ablesetag > heute)
+            if (zaehlerstand.Ablesetag > DateTime.Now)
             {
                 return null;
             }
-            // prüfen ob Ablesetag schon vorhanden ist
-            int count = await _context.Strom_zaehlerstand.Where(m => m.Ablesetag == zaehlerstand.Ablesetag).CountAsync();
+
+            // BEHOBEN: Prüfen, ob der Ablesetag FÜR DIESEN SPEZIFISCHEN LIEFERANTEN/ZÄHLER schon vorhanden ist
+            int count = await _context.Strom_zaehlerstand
+                .Where(m => m.Ablesetag == zaehlerstand.Ablesetag && m.ID_Anbieter == zaehlerstand.ID_Anbieter)
+                .CountAsync();
+
             if (count > 0)
             {
                 return null;
@@ -58,27 +65,47 @@ namespace GWS_Api.Repositories.Electric
         #region DELETE
         public async Task DeleteSupplierAsync(ElectricTarif supplier)
         {
-            var result = await _context.Strom_tarif.FirstOrDefaultAsync(m => m.Id == supplier.Id) ?? throw new ArgumentNullException(nameof(supplier));
-            _context.Remove(supplier);
+            ArgumentNullException.ThrowIfNull(supplier);
+
+            var result = await _context.Strom_tarif.FirstOrDefaultAsync(m => m.Id == supplier.Id)
+                            ?? throw new KeyNotFoundException($"Tarif mit ID {supplier.Id} nicht gefunden.");
+
+            _context.Remove(result);
         }
         public async Task DeleteCounterAsync(ElectricCounter counter)
         {
-            var result = await _context.Strom_zaehlerstand.FirstOrDefaultAsync(m => m.Ablesetag == counter.Ablesetag) ?? throw new ArgumentNullException(nameof(counter));
+            ArgumentNullException.ThrowIfNull(counter);
+
+            var result = await _context.Strom_zaehlerstand
+                .FirstOrDefaultAsync(m => m.ID_Tag == counter.ID_Tag)
+                ?? throw new KeyNotFoundException($"Zählerstand mit ID {counter.ID_Tag} nicht gefunden.");
+
             _context.Remove(result);
         }
         public async Task DeletePaymentAsync(ElectricPayment payment)
         {
-            var result = await _context.Strom_zahlungen.FirstOrDefaultAsync(m => m.Zahlungen == payment.Zahlungen) ?? throw new ArgumentNullException(nameof(payment));
+            ArgumentNullException.ThrowIfNull(payment);
+
+            var result = await _context.Strom_zahlungen.FirstOrDefaultAsync(m => m.ID_Zahlung == payment.ID_Zahlung)
+                 ?? throw new KeyNotFoundException($"Zahlung mit ID {payment.ID_Zahlung} nicht gefunden.");
+
             _context.Remove(result);
         }
         public async Task DeleteCostAsync(ElectricCost cost)
         {
-            var result = await _context.Strom_kosten.FirstOrDefaultAsync(m => m.Id == cost.Id) ?? throw new ArgumentNullException(nameof(cost));
+            ArgumentNullException.ThrowIfNull(cost);
+
+            var result = await _context.Strom_kosten.FirstOrDefaultAsync(m => m.Id == cost.Id)
+                            ?? throw new KeyNotFoundException($"Kosten-Eintrag mit ID {cost.Id} nicht gefunden.");
+
             _context.Remove(result);
         }
         public async Task DeleteCounterChangeAsync(ElectricCounterChange counterChange)
         {
-            var result = await _context.Strom_zaehlerwechsel.FirstOrDefaultAsync(m => m.Id == counterChange.Id) ?? throw new ArgumentNullException(nameof(counterChange));
+            ArgumentNullException.ThrowIfNull(counterChange);
+
+            var result = await _context.Strom_zaehlerwechsel.FirstOrDefaultAsync(m => m.Id == counterChange.Id)
+                            ?? throw new KeyNotFoundException($"Zählerwechsel mit ID {counterChange.Id} nicht gefunden.");
             _context.Remove(result);
         }
         #endregion
@@ -95,33 +122,38 @@ namespace GWS_Api.Repositories.Electric
         public async Task<IEnumerable<ElectricCounter?>> GetCountersAsync()
         {
             var counters = await _context.Strom_zaehlerstand.ToListAsync();
-            var tarifList = await _context.Strom_tarif.ToListAsync();
-            var supplierName = string.Empty;
-            int id = 0;
+
+            // Wir erstellen ein schnelles Dictionary für die Namenssuche (Key: Id, Value: Anbietername)
+            var tarifDict = await _context.Strom_tarif
+                .ToDictionaryAsync(x => x.Id, x => x.Anbieter);
+
             foreach (var counter in counters)
             {
-                if (counter.ID_Anbieter != id)
+                // Sicherer Zugriff: Falls die ID im Dictionary existiert, Namen zuweisen
+                if (tarifDict.TryGetValue(counter.ID_Anbieter, out var name))
                 {
-                    id = counter.ID_Anbieter;
-                    supplierName = tarifList.Where(m => m.Id == counter.ID_Anbieter).Select(x => x.Anbieter).FirstOrDefault();
+                    counter.Anbieter = name ?? string.Empty; // Null-safe abgesichert;
                 }
-                counter.Anbieter = supplierName;
             }
-            return await Task.FromResult(counters);
+            return counters;
         }
         public async Task<IEnumerable<ElectricCounter?>> GetCountersBySupplierAsync(int supplierId)
         {
             var result = await _context.Strom_zaehlerstand.Where(m => m.ID_Anbieter == supplierId).ToListAsync();
 
-            if (result != null)
+            var supplierName = await _context.Strom_tarif
+                .Where(m => m.Id == supplierId)
+                .Select(x => x.Anbieter)
+                .FirstOrDefaultAsync();
+
+            if (supplierName != null)
             {
-                var supplierName = await _context.Strom_tarif.Where(m => m.Id == supplierId).Select(x => x.Anbieter).FirstOrDefaultAsync();
                 foreach (var counter in result)
                 {
-                    counter.Anbieter = supplierName;
+                    counter.Anbieter = supplierName ?? string.Empty; // Null-safe abgesichert;
                 }
             }
-            return await Task.FromResult(result!);
+            return result;
         }
         public async Task<ElectricCounter?> GetCounterByIdAsync(int id)
         {
@@ -129,124 +161,129 @@ namespace GWS_Api.Repositories.Electric
             if (counter != null)
             {
                 var tarif = await _context.Strom_tarif.FirstOrDefaultAsync(m => m.Id == counter.ID_Anbieter);
-                counter.Anbieter = tarif!.Anbieter;
+                counter.Anbieter = tarif?.Anbieter ?? string.Empty; // Null-safe abgesichert
             }
-            return await Task.FromResult(counter);
+            return counter;
         }
-
         public async Task<ElectricCounter?> GetCounterByDateAsync(DateTime date)
         {
             var counter = await _context.Strom_zaehlerstand.FirstOrDefaultAsync(m => m.Ablesetag == date);
             if (counter != null)
             {
                 var tarif = await _context.Strom_tarif.FirstOrDefaultAsync(m => m.Id == counter.ID_Anbieter);
-                counter.Anbieter = tarif!.Anbieter;
+                counter.Anbieter = tarif?.Anbieter ?? string.Empty;
             }
-            return await Task.FromResult(counter);
+            return counter;
         }
         public async Task<IEnumerable<ElectricPayment?>> GetPaymentsAsync()
         {
             var payments = await _context.Strom_zahlungen.ToListAsync();
-            var tarifList = await _context.Strom_tarif.ToListAsync();
-            var supplierName = string.Empty;
-            int id = 0;
+
+            // Auch hier: Dictionary-Optimierung statt unzuverlässiger Sortierungsschleife
+            var tarifDict = await _context.Strom_tarif
+                .ToDictionaryAsync(x => x.Id, x => x.Anbieter);
 
             foreach (var payment in payments)
             {
-                if (payment.ID_Anbieter != id)
+                if (tarifDict.TryGetValue(payment.ID_Anbieter, out var name))
                 {
-                    id = payment.ID_Anbieter;
-                    supplierName = tarifList.Where(m => m.Id == payment.ID_Anbieter).Select(x => x.Anbieter).FirstOrDefault();
+                    payment.Anbieter = name;
                 }
-                payment.Anbieter = supplierName;
             }
-            return await Task.FromResult(payments);
+            return payments;
         }
         public async Task<IEnumerable<ElectricPayment?>> GetPaymentsBySupplierAsync(int supplierId)
         {
             var result = await _context.Strom_zahlungen.Where(m => m.ID_Anbieter == supplierId).ToListAsync();
 
-            if (result != null)
+            var supplierName = await _context.Strom_tarif
+                .Where(m => m.Id == supplierId)
+                .Select(x => x.Anbieter)
+                .FirstOrDefaultAsync();
+
+            if (supplierName != null)
             {
-                var supplierName = await _context.Strom_tarif.Where(m => m.Id == supplierId).Select(x => x.Anbieter).FirstOrDefaultAsync();
                 foreach (var payment in result)
                 {
                     payment.Anbieter = supplierName;
                 }
             }
-            return await Task.FromResult(result!);
+            return result;
         }
         public async Task<ElectricPayment?> GetPaymentByIdAsync(int paymentId)
         {
             var payment = await _context.Strom_zahlungen.FirstOrDefaultAsync(m => m.ID_Zahlung == paymentId);
-
-            return await Task.FromResult(payment);
+            if (payment != null)
+            {
+                var tarif = await _context.Strom_tarif.FirstOrDefaultAsync(m => m.Id == payment.ID_Anbieter);
+                payment.Anbieter = tarif?.Anbieter ?? string.Empty;
+            }
+            return payment;
         }
         public async Task<IEnumerable<PaymentMethod?>> GetPaymentMethodsAsync()
         {
-            var paymentMethods = await _context.Zahlungsarten.ToListAsync();
-
-            return await Task.FromResult(paymentMethods);
+            return await _context.Zahlungsarten.ToListAsync();
         }
         public async Task<IEnumerable<ElectricCost?>> GetCostsAsync()
         {
-            var costs = await _context.Strom_kosten.ToListAsync();
-
-            return await Task.FromResult(costs);
+            return await _context.Strom_kosten.ToListAsync();
         }
         public async Task<IEnumerable<ElectricCost?>> GetCostsBySupplierIdAsync(int supplierId)
         {
             var result = await _context.Strom_kosten.Where(m => m.Id_Anbieter == supplierId).ToListAsync();
 
-            if (result != null)
+            var supplierName = await _context.Strom_tarif
+                .Where(m => m.Id == supplierId)
+                .Select(x => x.Anbieter)
+                .FirstOrDefaultAsync();
+
+            if (supplierName != null)
             {
-                var supplierName = await _context.Strom_tarif.Where(m => m.Id == supplierId).Select(x => x.Anbieter).FirstOrDefaultAsync();
                 foreach (var costs in result)
                 {
-                    costs.Anbieter = supplierName;
+                    costs.Anbieter = supplierName ?? string.Empty;
                 }
             }
-            return await Task.FromResult(result!);
+            return result;
         }
         public async Task<ElectricCost?> GetCostByIdAsync(int costId)
         {
-            var cost = await _context.Strom_kosten.FirstOrDefaultAsync(m => m.Id == costId);
-
-            return await Task.FromResult(cost);
+            return await _context.Strom_kosten.FirstOrDefaultAsync(m => m.Id == costId);
         }
         public async Task<IEnumerable<ElectricCounterChange?>> GetCounterChangesAsync()
         {
-            var counterChanges = await _context.Strom_zaehlerwechsel.ToListAsync();
-
-            return await Task.FromResult(counterChanges);
+            return await _context.Strom_zaehlerwechsel.ToListAsync();
         }
         public async Task<ElectricCounterChange?> GetCounterChangeByIdAsync(int counterChangeId)
         {
-            var counterchange = await _context.Strom_zaehlerwechsel.FirstOrDefaultAsync(m => m.Id == counterChangeId);
-
-            return await Task.FromResult(counterchange);
+            return await _context.Strom_zaehlerwechsel.FirstOrDefaultAsync(m => m.Id == counterChangeId);
         }
         public async Task<IEnumerable<ElectricCounterChange?>> GetCounterChangesBySupplierAsync(int supplierId)
         {
             var result = await _context.Strom_zaehlerwechsel.Where(m => m.Id_Anbieter == supplierId).ToListAsync();
 
-            if (result != null)
+            var supplierName = await _context.Strom_tarif
+                .Where(m => m.Id == supplierId)
+                .Select(x => x.Anbieter)
+                .FirstOrDefaultAsync();
+
+            if (supplierName != null)
             {
-                var supplierName = await _context.Strom_tarif.Where(m => m.Id == supplierId).Select(x => x.Anbieter).FirstOrDefaultAsync();
                 foreach (var counterChange in result)
                 {
-                    counterChange.Anbieter = supplierName;
+                    counterChange.Anbieter = supplierName ?? string.Empty;
                 }
             }
-            return await Task.FromResult(result!);
+            return result;
         }
         #endregion
 
         #region UPDATE
         public async Task<ElectricTarif?> UpdateSupplierAsync(ElectricTarif supplier)
         {
-            var result = await _context.Strom_tarif.FirstOrDefaultAsync(m => m.Id == supplier.Id);
+            ArgumentNullException.ThrowIfNull(supplier);
 
+            var result = await _context.Strom_tarif.FirstOrDefaultAsync(m => m.Id == supplier.Id);
             if (result != null)
             {
                 result.Anbieter = supplier.Anbieter;
@@ -272,8 +309,9 @@ namespace GWS_Api.Repositories.Electric
         }
         public async Task<ElectricCounter?> UpdateCounterAsync(ElectricCounter zaehlerstand)
         {
-            var result = await _context.Strom_zaehlerstand.FirstOrDefaultAsync(m => m.ID_Tag == zaehlerstand.ID_Tag);
+            ArgumentNullException.ThrowIfNull(zaehlerstand);
 
+            var result = await _context.Strom_zaehlerstand.FirstOrDefaultAsync(m => m.ID_Tag == zaehlerstand.ID_Tag);
             if (result != null)
             {
                 result.ID_Anbieter = zaehlerstand.ID_Anbieter;
@@ -288,8 +326,28 @@ namespace GWS_Api.Repositories.Electric
             }
             return null;
         }
+        public async Task<ElectricPayment?> UpdatePaymentAsync(ElectricPayment payment)
+        {
+            ArgumentNullException.ThrowIfNull(payment);
+
+            var result = await _context.Strom_zahlungen.FirstOrDefaultAsync(m => m.ID_Zahlung == payment.ID_Zahlung);
+            if (result != null)
+            {
+                result.ID_Zahlung = payment.ID_Zahlung;
+                result.ID_Anbieter = payment.ID_Anbieter;
+                result.Anbieter = payment.Anbieter;
+                result.Datum = payment.Datum;
+                result.Zahlungsart = payment.Zahlungsart;
+                result.Zahlungen = payment.Zahlungen;
+                result.Bemerkungen = payment.Bemerkungen;
+                return result;
+            }
+            return null;
+        }
         public async Task<ElectricCost?> UpdateCostAsync(ElectricCost cost)
         {
+            ArgumentNullException.ThrowIfNull(cost);
+
             var result = await _context.Strom_kosten.FirstOrDefaultAsync(m => m.Id == cost.Id);
 
             if (result != null)
@@ -305,27 +363,11 @@ namespace GWS_Api.Repositories.Electric
 
             return await Task.FromResult(result);
         }
-        public async Task<ElectricPayment?> UpdatePaymentAsync(ElectricPayment payment)
-        {
-            var result = await _context.Strom_zahlungen.FirstOrDefaultAsync(m => m.ID_Zahlung == payment.ID_Zahlung);
-
-            if (result != null)
-            {
-                result.ID_Zahlung = payment.ID_Zahlung;
-                result.ID_Anbieter = payment.ID_Anbieter;
-                result.Anbieter = payment.Anbieter;
-                result.Datum = payment.Datum;
-                result.Zahlungsart = payment.Zahlungsart;
-                result.Zahlungen = payment.Zahlungen;
-                result.Bemerkungen = payment.Bemerkungen;
-                return result;
-            }
-            return null;
-        }
         public async Task<ElectricCounterChange?> UpdateCounterChangeAsync(ElectricCounterChange counterChange)
         {
-            var result = await _context.Strom_zaehlerwechsel.FirstOrDefaultAsync(m => m.Id == counterChange.Id);
+            ArgumentNullException.ThrowIfNull(counterChange);
 
+            var result = await _context.Strom_zaehlerwechsel.FirstOrDefaultAsync(m => m.Id == counterChange.Id);
             if (result != null)
             {
                 result.Id = counterChange.Id;
@@ -339,35 +381,47 @@ namespace GWS_Api.Repositories.Electric
                 result.Zaehlerstand_Enfluri_alt = counterChange.Zaehlerstand_Enfluri_alt;
                 result.Zaehlerstand_Enfluri_neu = counterChange.Zaehlerstand_Enfluri_neu;
                 result.Bemerkung = counterChange.Bemerkung;
+                return result;
             }
-
-            return await Task.FromResult(result!);
+            return null;
         }
         #endregion
 
+        #region SaveChanges
+        // Zwingend erforderlich, damit EF Core die obigen Updates an die MySQL-DB schickt
         public async Task<bool> SaveChangesAsync()
         {
-            return (await _context.SaveChangesAsync() >= 0);    // return count of state entries written to DB
+            try
+            {
+                // Wir führen das Speichern aus. 
+                // Ob 0 oder mehr Zeilen geändert wurden, ist für den reinen Erfolg egal.
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch (Exception)
+            {
+                // Nur wenn die Datenbank wirklich einen Fehler wirft, geben wir false zurück
+                return false;
+            }
         }
 
-
-
         // nur zum Testen
-        //public async Task<IEnumerable<ElectricTarif>> SearchElectric(string tarif, double? zaehlermiete)
-        //{
-        //    IQueryable<ElectricTarif> query = _context.Strom_tarif;
-        //    if (!string.IsNullOrEmpty(tarif))
-        //    {
-        //        //query = query.Where(m => m.Tarif.Contains(tarif) || m.Grundpreis == 0.0);
-        //        query = query.Where(m => m.Tarif.Contains(tarif));
-        //    }
-        //    // if (zaehlermiete != null)
-        //    // {
-        //    //   query = query.Where(m => m.Zaehlermiete == zaehlermiete);
-        //    // }
-        //    return await query.ToListAsync();
+        public async Task<IEnumerable<ElectricTarif>> Search(string tarif, double? zaehlermiete)
+        {
+            IQueryable<ElectricTarif> query = _context.Strom_tarif;
 
-        //}
+            if (!string.IsNullOrEmpty(tarif))
+            {
+                query = query.Where(m => m.Tarif!.Contains(tarif));
+            }
+
+            if (zaehlermiete != null)
+            {
+                query = query.Where(m => m.Zaehlermiete == zaehlermiete);
+            }
+
+            return await query.ToListAsync();
+        }
+        #endregion
     }
-
 }
