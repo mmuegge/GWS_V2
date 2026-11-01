@@ -55,31 +55,32 @@
 </div>
 
 @* Grid *@
-@if (paymentList != null && paymentList.Count > 0)
+@if (paymentList != null)
 {
-    <div class="control-section" id="target" align="center">
-        <SfGrid ID="Grid" @ref="sfDataGrid" DataSource="@paymentList"
-        AllowPaging="true"
-        AllowFiltering="true"
-        AllowReordering="true"
-        AllowResizing="true"
-        AllowExcelExport="true"
-        AllowPdfExport="true"
-        EnableHover="true"
-        AllowTextWrap="true"
-        AllowSelection="true"
-        AllowSorting="true"
-        Height="100%"
-        Width="100%"
-        Toolbar=@toolbar
-        EnableStickyHeader="true">
+    <div class="control-section" id="target" align="center" style="position: relative; min-height: 200px;">
+        <SfGrid ID="Grid" @ref="sfDataGrid" 
+                DataSource="@paymentList"
+                AllowPaging="true"
+                AllowFiltering="true"
+                AllowReordering="true"
+                AllowResizing="true"
+                AllowExcelExport="true"
+                AllowPdfExport="true"
+                EnableHover="true"
+                AllowTextWrap="true"
+                AllowSelection="true"
+                AllowSorting="true"
+                Height="100%"
+                Width="100%"
+                Toolbar=@toolbar
+                EnableStickyHeader="true">
 
             <GridEditSettings AllowAdding="true"
-            AllowEditing="true"
-            AllowDeleting="true"
-            ShowDeleteConfirmDialog="true"
-            Mode="Syncfusion.Blazor.Grids.EditMode.Dialog"
-            Dialog="DialogParams">
+                              AllowEditing="true"
+                              AllowDeleting="true"
+                              ShowDeleteConfirmDialog="false"
+                              Mode="EditMode.Dialog"
+                              Dialog="DialogParams">
 
                 <HeaderTemplate>
                 @{
@@ -90,10 +91,9 @@
             </GridEditSettings>
 
             <GridEvents OnToolbarClick="ToolbarBtnClickHandler"
-            RowCreating="RowCreatingHandler"
-            RowEditing="RowEditingHandler"
-            OnActionComplete="ActionCompleteHandler"
-            TValue="GWS_PaymentModel">
+                        RowCreating="RowCreatingHandler"
+                        OnActionComplete="ActionBeginHandler"
+                        TValue="GWS_PaymentModel">
             </GridEvents>
 
             <GridPageSettings PageSize="20" PageSizes="true"></GridPageSettings>
@@ -103,8 +103,8 @@
             <GridSortSettings>
                 <GridSortColumns>
                     <GridSortColumn 
-                    Field="Datum" 
-                    Direction="SortDirection.Descending">
+                        Field="Datum" 
+                        Direction="SortDirection.Descending">
                     </GridSortColumn>
                 </GridSortColumns>
             </GridSortSettings>
@@ -127,89 +127,93 @@
             </GridAggregates>
 
             <GridColumns>
-                <GridColumn IsPrimaryKey="true" Field="@nameof(GWS_PaymentModel.ID_Zahlung)" Visible="false"
-                AllowAdding="false"
-                AllowEditing="false"
-                AllowSorting="false"
-                AllowFiltering="false"
-                Width="35">
+                @* der Primärschlüssel muss unbedingt angegeben werden auch wenn er nicht sichtbar ist *@
+                <GridColumn 
+                    Field="@nameof(GWS_PaymentModel.ID_Zahlung)"
+                    IsPrimaryKey="true"
+                    Visible="false">
                 </GridColumn>
 
-                <GridColumn Field=@nameof(GWS_PaymentModel.Anbieter)
-                Width="200"
-                EditType="EditType.DropDownEdit"
-                HeaderText="Anbieter">
+                <GridColumn Field=@nameof(GWS_PaymentModel.ID_Anbieter) Width="200" EditType="EditType.DropDownEdit" HeaderText="Anbieter">
+                    @* Zeigt im normalen Grid-Modus den Text statt der ID an --> *@
+                    <Template>
+                        @{
+                            var payment = (context as GWS_PaymentModel);
+                            var supplierName = supplierList?.FirstOrDefault(s => s.Id == payment?.ID_Anbieter)?.Anbieter;
+                            <span>@supplierName</span>
+                        }
+                    </Template>
 
                     <EditTemplate>
-                        <SfDropDownList Placeholder="Anbieter"
-                        FloatLabelType="FloatLabelType.Always"
-                        TValue="int?"
-                        TItem="Gas_SupplierDataModel"
-                        DataSource="@supplierList"
-                        @bind-Value="@DropDownValueSupplier">
-
+                        <SfDropDownList Placeholder="Anbieter wählen"
+                                        FloatLabelType="FloatLabelType.Always"
+                                        ID="ID_Anbieter"
+                                        TItem="Gas_SupplierDataModel"
+                                        TValue="int"
+                                        @bind-Value="@((context as GWS_PaymentModel)!.ID_Anbieter)"
+                                        DataSource="@supplierList">
+                            @* Value="Id" (int) wird in ID_Anbieter gespeichert, Text="Anbieter" (string) wird angezeigt *@
                             <DropDownListFieldSettings Value="Id" Text="Anbieter"></DropDownListFieldSettings>
                         </SfDropDownList>
                     </EditTemplate>
 
                     <HeaderTemplate>
-                        <SfTooltip Content="@GetTooltipContent("Anbieter")"
-                        Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                        <SfTooltip Content="@GetTooltipContent("Anbieter")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
                             <span><b>Anbieter</b></span>
                         </SfTooltip>
                     </HeaderTemplate>
                 </GridColumn>
 
                 <GridColumn Field=@nameof(GWS_PaymentModel.Datum)
-                Format="d"
-                EditType="EditType.DatePickerEdit"
-                Width="110"
-                DefaultValue="DateTime.Now"
-                HeaderText="Datum">
+                            Format="d"
+                            EditType="EditType.DatePickerEdit"
+                            Width="110"
+                            DefaultValue="DateTime.Now"
+                            HeaderText="Datum">
 
-                    <HeaderTemplate>
-                        <SfTooltip Content="@GetTooltipContent("Datum")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
-                            <span><b>Datum</b></span>
-                        </SfTooltip>
-                    </HeaderTemplate>
+                            <HeaderTemplate>
+                                <SfTooltip Content="@GetTooltipContent("Datum")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                                    <span><b>Datum</b></span>
+                                </SfTooltip>
+                            </HeaderTemplate>
                 </GridColumn>
 
                 <GridColumn Field=@nameof(GWS_PaymentModel.Zahlungsart)
-                EditType="EditType.DropDownEdit"
-                Width="110"
-                HeaderText="Zahlungsart">
+                            EditType="EditType.DropDownEdit"
+                            Width="110"
+                            HeaderText="Zahlungsart">
 
-                    <EditTemplate>
-                        <SfDropDownList Placeholder="Zahlungsart"
-                        FloatLabelType="FloatLabelType.Always" 
-                        TItem="GWS_PaymentsMethodModel"
-                        TValue="string"
-                        DataSource="@paymentsMethodList"
-                        @bind-Value="@((context as GWS_PaymentModel)!.Zahlungsart)">
+                            <EditTemplate>
+                                <SfDropDownList Placeholder="Zahlungsart"
+                                                FloatLabelType="FloatLabelType.Always" 
+                                                TItem="GWS_PaymentsMethodModel"
+                                                TValue="string"
+                                                DataSource="@paymentsMethodList"
+                                                @bind-Value="@((context as GWS_PaymentModel)!.Zahlungsart)">
 
-                            <DropDownListFieldSettings Value="Zahlungsart" Text="Zahlungsart"></DropDownListFieldSettings>
-                        </SfDropDownList>
-                    </EditTemplate>
+                                    <DropDownListFieldSettings Value="Zahlungsart" Text="Zahlungsart"></DropDownListFieldSettings>
+                                </SfDropDownList>
+                            </EditTemplate>
 
-                    <HeaderTemplate>
-                        <SfTooltip Content="@GetTooltipContent("Art")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
-                            <span><b>Art</b></span>
-                        </SfTooltip>
-                    </HeaderTemplate>
+                            <HeaderTemplate>
+                                <SfTooltip Content="@GetTooltipContent("Art")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                                    <span><b>Art</b></span>
+                                </SfTooltip>
+                            </HeaderTemplate>
                 </GridColumn>
 
                 <GridColumn Field=@nameof(GWS_PaymentModel.Zahlungen)
-                Format="C2"
-                EditType="EditType.NumericEdit"
-                Width="110"
-                HeaderText="Zahlung">
+                            Format="C2"
+                            EditType="EditType.NumericEdit"
+                            Width="110"
+                            HeaderText="Zahlung">
 
                     <EditTemplate>
                         <SfNumericTextBox Placeholder="Betrag"
-                        FloatLabelType="FloatLabelType.Always"
-                        TValue="Double?"
-                        @bind-Value="@((context as GWS_PaymentModel)!.Zahlungen)"
-                        Format="C2">
+                                          FloatLabelType="FloatLabelType.Always"
+                                          TValue="Double?"
+                                          @bind-Value="@((context as GWS_PaymentModel)!.Zahlungen)"
+                                          Format="C2">
                         </SfNumericTextBox>
                     </EditTemplate>
 
@@ -221,8 +225,8 @@
                 </GridColumn>
 
                 <GridColumn Field=@nameof(GWS_PaymentModel.Bemerkungen)
-                Width="300" 
-                HeaderText="Bemerkung">
+                            Width="300" 
+                            HeaderText="Bemerkung">
 
                     <HeaderTemplate>
                         <SfTooltip Content="@GetTooltipContent("Bemerkung")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
@@ -284,14 +288,14 @@ else
 @* Dialog*@
 <div>
     <SfDialog Target="#target"
-                Width="@dialogWidth"
-                Height="@dialogHeight"
-                AllowDragging="true"
-                ShowCloseIcon="true"
-                @bind-Visible="@DialogVisible"
-                AllowPrerender="true"
-                IsModal="true" 
-                CssClass="MyCss">
+              Width="@dialogWidth"
+              Height="@dialogHeight"
+              AllowDragging="true"
+              ShowCloseIcon="true"
+              @bind-Visible="@DialogVisible"
+              AllowPrerender="true"
+              IsModal="true" 
+              CssClass="MyCss">
 
         <DialogTemplates>
             <Header>@header</Header>
@@ -311,6 +315,26 @@ else
 </div>
 
 <style>
+    /* 1. Zwingt das gesamte Spinner-Container-System nach ganz vorne */
+    .e-spinner-pane.e-spin-overlay {
+        z-index: 99999 !important;
+        background-color: rgba(0, 0, 0, 0.4) !important; /* Macht den Hintergrund dunkel-transparent */
+    }
+
+        /* 2. Zwingt das Ladesymbol und den Text, sich abzuheben */
+        .e-spinner-pane.e-spin-overlay .e-spinner-inner {
+            z-index: 100000 !important;
+        }
+
+        /* 3. HIER WIRD DER TEXT ERZWUNGEN UND SCHÖN FORMATIERT */
+        .e-spinner-pane.e-spin-overlay .e-spin-label {
+            color: #FFFFFF !important; /* Reines Weiß, damit es auf dem dunklen Overlay lesbar ist */
+            font-weight: bold !important; /* Fett gedruckt */
+            font-size: 16px !important; /* Etwas größer für bessere Lesbarkeit */
+            margin-top: 10px !important; /* Abstand zum drehenden Rad */
+            display: block !important; /* Sicherstellen, dass es nicht auf hidden steht */
+        }
+
     .e-dlg-overlay {
         background-color: slategray;
         opacity: 0.6;
@@ -361,6 +385,12 @@ else
     .MyCss .e-dlg-header-content {
         background-color: red;
     }
+
+    .dialog-label {
+        color: black;
+        font-size: 14px;
+        margin-bottom: 2px;
+    }
 </style>
 
 @code
@@ -381,8 +411,8 @@ else
     public int? DropDownValueSupplier { get; set; } = 0;
     public int? DropDownValuePaymentsMethod { get; set; } = 1;
 
-    private bool save = false;
-    private bool update = false;
+    //private bool save = false;
+    //private bool update = false;
     private bool success = false;
 
     readonly string urlSupplier = "gas/anbieter/";
@@ -398,7 +428,7 @@ else
 
     private SfGrid<GWS_PaymentModel> sfDataGrid = new();
 
-    private enum GridOperation { None, Add, Edit }
+    private enum GridOperation { None, Add, Edit, Delete }
     private GridOperation currentOperation = GridOperation.None;
 
     private List<Gas_SupplierDataModel>? supplierList = new();
@@ -453,62 +483,6 @@ else
     /// <returns></returns>
     protected override async Task OnInitializedAsync()
     {
-        // // Spinner
-        // this.spinnerVisibleProperty = true;
-
-        // // MyAppSettings.json auslesen und letzten gespeicherten Anbieter auslesen
-        // settings = await GetSetMyAppConfig.GetMyAppSettings.ReadSettingsAsync(myAppSettings);
-        // if (settings == null) return;
-
-        // gwsP = new GWSProcessor(myHttpClient, settings!.GWSUri);
-        // try
-        // {
-        //     // Anbieterdaten auslesen (nur Anbieter und Id => durch Gas_SupplierDataModel)
-        //     supplierList = await gwsP.LoadDataAsync<Gas_SupplierDataModel>(urlSupplier);
-
-        //     if (supplierList != null && supplierList.Any()) // prüfen ob es Anbieterdaten gibt
-        //     {
-        //         // gespeicherten letzten Anbieter auslesen
-        //         supplierData.Id = String.IsNullOrEmpty(settings.Supplier_Id!.Gas) ? supplierData.Id = supplierList.Max(x => x.Id) : supplierData.Id = Int32.Parse(settings.Supplier_Id.Gas);
-
-        //         // Anbieter Start-Datum auslesen
-        //         startDate = supplierList
-        //         .Where(c => c.Id == supplierData.Id)
-        //         .Select(c => c.Zeitraum_Start).FirstOrDefault();
-
-        //         // Anbieter Ende-Datum auslesen
-        //         endDate = supplierList
-        //        .Where(c => c.Id == supplierData.Id)
-        //        .Select(c => c.Zeitraum_Ende).FirstOrDefault();
-        //     }
-        //     else
-        //     {
-        //         // es gibt keine gültigen Daten der Anbieter
-        //         supplierData.Id = 0;
-        //     }
-
-        //     if (supplierData.Id > 0)
-        //     {
-        //         // Zahlungen anbieterabhängig auslesen
-        //         paymentList = await gwsP.LoadDataAsync<GWS_PaymentModel>(urlPaymentsSupplier + Convert.ToString(supplierData.Id));
-        //         if (paymentList == null || !paymentList.Any())
-        //         {
-        //             OpenDialog("Keine Gas-Zahlungen vorhanden!", "60px", "380px", false);
-        //         }
-        //     }
-
-        //     // Zahlungsarten laden
-        //     paymentsMethodList = await gwsP.LoadDataAsync<GWS_PaymentsMethodModel>(urlPaymentsMethod);
-        // }
-        // catch (Exception)
-        // {
-        //     throw new Exception("Es konnten keine Gas-Zahlungen geladen werden");
-        // }
-
-        // // Spinner
-        // await Task.Delay(200);
-        // this.spinnerVisibleProperty = false;
-
         // 1. Spinner sofort einschalten
         spinnerVisibleProperty = true;
 
@@ -723,59 +697,6 @@ else
     }
     #endregion
 
-    #region ActionCompleteHandler
-    /// <summary>
-    /// ActionCompleteHandler
-    /// </summary>
-    /// <param name="args"></param>
-    public async Task ActionCompleteHandler(ActionEventArgs<GWS_PaymentModel> args)
-    {
-        if (args?.Data is null) return;
-
-        switch (args.RequestType)
-        {
-            case Syncfusion.Blazor.Grids.Action.Save:
-                paymentData = args.Data;
-
-                if (args.Action == "Add")
-                {
-                    currentOperation = GridOperation.Add;
-                    OpenDialog("Datensatz speichern ?", "130px", "220px", true);
-                }
-                else if (args.Action == "Edit")
-                {
-                    currentOperation = GridOperation.Edit;
-                    OpenDialog("Datensatz ändern ?", "130px", "220px", true);
-                }
-                break;
-
-            case Syncfusion.Blazor.Grids.Action.Delete:
-                if (args.Data.ID_Zahlung <= 0)
-                {
-                    if (gwsP is not null)
-                    {
-                        paymentList = await gwsP.LoadDataAsync<GWS_PaymentModel>($"{urlPaymentsSupplier}{supplierData.Id}");
-                    }
-                    ShowToast(false, "Datensatz nicht gelöscht!");
-                }
-                else
-                {
-                    if (gwsP is not null)
-                    {
-                        paymentData = await gwsP.DeleteDataAsync<GWS_PaymentModel>(urlPayment, args.Data.ID_Zahlung.ToString());
-                        ShowToast(true, "Datensatz gelöscht!");
-                    }
-                }
-
-                if (sfDataGrid is not null)
-                {
-                    await sfDataGrid.Refresh();
-                }
-                break;
-        }
-    }
-    #endregion
-
     #region CancelClick
     /// <summary>
     /// CancelClick
@@ -789,8 +710,22 @@ else
         // Setzt den aktuellen Operationstyp zurück, um sicherzustellen, dass keine Aktion mehr aussteht
         currentOperation = GridOperation.None;
 
-        // Setzt die temporären Datenstrukturen zurück, falls diese im Grid gebunden waren
+        // 3. Setzt die temporäre Datenstruktur zurück
         paymentData = null;
+
+        // 4. DIE RETTUNG: Daten frisch von der API laden, um die UI-Änderungen zu verwerfen
+        if (gwsP is not null && supplierData is not null)
+        {
+            // Nutzen Sie hier die URL-Variable, die Sie auch beim initialen Laden verwenden (z.B. urlCounter)
+            // Lädt gezielt die Zählerstände für den aktuell ausgewählten Anbieter neu
+            paymentList = await gwsP.LoadDataAsync<GWS_PaymentModel>($"{urlPaymentsSupplier}{supplierData.Id}");
+        }
+
+        // 5. Grid zwingen, die frischen Daten anzuzeigen
+        if (sfDataGrid is not null)
+        {
+            await sfDataGrid.Refresh();
+        }
     }
     #endregion
 
@@ -802,7 +737,6 @@ else
     private async Task YesClick()
     {
         DialogVisible = false;
-
         if (gwsP is null || paymentData is null || currentOperation == GridOperation.None) return;
 
         try
@@ -810,6 +744,9 @@ else
             bool isSuccess = false;
             string successMessage = string.Empty;
             string defaultErrorMessage = "Aktion konnte nicht ausgeführt werden.";
+
+            // Vor jedem Aufruf die alte API-Response zurücksetzen!
+            apiResponse = null;
 
             switch (currentOperation)
             {
@@ -821,31 +758,52 @@ else
                     break;
 
                 case GridOperation.Edit:
-                    string url = $"{urlPayment.TrimEnd('/')}/{paymentData.ID_Zahlung}";
-                    apiResponse = await gwsP.UpdateDataAsync<GWS_PaymentModel>(url, paymentData);
+                    string urlEdit = $"{urlPayment.TrimEnd('/')}/{paymentData.ID_Zahlung}";
+                    apiResponse = await gwsP.UpdateDataAsync<GWS_PaymentModel>(urlEdit, paymentData);
                     isSuccess = apiResponse?.MyHttpStatusCode == HttpStatusCode.NoContent;
                     successMessage = "Datensatz erfolgreich aktualisiert!";
                     defaultErrorMessage = "Datensatz konnte nicht aktualisiert werden.";
+                    break;
+
+                case GridOperation.Delete:
+                    string deleteUrl = urlPayment.EndsWith("/") ? urlPayment : urlPayment + "/";
+                    string idToDelete = paymentData.ID_Zahlung.ToString();
+
+                    var deletedData = await gwsP.DeleteDataAsync<GWS_PaymentModel>(deleteUrl, idToDelete);
+
+                    // Falls DeleteDataAsync intern doch die apiResponse befüllt,
+                    // wäre es ideal, diese hier zuzuweisen. Wenn nicht, reicht das:
+                    isSuccess = deletedData is not null;
+                    successMessage = "Datensatz erfolgreich gelöscht!";
+                    defaultErrorMessage = "Datensatz konnte nicht gelöscht werden.";
                     break;
             }
 
             if (isSuccess)
             {
                 ShowToast(true, successMessage);
+
+                // Zwinge das Grid zum sofortigen UI-Update, indem du das Element lokal entfernst
+                if (paymentList is not null)
+                {
+                    var itemToRemove = paymentList.FirstOrDefault(x => x.ID_Zahlung == paymentData.ID_Zahlung);
+                    if (itemToRemove is not null)
+                    {
+                        paymentList.Remove(itemToRemove);
+                    }
+                }
+
+                // Erst danach im Hintergrund die Liste frisch vom Server holen
                 paymentList = await gwsP.LoadDataAsync<GWS_PaymentModel>($"{urlPaymentsSupplier}{supplierData!.Id}");
             }
             else
             {
-                // Dynamische Fehlerursache aus MyResponseString ermitteln
                 string errorMessage = defaultErrorMessage;
-
+                // Die Prüfung stellt sicher, dass wir nicht aus Versehen alte Response-Daten anzeigen
                 if (apiResponse is not null && !string.IsNullOrWhiteSpace(apiResponse.MyResponseString))
                 {
-                    // Wenn die API direkt Text zurückgibt, nutzen wir ihn.
-                    // Falls es JSON ist (z.B. bei Validierungsfehlern), könnte man es hier parsen.
                     errorMessage = $"Fehler ({apiResponse.MyHttpStatusCode}): {apiResponse.MyResponseString}";
                 }
-
                 ShowToast(false, errorMessage);
             }
 
@@ -899,7 +857,7 @@ else
     /// <returns></returns>
     public string GetTooltipContent(string headerText)
     {
-        return ColumnDescriptions.ContainsKey(headerText) ? ColumnDescriptions[headerText] : "No description available.";
+        return ColumnDescriptions.ContainsKey(headerText) ? ColumnDescriptions[headerText] : "Keine Beschreibung verfügbar.";
     }
     #endregion
 
@@ -939,52 +897,87 @@ else
     /// <param name="args"></param>
     public void RowCreatingHandler(RowCreatingEventArgs<GWS_PaymentModel> args)
     {
-        // 1. Guard Clause: Wenn keine Anbieterdaten da sind, sofort abbrechen
-        if (supplierData == null || args?.Data == null) return;
+        if (args?.Data == null) return;
 
-        // Anbieter-Daten zuweisen
-        DropDownValueSupplier = supplierData.Id;
-        args.Data.ID_Anbieter = supplierData.Id;
-
-        // Kompaktes LINQ: Findet direkt den Anbieter-Namen
-        args.Data.Anbieter = supplierList?
-            .FirstOrDefault(x => x.Id == supplierData.Id)?
-            .Anbieter;
-
-        // 2. Bezahlmethode verarbeiten
-        if (DropDownValuePaymentsMethod == 0)
+        // 1. Anbieter-Daten direkt zuweisen (Vermeidung von LINQ-Suche auf Listen)
+        if (supplierData != null)
         {
-            // Wert aus der Liste anhand der Daten lesen
-            var method = paymentsMethodList?
-                .FirstOrDefault(c => c.Zahlungsart == args.Data.Zahlungsart);
+            args.Data.ID_Anbieter = supplierData.Id;
 
-            if (method != null)
+            var selectedSupplier = supplierList?.FirstOrDefault(x => x.Id == supplierData.Id);
+            if (selectedSupplier != null)
             {
-                DropDownValuePaymentsMethod = method.ID_Zahlungsart;
+                args.Data.Anbieter = selectedSupplier.Anbieter;
             }
         }
-        else
+
+        // 2. Datum auf das aktuelle Datum (ohne Uhrzeit) setzen
+        args.Data.Datum = DateTime.Today;
+
+        // 3. Effizientes Holen des letzten Eintrags (Vermeidung von Any() + LastOrDefault())
+        var lastCost = paymentList?.LastOrDefault();
+        if (lastCost != null)
         {
-            // Wert aus der Liste anhand der ID lesen (Sicherer Null-Check statt !)
-            args.Data.Zahlungsart = paymentsMethodList?
-                .FirstOrDefault(a => a.ID_Zahlungsart == DropDownValuePaymentsMethod)?
-                .Zahlungsart;
+            args.Data.Zahlungsart = lastCost.Zahlungsart;
+            args.Data.Zahlungen = lastCost.Zahlungen;
+            args.Data.Bemerkungen = lastCost.Bemerkungen;
         }
     }
     #endregion
 
-    #region RowEditingHandler
+    #region ActionBeginHandler
     /// <summary>
-    /// Datenzeile wird editiert
+    ///
     /// </summary>
     /// <param name="args"></param>
-    public void RowEditingHandler(RowEditingEventArgs<GWS_PaymentModel> args)
+    /// <returns></returns>
+    public async Task ActionBeginHandler(ActionEventArgs<GWS_PaymentModel> args)
     {
-        // C# 8+ Null-Conditional Assignment: Zuweisung erfolgt nur, wenn args und Data nicht null sind
-        if (args?.Data != null)
+        if (args?.Data is null) return;
+
+        switch (args.RequestType)
         {
-            DropDownValueSupplier = args.Data.ID_Anbieter;
+            case Syncfusion.Blazor.Grids.Action.Save:
+                args.Cancel = true;
+                paymentData = args.Data;
+
+                if (args.Action == "Add")
+                {
+                    currentOperation = GridOperation.Add;
+                    OpenDialog("Datensatz speichern ?", "130px", "220px", true);
+                }
+                else if (args.Action == "Edit")
+                {
+                    currentOperation = GridOperation.Edit;
+                    OpenDialog("Datensatz ändern ?", "130px", "220px", true);
+                }
+                break;
+
+            case Syncfusion.Blazor.Grids.Action.Delete:
+                // 1. Automatische Grid-Löschung stoppen, damit wir die Kontrolle behalten
+                args.Cancel = true;
+
+                if (sfDataGrid != null)
+                {
+                    await sfDataGrid.ClearSelectionAsync();
+                }
+
+                // Sicherheitshalber prüfen, ob eine gültige ID vorliegt
+                if (args.Data.ID_Zahlung <= 0)
+                {
+                    ShowToast(false, "Ungültiger Datensatz. Löschen nicht möglich!");
+                    return;
+                }
+
+                // 2. Daten für die 'YesClick'-Methode zwischenspeichern
+                paymentData = args.Data;
+                currentOperation = GridOperation.Delete;
+
+                // 3. Bestätigungsdialog für das Löschen öffnen
+                OpenDialog("Datensatz wirklich löschen ?", "130px", "300px", true);
+                break;
         }
     }
     #endregion
+
 }

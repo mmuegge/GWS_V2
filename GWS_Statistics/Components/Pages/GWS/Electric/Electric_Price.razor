@@ -107,12 +107,11 @@
             </GridSortSettings>
 
             <GridColumns>
-                <GridColumn IsPrimaryKey="true" Field="@nameof(Electric_CostModel.Id)" Visible="false"
-                            AllowAdding="false"
-                            AllowEditing="false"
-                            AllowSorting="false"
-                            AllowFiltering="false"
-                            Width="35">
+                @* der Primärschlüssel muss unbedingt angegeben werden auch wenn er nicht sichtbar ist *@
+                <GridColumn 
+                    Field="@nameof(GWS_PaymentModel.ID_Zahlung)"
+                    IsPrimaryKey="true"
+                    Visible="false">
                 </GridColumn>
 
                 <GridColumn Field=@nameof(Electric_CostModel.Anbieter)

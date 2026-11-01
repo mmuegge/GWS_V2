@@ -80,12 +80,11 @@
             </GridSortSettings>
 
             <GridColumns>
-                <GridColumn IsPrimaryKey="true" Field="@nameof(Gas_BoilerModel.Id)" Visible="false"
-                    AllowAdding="false"
-                    AllowEditing="false"
-                    AllowSorting="false"
-                    AllowFiltering="false"
-                    Width="35">
+                @* der Primärschlüssel muss unbedingt angegeben werden auch wenn er nicht sichtbar ist *@
+                <GridColumn 
+                    Field="@nameof(Gas_BoilerModel.Id)" 
+                    IsPrimaryKey="true" 
+                    Visible="false">
                 </GridColumn>
 
                 <GridColumn Field=@nameof(Gas_BoilerModel.Verbrauchsjahr)
@@ -606,7 +605,7 @@ else
             }
             else
             {
-                boilerData = await gwsP!.DeleteDataAsync<Gas_BoilerModel>(urlBoiler, Convert.ToString(args.Data.Id));
+                boilerData = await gwsP!.DeleteDataAsync<Gas_BoilerModel>(urlBoiler, Convert.ToString(args.Data!.Id));
                 ShowToastMessage(true, "Datensatz gelöscht!");
             }
             SfDataGrid?.Refresh();
@@ -752,22 +751,26 @@ else
     /// </summary>
     /// <param name="supplier"></param>
     /// <returns></returns>
-    public string GetDialogHeader(Gas_BoilerModel boiler)
-    {
-        return boiler.Id == 0
-            ? "Verbrauchsjahr: neuer Verbrauch"
-            : "Verbrauchsjahr: " + boiler.Verbrauchsjahr.ToString("yyyy");
-    }
+    // public string GetDialogHeader(Gas_BoilerModel boiler)
+    // {
+    //     return boiler.Id == 0
+    //         ? "Verbrauchsjahr: neuer Verbrauch"
+    //         : "Verbrauchsjahr: " + boiler.Verbrauchsjahr.ToString("yyyy");
+    // }
+    public string GetDialogHeader(Gas_BoilerModel? boiler) =>
+     boiler is not { Id: > 0 }
+         ? "Verbrauchsjahr: neuer Verbrauch"
+         : $"Verbrauchsjahr: {boiler.Verbrauchsjahr:yyyy}";
     #endregion
 
     // not used
-    [JSInvokable]
-    public void DeleteKeyPressed(bool isDeleteInvoked)
-    {
-        isDeleteProcessed = isDeleteInvoked;
-        StateHasChanged();
+    // [JSInvokable]
+    // public void DeleteKeyPressed(bool isDeleteInvoked)
+    // {
+    //     isDeleteProcessed = isDeleteInvoked;
+    //     StateHasChanged();
 
-    }
+    // }
 
     // not used
     public void RowDeletedHandler(RowDeletedEventArgs<Gas_BoilerModel> args)

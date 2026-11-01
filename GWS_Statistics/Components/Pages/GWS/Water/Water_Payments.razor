@@ -12,6 +12,7 @@
 
 <PageTitle>Wasser- Zahlungen</PageTitle>
 
+@* Seiten-Überschrift *@
 <div class="container">
     <div class="text-center fs-3 fw-bold">
         <span class="fa-solid fa-faucet-drip fa-3xs" aria-hidden="true"> </span>
@@ -57,7 +58,8 @@
 @if(paymentList != null)
 {
     <div class="control-section" id="target" align="center" style="position: relative; min-height: 200px;">
-        <SfGrid ID="Grid" @ref="sfDataGrid" DataSource="@paymentList"
+        <SfGrid ID="Grid" @ref="sfDataGrid" 
+                DataSource="@paymentList"
                 AllowPaging="true"
                 AllowFiltering="true"
                 AllowReordering="true"
@@ -100,8 +102,9 @@
 
             <GridSortSettings>
                 <GridSortColumns>
-                    <GridSortColumn Field="Datum"
-                                    Direction="SortDirection.Descending">
+                    <GridSortColumn 
+                        Field="Datum"
+                        Direction="SortDirection.Descending">
                     </GridSortColumn>
                 </GridSortColumns>
             </GridSortSettings>
@@ -124,45 +127,18 @@
             </GridAggregates>
 
             <GridColumns>
-                @* <GridColumn IsPrimaryKey="true" Field="@nameof(GWS_PaymentModel.ID_Zahlung)" Visible="false"
-                            AllowAdding="false"
-                            AllowEditing="false"
-                            AllowSorting="false"
-                            AllowFiltering="false"
-                            Width="35">
+                @* der Primärschlüssel muss unbedingt angegeben werden auch wenn er nicht sichtbar ist *@
+                <GridColumn 
+                    Field="@nameof(GWS_PaymentModel.ID_Zahlung)"
+                    IsPrimaryKey="true"
+                    Visible="false">
                 </GridColumn>
 
-                <GridColumn Field=@nameof(GWS_PaymentModel.Anbieter)
-                            Width="200"
-                            EditType="EditType.DropDownEdit"
-                            HeaderText="Anbieter">
-
-                    <EditTemplate>
-                        <SfDropDownList Placeholder="Anbieter"
-                                        FloatLabelType="FloatLabelType.Always"
-                                        ID="Anbieter"
-                                        TItem="Water_SupplierDataModel"
-                                        TValue="string"
-                                        @bind-Value="@((context as GWS_PaymentModel)!.Anbieter)"
-                                        DataSource="@supplierList">
-
-                            <DropDownListFieldSettings Value="Anbieter" Text="Anbieter"></DropDownListFieldSettings>
-                        </SfDropDownList>
-                    </EditTemplate>
-
-                    <HeaderTemplate>
-                        <SfTooltip Content="@GetTooltipContent("Anbieter")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
-                            <span><b>Anbieter</b></span>
-                        </SfTooltip>
-                    </HeaderTemplate>
-                </GridColumn> *@
-
                 <GridColumn Field=@nameof(GWS_PaymentModel.ID_Anbieter) Width="200" EditType="EditType.DropDownEdit" HeaderText="Anbieter">
-                    <!-- Zeigt im normalen Grid-Modus den Text statt der ID an -->
+                    @* Zeigt im normalen Grid-Modus den Text statt der ID an --> *@
                     <Template>
                         @{
                             var payment = (context as GWS_PaymentModel);
-                            // Holt den passenden Namen aus der Liste anhand der ID
                             var supplierName = supplierList?.FirstOrDefault(s => s.Id == payment?.ID_Anbieter)?.Anbieter;
                             <span>@supplierName</span>
                         }
@@ -176,7 +152,7 @@
                                         TValue="int" 
                                         @bind-Value="@((context as GWS_PaymentModel)!.ID_Anbieter)" 
                                         DataSource="@supplierList">
-                            <!-- Value="Id" (int) wird in ID_Anbieter gespeichert, Text="Anbieter" (string) wird angezeigt -->
+                            @* Value="Id" (int) wird in ID_Anbieter gespeichert, Text="Anbieter" (string) wird angezeigt *@
                             <DropDownListFieldSettings Value="Id" Text="Anbieter"></DropDownListFieldSettings>
                         </SfDropDownList>
                     </EditTemplate>
@@ -195,11 +171,11 @@
                             DefaultValue="DateTime.Now"
                             HeaderText="Datum">
 
-                    <HeaderTemplate>
-                        <SfTooltip Content="@GetTooltipContent("Datum")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
-                            <span><b>Datum</b></span>
-                        </SfTooltip>
-                    </HeaderTemplate>
+                            <HeaderTemplate>
+                                <SfTooltip Content="@GetTooltipContent("Datum")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                                    <span><b>Datum</b></span>
+                                </SfTooltip>
+                            </HeaderTemplate>
                 </GridColumn>
 
                 <GridColumn Field=@nameof(GWS_PaymentModel.Zahlungsart)
@@ -207,24 +183,23 @@
                             Width="110"
                             HeaderText="Zahlungsart">
 
-                    <EditTemplate>
-                        <SfDropDownList Placeholder="Zahlungsart"
-                                        FloatLabelType="FloatLabelType.Always"
-                                        TItem="GWS_PaymentsMethodModel"
-                                        TValue="string"
-                                        DataSource="@paymentsMethodList"
-                                        @bind-Value="@((context as GWS_PaymentModel)!.Zahlungsart)">
+                            <EditTemplate>
+                                <SfDropDownList Placeholder="Zahlungsart"
+                                                FloatLabelType="FloatLabelType.Always"
+                                                TItem="GWS_PaymentsMethodModel"
+                                                TValue="string"
+                                                DataSource="@paymentsMethodList"
+                                                @bind-Value="@((context as GWS_PaymentModel)!.Zahlungsart)">
 
-                            <DropDownListFieldSettings Value="Zahlungsart" Text="Zahlungsart"></DropDownListFieldSettings>
-                        </SfDropDownList>
-                    </EditTemplate>
+                                                <DropDownListFieldSettings Value="Zahlungsart" Text="Zahlungsart"></DropDownListFieldSettings>
+                                </SfDropDownList>
+                            </EditTemplate>
 
-                    <HeaderTemplate>
-                        <SfTooltip Content="@GetTooltipContent("Art")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
-                            <span><b>Art</b></span>
-                        </SfTooltip>
-                    </HeaderTemplate>
-
+                            <HeaderTemplate>
+                                <SfTooltip Content="@GetTooltipContent("Art")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                                    <span><b>Art</b></span>
+                                </SfTooltip>
+                            </HeaderTemplate>
                 </GridColumn>
 
                 <GridColumn Field=@nameof(GWS_PaymentModel.Zahlungen)
@@ -425,7 +400,7 @@ else
 
 @code {
     #region Variablendeklaration
-    private string? ToastContent { get; set; }
+    //private string? ToastContent { get; set; }
     private bool spinnerVisibleProperty { get; set; } = false;
 
     private DialogSettings DialogParams = new DialogSettings { MinHeight = "400px", Width = "400px" };
@@ -441,8 +416,8 @@ else
     public int? DropDownValueSupplier { get; set; } = 0;
     public int? DropDownValuePaymentsMethod { get; set; } = 1;
 
-    private bool save = false;
-    private bool update = false;
+   //private bool save = false;
+    //private bool update = false;
     private bool success = false;
 
     readonly string urlSupplier = "wasser/anbieter/";
@@ -762,176 +737,93 @@ else
     /// <summary>
     /// YesClick
     /// </summary>
-    ///
-    // private async Task YesClick()
-    // {
-    //     DialogVisible = false;
-
-    //     if (gwsP is null || paymentData is null || currentOperation == GridOperation.None) return;
-
-    //     try
-    //     {
-    //         bool isSuccess = false;
-    //         string successMessage = string.Empty;
-    //         string defaultErrorMessage = "Aktion konnte nicht ausgeführt werden.";
-
-    //         switch (currentOperation)
-    //         {
-    //             case GridOperation.Add:
-    //                 apiResponse = await gwsP.PostDataAsync<GWS_PaymentModel>(urlPayment, paymentData);
-    //                 isSuccess = apiResponse?.MyHttpStatusCode == HttpStatusCode.Created;
-    //                 successMessage = "Datensatz erfolgreich gespeichert!";
-    //                 defaultErrorMessage = "Datensatz konnte nicht gespeichert werden.";
-    //                 break;
-
-    //             case GridOperation.Edit:
-    //                 string urlEdit = $"{urlPayment.TrimEnd('/')}/{paymentData.ID_Zahlung}";
-    //                 apiResponse = await gwsP.UpdateDataAsync<GWS_PaymentModel>(urlEdit, paymentData);
-    //                 isSuccess = apiResponse?.MyHttpStatusCode == HttpStatusCode.NoContent;
-    //                 successMessage = "Datensatz erfolgreich aktualisiert!";
-    //                 defaultErrorMessage = "Datensatz konnte nicht aktualisiert werden.";
-    //                 break;
-
-    //             // ================= INJEKTION / ERGÄNZUNG FÜR LÖSCHEN =================
-    //             case GridOperation.Delete:
-    //                 // Wichtig: Da deine Methode baseUrl + url + dataToDelete rechnet, 
-    //                 // übergeben wir die Basis-URL des Endpoints und die ID separat als String.
-    //                 string deleteUrl = urlPayment.EndsWith("/") ? urlPayment : urlPayment + "/";
-    //                 string idToDelete = paymentData.ID_Zahlung.ToString();
-
-    //                 // Aufruf deiner spezifischen Methode (gibt das gelöschte Objekt zurück)
-    //                 var deletedData = await gwsP.DeleteDataAsync<GWS_PaymentModel>(deleteUrl, idToDelete); 
-    
-    //                 // Da deine Methode bei Fehlern eine Exception wirft, 
-    //                 // sind wir im Erfolgsfall automatisch hier (isSuccess = true).
-    //                 isSuccess = deletedData is not null; 
-    //                 successMessage = "Datensatz erfolgreich gelöscht!";
-    //                 defaultErrorMessage = "Datensatz konnte nicht gelöscht werden.";
-    //                 break;
-    //             // =====================================================================
-    //         }
-
-    //         if (isSuccess)
-    //         {
-    //             ShowToast(true, successMessage);
-    //             paymentList = await gwsP.LoadDataAsync<GWS_PaymentModel>($"{urlPaymentsSupplier}{supplierData!.Id}");
-
-    //         }
-    //         else
-    //         {
-    //             string errorMessage = defaultErrorMessage;
-
-    //             if (apiResponse is not null && !string.IsNullOrWhiteSpace(apiResponse.MyResponseString))
-    //             {
-    //                 errorMessage = $"Fehler ({apiResponse.MyHttpStatusCode}): {apiResponse.MyResponseString}";
-    //             }
-
-    //             ShowToast(false, errorMessage);
-    //         }
-
-    //         if (sfDataGrid is not null)
-    //         {
-    //             await sfDataGrid.Refresh();
-    //         }
-    //     }
-    //     catch (Exception ex)
-    //     {
-    //         ShowToast(false, $"Netzwerkfehler: {ex.Message}");
-    //     }
-    //     finally
-    //     {
-    //         currentOperation = GridOperation.None;
-    //     }
-
-    // }
-
     private async Task YesClick()
-{
-    DialogVisible = false;
-    if (gwsP is null || paymentData is null || currentOperation == GridOperation.None) return;
-
-    try
     {
-        bool isSuccess = false;
-        string successMessage = string.Empty;
-        string defaultErrorMessage = "Aktion konnte nicht ausgeführt werden.";
-        
-        // Vor jedem Aufruf die alte API-Response zurücksetzen!
-        apiResponse = null; 
+        DialogVisible = false;
+        if (gwsP is null || paymentData is null || currentOperation == GridOperation.None) return;
 
-        switch (currentOperation)
+        try
         {
-            case GridOperation.Add:
-                apiResponse = await gwsP.PostDataAsync<GWS_PaymentModel>(urlPayment, paymentData);
-                isSuccess = apiResponse?.MyHttpStatusCode == HttpStatusCode.Created;
-                successMessage = "Datensatz erfolgreich gespeichert!";
-                defaultErrorMessage = "Datensatz konnte nicht gespeichert werden.";
-                break;
+            bool isSuccess = false;
+            string successMessage = string.Empty;
+            string defaultErrorMessage = "Aktion konnte nicht ausgeführt werden.";
 
-            case GridOperation.Edit:
-                string urlEdit = $"{urlPayment.TrimEnd('/')}/{paymentData.ID_Zahlung}";
-                apiResponse = await gwsP.UpdateDataAsync<GWS_PaymentModel>(urlEdit, paymentData);
-                isSuccess = apiResponse?.MyHttpStatusCode == HttpStatusCode.NoContent;
-                successMessage = "Datensatz erfolgreich aktualisiert!";
-                defaultErrorMessage = "Datensatz konnte nicht aktualisiert werden.";
-                break;
+            // Vor jedem Aufruf die alte API-Response zurücksetzen!
+            apiResponse = null; 
 
-            case GridOperation.Delete:
-                string deleteUrl = urlPayment.EndsWith("/") ? urlPayment : urlPayment + "/";
-                string idToDelete = paymentData.ID_Zahlung.ToString();
-                
-                var deletedData = await gwsP.DeleteDataAsync<GWS_PaymentModel>(deleteUrl, idToDelete);
-                
-                // Falls DeleteDataAsync intern doch die apiResponse befüllt, 
-                // wäre es ideal, diese hier zuzuweisen. Wenn nicht, reicht das:
-                isSuccess = deletedData is not null;
-                successMessage = "Datensatz erfolgreich gelöscht!";
-                defaultErrorMessage = "Datensatz konnte nicht gelöscht werden.";
-                break;
-        }
-
-        if (isSuccess)
-        {
-            ShowToast(true, successMessage);
-
-            // Zwinge das Grid zum sofortigen UI-Update, indem du das Element lokal entfernst
-            if (paymentList is not null)
+            switch (currentOperation)
             {
-                var itemToRemove = paymentList.FirstOrDefault(x => x.ID_Zahlung == paymentData.ID_Zahlung);
-                if (itemToRemove is not null)
+                case GridOperation.Add:
+                    apiResponse = await gwsP.PostDataAsync<GWS_PaymentModel>(urlPayment, paymentData);
+                    isSuccess = apiResponse?.MyHttpStatusCode == HttpStatusCode.Created;
+                    successMessage = "Datensatz erfolgreich gespeichert!";
+                    defaultErrorMessage = "Datensatz konnte nicht gespeichert werden.";
+                    break;
+
+                case GridOperation.Edit:
+                    string urlEdit = $"{urlPayment.TrimEnd('/')}/{paymentData.ID_Zahlung}";
+                    apiResponse = await gwsP.UpdateDataAsync<GWS_PaymentModel>(urlEdit, paymentData);
+                    isSuccess = apiResponse?.MyHttpStatusCode == HttpStatusCode.NoContent;
+                    successMessage = "Datensatz erfolgreich aktualisiert!";
+                    defaultErrorMessage = "Datensatz konnte nicht aktualisiert werden.";
+                    break;
+
+                case GridOperation.Delete:
+                    string deleteUrl = urlPayment.EndsWith("/") ? urlPayment : urlPayment + "/";
+                    string idToDelete = paymentData.ID_Zahlung.ToString();
+
+                    var deletedData = await gwsP.DeleteDataAsync<GWS_PaymentModel>(deleteUrl, idToDelete);
+
+                    // Falls DeleteDataAsync intern doch die apiResponse befüllt, 
+                    // wäre es ideal, diese hier zuzuweisen. Wenn nicht, reicht das:
+                    isSuccess = deletedData is not null;
+                    successMessage = "Datensatz erfolgreich gelöscht!";
+                    defaultErrorMessage = "Datensatz konnte nicht gelöscht werden.";
+                    break;
+            }
+
+            if (isSuccess)
+            {
+                ShowToast(true, successMessage);
+
+                // Zwinge das Grid zum sofortigen UI-Update, indem du das Element lokal entfernst
+                if (paymentList is not null)
                 {
-                    paymentList.Remove(itemToRemove); 
+                    var itemToRemove = paymentList.FirstOrDefault(x => x.ID_Zahlung == paymentData.ID_Zahlung);
+                    if (itemToRemove is not null)
+                    {
+                        paymentList.Remove(itemToRemove); 
+                    }
                 }
-            }
 
-            // Erst danach im Hintergrund die Liste frisch vom Server holen
-            paymentList = await gwsP.LoadDataAsync<GWS_PaymentModel>($"{urlPaymentsSupplier}{supplierData!.Id}");
-        }
-        else
-        {
-            string errorMessage = defaultErrorMessage;
-            // Die Prüfung stellt sicher, dass wir nicht aus Versehen alte Response-Daten anzeigen
-            if (apiResponse is not null && !string.IsNullOrWhiteSpace(apiResponse.MyResponseString))
+                // Erst danach im Hintergrund die Liste frisch vom Server holen
+                paymentList = await gwsP.LoadDataAsync<GWS_PaymentModel>($"{urlPaymentsSupplier}{supplierData!.Id}");
+            }
+            else
             {
-                errorMessage = $"Fehler ({apiResponse.MyHttpStatusCode}): {apiResponse.MyResponseString}";
+                string errorMessage = defaultErrorMessage;
+                // Die Prüfung stellt sicher, dass wir nicht aus Versehen alte Response-Daten anzeigen
+                if (apiResponse is not null && !string.IsNullOrWhiteSpace(apiResponse.MyResponseString))
+                {
+                    errorMessage = $"Fehler ({apiResponse.MyHttpStatusCode}): {apiResponse.MyResponseString}";
+                }
+                ShowToast(false, errorMessage);
             }
-            ShowToast(false, errorMessage);
-        }
 
-        if (sfDataGrid is not null)
+            if (sfDataGrid is not null)
+            {
+                await sfDataGrid.Refresh();
+            }
+        }
+        catch (Exception ex)
         {
-            await sfDataGrid.Refresh();
+            ShowToast(false, $"Netzwerkfehler: {ex.Message}");
+        }
+        finally
+        {
+            currentOperation = GridOperation.None;
         }
     }
-    catch (Exception ex)
-    {
-        ShowToast(false, $"Netzwerkfehler: {ex.Message}");
-    }
-    finally
-    {
-        currentOperation = GridOperation.None;
-    }
-}
 
     #endregion
 
@@ -968,7 +860,7 @@ else
     /// <returns></returns>
     public string GetTooltipContent(string headerText)
     {
-        return ColumnDescriptions.ContainsKey(headerText) ? ColumnDescriptions[headerText] : "No description available.";
+        return ColumnDescriptions.ContainsKey(headerText) ? ColumnDescriptions[headerText] : "Keine Beschreibung verfügbar.";
     }
     #endregion
 
@@ -1036,24 +928,14 @@ else
     }
     #endregion
 
-    #region RowEditingHandler
+    #region ActionBeginHandler
     /// <summary>
-    /// Datenzeile wird editiert
+    /// 
     /// </summary>
     /// <param name="args"></param>
-    // public void RowEditingHandler(RowEditingEventArgs<GWS_PaymentModel> args)
-    // {
-    //     // Best Practice: Null-Check für die Argumente und Daten
-    //     if (args?.Data is null) return;
-
-    //     // Daten aus Dropdown "Anbieter" auslesen und Anbieter-Feld in Grid vorbesetzen
-    //     DropDownValueSupplier = args.Data.ID_Anbieter;
-    // }
-    #endregion
-
+    /// <returns></returns>
     public async Task ActionBeginHandler(ActionEventArgs<GWS_PaymentModel> args)
     {
-   
         if (args?.Data is null) return;
 
         switch (args.RequestType)
@@ -1094,4 +976,5 @@ else
                 break;
         }
     }
+    #endregion
 }

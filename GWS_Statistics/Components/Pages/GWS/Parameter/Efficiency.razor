@@ -13,155 +13,168 @@
 
 <PageTitle>Effizienzklassen</PageTitle>
 
+@* Seiten-Überschrift *@
 <div class="container">
-    <div class="row">
-        <div class="col col-md-12">
-            <div class="text-center fs-3 fw-bold">
-                @* <span class="fa-solid fa-fire-flame-simple fa-3xs" aria-hidden="true"> </span> *@
-                <span><img src="energyEfficiency.png" width="50" height="50"></span>
-                <label>Effizienzklassen</label>
-            </div>
-        </div>
+    <div class="text-center fs-3 fw-bold">
+        <span><img src="energyEfficiency.png" width="50" height="50"></span>
+        <label>Effizienzklassen</label>
     </div>
 </div>
 
-<div class="control-section" id="target" align="center">
-    <SfGrid ID="Grid" @ref="SfDataGrid" DataSource="@efficiencyList"
-    AllowPaging="true"
-    AllowFiltering="true"
-    AllowReordering="true"
-    AllowResizing="true"
-    AllowExcelExport="true"
-    AllowPdfExport="true"
-    EnableHover="true"
-    AllowTextWrap="true"
-    AllowSelection="true"
-    AllowSorting="true"
-    Height="100%" Width="100%"
-    Toolbar=@toolbar
-    EnableStickyHeader="true">
+@if (efficiencyList != null)
+{
+    <div class="control-section" id="target" align="center">
+        <SfGrid ID="Grid" @ref="sfDataGrid" DataSource="@efficiencyList"
+        AllowPaging="true"
+        AllowFiltering="true"
+        AllowReordering="true"
+        AllowResizing="true"
+        AllowExcelExport="true"
+        AllowPdfExport="true"
+        EnableHover="true"
+        AllowTextWrap="true"
+        AllowSelection="true"
+        AllowSorting="true"
+        Height="100%" Width="100%"
+        Toolbar=@toolbar
+        EnableStickyHeader="true">
 
-        <GridEditSettings AllowAdding="true"
-        AllowEditing="true"
-        AllowDeleting="true"
-        ShowDeleteConfirmDialog="true"
-        Mode="EditMode.Dialog"
-        Dialog="DialogParams">
+            <GridEditSettings AllowAdding="true"
+            AllowEditing="true"
+            AllowDeleting="true"
+            ShowDeleteConfirmDialog="true"
+            Mode="EditMode.Dialog"
+            Dialog="dialogParams">
 
-            <HeaderTemplate>
+                <HeaderTemplate>
                 @{
-                    var DialogHeader = GetDialogHeader((context as EfficiencyModel));
-                    <span>@DialogHeader</span>
-                }
-            </HeaderTemplate>
-        </GridEditSettings>
-
-        <GridEvents OnToolbarClick="ToolbarBtnClickHandler"
-                    QueryCellInfo="CustomizeCell"
-                    RowCreating="RowCreatingHandler"
-                    OnActionComplete="ActionCompleteHandler"
-                    TValue="EfficiencyModel">
-        </GridEvents>
-
-        <GridPageSettings PageSize="20" PageSizes="true"></GridPageSettings>
-
-        <GridFilterSettings Type="Syncfusion.Blazor.Grids.FilterType.CheckBox"></GridFilterSettings>
-
-        <GridColumns>
-            <GridColumn IsPrimaryKey="true" Field="@nameof(EfficiencyModel.Id)" Visible="false"
-            AllowAdding="false"
-            AllowEditing="false"
-            AllowSorting="false"
-            AllowFiltering="false"
-            Width="35">
-            </GridColumn>
-
-            <GridColumn Field=@nameof(EfficiencyModel.Energieklasse)
-            Width="150"
-            HeaderText="Energieklasse">
-
-                <HeaderTemplate>
-                    <SfTooltip Content="@GetTooltipContent("EK")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
-                        <span><b>Energieklasse</b></span>
-                    </SfTooltip>
+                        var DialogHeader = GetDialogHeader((context as EfficiencyModel));
+                        <span>@DialogHeader</span>
+                    }
                 </HeaderTemplate>
-            </GridColumn>
+            </GridEditSettings>
 
-            <GridColumn Field=@nameof(EfficiencyModel.Energiebedarf)
-            Width="150"
-            HeaderText="Energiebedarf">
+            <GridEvents OnToolbarClick="ToolbarBtnClickHandler"
+            QueryCellInfo="CustomizeCell"
+            RowCreating="RowCreatingHandler"
+            OnActionComplete="ActionCompleteHandler"
+            TValue="EfficiencyModel">
+            </GridEvents>
 
-                <EditTemplate>
-                    <SfNumericTextBox Placeholder="Energiebedarf"
-                    FloatLabelType="FloatLabelType.Always"
-                    TValue="int?"
-                    @bind-Value="@((context as EfficiencyModel)!.Energiebedarf)"
-                    Format="# kWh/m2*a">
-                    </SfNumericTextBox>
-                </EditTemplate>
+            <GridPageSettings PageSize="20" PageSizes="true"></GridPageSettings>
 
-                <HeaderTemplate>
-                    <SfTooltip Content="@GetTooltipContent("EB")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
-                        <span><b>Energiebedarf</b></span>
-                    </SfTooltip>
-                </HeaderTemplate>
-            </GridColumn>
+            <GridFilterSettings Type="Syncfusion.Blazor.Grids.FilterType.CheckBox"></GridFilterSettings>
 
-            <GridColumn Field=@nameof(EfficiencyModel.Farbcode)
-            Width="150"
-            HeaderText="Farbcode">
+            <GridColumns>
+                @* der Primärschlüssel muss unbedingt angegeben werden auch wenn er nicht sichtbar ist *@
+                <GridColumn 
+                Field="@nameof(EfficiencyModel.Id)" 
+                IsPrimaryKey="true" 
+                Visible="false">
+                </GridColumn>
 
-                <HeaderTemplate>
-                    <SfTooltip Content="@GetTooltipContent("FC")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
-                        <span><b>Farbcode</b></span>
-                    </SfTooltip>
-                </HeaderTemplate>
-            </GridColumn>
+                <GridColumn Field=@nameof(EfficiencyModel.Energieklasse)
+                Width="150"
+                HeaderText="Energieklasse">
 
-            <GridColumn Field=@nameof(EfficiencyModel.Bemerkung)
-            Width="300"
-            HeaderText="Bemerkung">
+                    <HeaderTemplate>
+                        <SfTooltip Content="@GetTooltipContent("EK")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                            <span><b>Energieklasse</b></span>
+                        </SfTooltip>
+                    </HeaderTemplate>
+                </GridColumn>
 
-                <HeaderTemplate>
-                    <SfTooltip Content="@GetTooltipContent("BM")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
-                        <span><b>Bemerkung</b></span>
-                    </SfTooltip>
-                </HeaderTemplate>
-            </GridColumn>
+                <GridColumn Field=@nameof(EfficiencyModel.Energiebedarf)
+                Width="150"
+                HeaderText="Energiebedarf">
 
-            <GridColumn HeaderText="Funktion" Width="20%" MinWidth="110">
-                <GridCommandColumns>
-                    <GridCommandColumn Type="CommandButtonType.Edit"
-                    ButtonOption="@(new CommandButtonOptions(){
+                    <EditTemplate>
+                        <SfNumericTextBox Placeholder="Energiebedarf"
+                        FloatLabelType="FloatLabelType.Always"
+                        TValue="int?"
+                        @bind-Value="@((context as EfficiencyModel)!.Energiebedarf)"
+                        Format="# kWh/m2*a">
+                        </SfNumericTextBox>
+                    </EditTemplate>
+
+                    <HeaderTemplate>
+                        <SfTooltip Content="@GetTooltipContent("EB")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                            <span><b>Energiebedarf</b></span>
+                        </SfTooltip>
+                    </HeaderTemplate>
+                </GridColumn>
+
+                <GridColumn Field=@nameof(EfficiencyModel.Farbcode)
+                Width="150"
+                HeaderText="Farbcode">
+
+                    <HeaderTemplate>
+                        <SfTooltip Content="@GetTooltipContent("FC")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                            <span><b>Farbcode</b></span>
+                        </SfTooltip>
+                    </HeaderTemplate>
+                </GridColumn>
+
+                <GridColumn Field=@nameof(EfficiencyModel.Bemerkung)
+                Width="300"
+                HeaderText="Bemerkung">
+
+                    <HeaderTemplate>
+                        <SfTooltip Content="@GetTooltipContent("BM")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                            <span><b>Bemerkung</b></span>
+                        </SfTooltip>
+                    </HeaderTemplate>
+                </GridColumn>
+
+                <GridColumn HeaderText="Funktion" Width="20%" MinWidth="110">
+                    <GridCommandColumns>
+                        <GridCommandColumn Type="CommandButtonType.Edit"
+                        ButtonOption="@(new CommandButtonOptions(){
                                                     IconCss="e-icons e-edit",
                                                     CssClass="e-flat"
                                                })">
-                    </GridCommandColumn>
-                    <GridCommandColumn Type="CommandButtonType.Delete"
-                    ButtonOption="@(new CommandButtonOptions(){
+                        </GridCommandColumn>
+                        <GridCommandColumn Type="CommandButtonType.Delete"
+                        ButtonOption="@(new CommandButtonOptions(){
                                                     IconCss ="e-icons e-delete",
                                                     CssClass="e-flat"
                                                })">
-                    </GridCommandColumn>
-                    <GridCommandColumn Type="CommandButtonType.Save"
-                    ButtonOption="@(new CommandButtonOptions(){
+                        </GridCommandColumn>
+                        <GridCommandColumn Type="CommandButtonType.Save"
+                        ButtonOption="@(new CommandButtonOptions(){
                                                     IconCss="e-icons e-update",
                                                     CssClass="e-flat"
                                                })">
-                    </GridCommandColumn>
-                    <GridCommandColumn Type="CommandButtonType.Cancel"
-                    ButtonOption="@(new CommandButtonOptions(){
+                        </GridCommandColumn>
+                        <GridCommandColumn Type="CommandButtonType.Cancel"
+                        ButtonOption="@(new CommandButtonOptions(){
                                                     IconCss="e-icons e-cancel-icon",
                                                     CssClass="e-flat"
                                                })">
-                    </GridCommandColumn>
-                </GridCommandColumns>
-            </GridColumn>
-        </GridColumns>
-    </SfGrid>
-</div>
+                        </GridCommandColumn>
+                    </GridCommandColumns>
+                </GridColumn>
+            </GridColumns>
+        </SfGrid>
 
-<SfSpinner @bind-Visible="@SpinnerVisibleProperty" Type="SpinnerType.Tailwind" Size="40" CssClass="e-custom-color"></SfSpinner>
+        @* Spinner für den Export *@
+        <SfSpinner Visible="@IsExporting"
+                   Label="Datei wird generiert, bitte warten..."
+                   Type="@SpinnerType.Material"
+                   Size="40"
+                   CssClass="e-spin-overlay e-custom-color">
+        </SfSpinner>
+    </div>
+}
+else
+{
+    <SfSpinner @bind-Visible="@spinnerVisibleProperty"
+               Type="SpinnerType.Tailwind"
+               CssClass="e-custom-color"
+               Label="Lade Daten..."
+               Size="40">
+    </SfSpinner>
+}
 
 @* Dialog*@
 <div>
@@ -176,7 +189,7 @@
     CssClass="MyCss">
 
         <DialogTemplates>
-            <Header>@Header</Header>
+            <Header>@header</Header>
         </DialogTemplates>
 
         <DialogPositionData X="@dialogXValue" Y="@dialogYValue"></DialogPositionData>
@@ -193,6 +206,26 @@
 </div>
 
 <style>
+    /* 1. Zwingt das gesamte Spinner-Container-System nach ganz vorne */
+    .e-spinner-pane.e-spin-overlay {
+        z-index: 99999 !important;
+        background-color: rgba(0, 0, 0, 0.4) !important; /* Macht den Hintergrund dunkel-transparent */
+    }
+
+        /* 2. Zwingt das Ladesymbol und den Text, sich abzuheben */
+        .e-spinner-pane.e-spin-overlay .e-spinner-inner {
+            z-index: 100000 !important;
+        }
+
+        /* 3. HIER WIRD DER TEXT ERZWUNGEN UND SCHÖN FORMATIERT */
+        .e-spinner-pane.e-spin-overlay .e-spin-label {
+            color: #FFFFFF !important; /* Reines Weiß, damit es auf dem dunklen Overlay lesbar ist */
+            font-weight: bold !important; /* Fett gedruckt */
+            font-size: 16px !important; /* Etwas größer für bessere Lesbarkeit */
+            margin-top: 10px !important; /* Abstand zum drehenden Rad */
+            display: block !important; /* Sicherstellen, dass es nicht auf hidden steht */
+        }
+
     .color-cl-a-plus {
     background-color: @(classColors[0]);
     }
@@ -301,13 +334,13 @@
     private bool save = false;
     private bool update = false;
 
-    private bool SpinnerVisibleProperty { get; set; } = false;
+    private bool spinnerVisibleProperty { get; set; } = false;
 
-    private DialogSettings DialogParams = new DialogSettings { MinHeight = "400px", Width = "600px" };
+    private DialogSettings dialogParams = new DialogSettings { MinHeight = "400px", Width = "600px" };
     public DialogEffect animationEffect = DialogEffect.Zoom;
     public bool DialogVisible { get; set; } = false;
     private bool showDialogButtons = false;
-    private string DialogText { get; set; } = string.Empty;
+    private string dialogText { get; set; } = string.Empty;
     private string dialogXValue = "center";
     private string dialogYValue = "center";
     private string dialogHeight = "130px";
@@ -317,13 +350,13 @@
 
     readonly string urlEfficiency = "gws/effizienz/";
 
-    string? Header { get; set; }
-    string? Content { get; set; }
+    string? header { get; set; }
+    string? content { get; set; }
 
     GWSProcessor? gwsP;
     ApiResponse? apiResponse;
 
-    private SfGrid<EfficiencyModel> SfDataGrid = new();
+    private SfGrid<EfficiencyModel> sfDataGrid = new();
 
     private EfficiencyModel? efficiencyData = new();
     private List<EfficiencyModel>? efficiencyList = null;
@@ -366,14 +399,15 @@
     protected override async Task OnInitializedAsync()
     {
         // Spinner
-        this.SpinnerVisibleProperty = true;
+        this.spinnerVisibleProperty = true;
 
-        // MyAppSettings.json auslesen und letzten gespeicherten Anbieter auslesen
-        settings = await GetSetMyAppConfig.GetMyAppSettings.ReadSettingsAsync(myAppSettings);
-
-        gwsP = new GWSProcessor(myHttpClient, settings!.GWSUri);
         try
         {
+            // MyAppSettings.json auslesen und letzten gespeicherten Anbieter auslesen
+            settings = await GetSetMyAppConfig.GetMyAppSettings.ReadSettingsAsync(myAppSettings);
+            if (settings == null) return;
+
+            gwsP = new GWSProcessor(myHttpClient, settings!.GWSUri);
             // Effizienzdaten auslesen
             efficiencyList = await gwsP.LoadDataAsync<EfficiencyModel>(urlEfficiency);
 
@@ -389,14 +423,15 @@
                 OpenDialog("Keine Effizienzklassen vorhanden!", "50px", false);
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw new Exception("Es konnten keine Effizienzklassen geladen werden");
+            throw new Exception("Es konnten keine Effizienzklassen geladen werden", ex);
         }
-
-        // Spinner
-        await Task.Delay(200);
-        this.SpinnerVisibleProperty = false;
+        finally
+        {
+            // Spinner GARANTIERT ausschalten (künstliches Delay entfernt)
+            spinnerVisibleProperty = false;
+        }
     }
     #endregion
 
@@ -406,112 +441,96 @@
     ///
     /// </summary>
     /// <param name="args"></param>
+   
+    private bool IsExporting { get; set; }
+
     public async Task ToolbarBtnClickHandler(Syncfusion.Blazor.Navigations.ClickEventArgs args)
     {
-        if (args.Item.Id.Contains("_excelexport"))
+        string? itemId = args.Item?.Id;
+        if (string.IsNullOrEmpty(itemId)) return;
+
+        try
         {
-            ExcelExportProperties excelExportProperties = new();
-            excelExportProperties.FileName = $"Effizienklassen_{DateTime.Now.ToString("ddMMyyyy")}.xlsx";
+            // 1. Spinner aktivieren & UI aktualisieren
+            IsExporting = true;
 
-            ExcelTheme Theme = new ExcelTheme();
-            // Header
-            ExcelStyle ThemeStyleHeader = new ExcelStyle()
+            // Test Spinner sichtbar machen
+            // 2. ERZWINGEN, dass Blazor das UI JETZT sofort neu zeichnet
+            // StateHasChanged();
+            // 3. TEST: 3 Sekunden warten, um zu sehen, ob der Spinner auftaucht
+            // await Task.Delay(3000);
+
+            string dateSuffix = DateTime.Now.ToString("ddMMyyyy");
+
+            if (itemId.Contains("_excelexport", StringComparison.OrdinalIgnoreCase))
+            {
+                var excelExportProperties = new ExcelExportProperties
                 {
-                    FontName = "Calibri",
-                    FontSize = 12,
-                    Bold = true,
+                    FileName = $"Effizienzklassen_{dateSuffix}.xlsx",
+                    Theme = new ExcelTheme
+                    {
+                        Header = new ExcelStyle { FontName = "Calibri", FontSize = 12, Bold = true },
+                        Record = new ExcelStyle { FontName = "Calibri", FontSize = 10, Bold = false }
+                    }
                 };
-            Theme.Header = ThemeStyleHeader;
-            // Data
-            ExcelStyle ThemeStyleRecord = new ExcelStyle()
+
+                // 2. Optionale Optimierung: Bestimmte Spalten vor Export verstecken
+                await ToggleActionColumnsAsync(hide: true);
+
+                await sfDataGrid.ExportToExcelAsync(excelExportProperties);
+            }
+            else if (itemId.Contains("_pdfexport", StringComparison.OrdinalIgnoreCase))
+            {
+                var pdfExportProperties = new PdfExportProperties
                 {
-                    FontName = "Calibri",
-                    FontSize = 10,
-                    Bold = false,
+                    IsRepeatHeader = true,
+                    FileName = $"Effizienzklassen_{dateSuffix}.pdf",
+                    PageOrientation = Syncfusion.Blazor.Grids.PageOrientation.Landscape,
+                    Header = new PdfHeader { FromTop = 0, Height = 80, Contents = HeaderContent },
+                    Footer = new PdfFooter { FromBottom = 0, Height = 80, Contents = FooterContent },
+                    Theme = new PdfTheme
+                    {
+                        Header = new PdfThemeStyle { FontColor = "Blue", FontName = "Calibri", FontSize = 8, Bold = true }
+                    }
                 };
-            Theme.Record = ThemeStyleRecord;
 
-            excelExportProperties.Theme = Theme;
+                await ToggleActionColumnsAsync(hide: true);
 
-            await SfDataGrid.ExportToExcelAsync(excelExportProperties);
+                await sfDataGrid.ExportToPdfAsync(pdfExportProperties);
+            }
         }
-        else if (args.Item.Id.Contains("_pdfexport"))
+        catch (Exception ex)
         {
-            PdfExportProperties pdfExportProperties = new();
-            pdfExportProperties.IsRepeatHeader = true;
-            pdfExportProperties.FileName = $"Effizienklassen_{DateTime.Now.ToString("ddMMyyyy")}.pdf";
-            pdfExportProperties.PageOrientation = Syncfusion.Blazor.Grids.PageOrientation.Landscape;
-
-            PdfHeader pdfHeader = new()
-                {
-                    FromTop = 0,
-                    Height = 80,
-                    Contents = HeaderContent
-                };
-
-            PdfFooter pdfFooter = new()
-                {
-                    FromBottom = 0,
-                    Height = 80,
-                    Contents = FooterContent
-                };
-
-            PdfTheme Theme = new PdfTheme();
-
-            PdfThemeStyle HeaderThemeStyle = new PdfThemeStyle()
-                {
-                    FontColor = "Blue",
-                    FontName = "Calibri",
-                    FontSize = 8,
-                    Bold = true,
-                };
-            Theme.Header = HeaderThemeStyle;
-
-            pdfExportProperties.Theme = Theme;
-
-            pdfExportProperties.Header = pdfHeader;
-            pdfExportProperties.Footer = pdfFooter;
-
-            await SfDataGrid.ExportToPdfAsync(pdfExportProperties);
+            // Hier optionales Logging oder Benutzer-Fehlermeldung integrieren
+            Console.WriteLine($"Export fehlgeschlagen: {ex.Message}");
         }
-        else if (args.Item.Id.Contains("XmlExport"))
+        finally
         {
-            Console.Write("Export to Xml function");        // wird nicht genutzt
+            // 3. Spalten wieder einblenden & Spinner deaktivieren (läuft IMMER durch)
+            await ToggleActionColumnsAsync(hide: false);
+            IsExporting = false;
+        }
+    }
+
+    // Hilfsmethode zum Ein-/Ausblenden von Grid-Spalten (z.B. "Aktionen" oder "Id")
+    private async Task ToggleActionColumnsAsync(bool hide)
+    {
+        // Nutzen Sie die Field-Namen Ihrer Spalten, die nicht exportiert werden sollen
+        var columnsToToggle = new[] { "Id", "Actions" };
+
+        foreach (var field in columnsToToggle)
+        {
+            if (hide)
+            {
+                await sfDataGrid.HideColumnAsync(field);
+            }
+            else
+            {
+                await sfDataGrid.ShowColumnAsync(field);
+            }
         }
     }
     #endregion
-
-    // #region ActionBeginHandler
-    // /// <summary>
-    // /// ActionBeginHandler
-    // /// </summary>
-    // /// <param name="args"></param>
-    // public void ActionBeginHandler(ActionEventArgs<EfficiencyModel> args)
-    // {
-    //     if (args.Data != null)
-    //     {
-    //         if (!args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Save))
-    //         {
-    //             // Add
-    //             if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Add))
-    //             {
-    //                 // letzte Einträge holen und Variablen vorbesetzen
-    //                 if (efficiencyList != null && efficiencyList.Any())
-    //                 {
-    //                     var lastEfficiency = efficiencyList?.LastOrDefault();
-    //                     if (lastEfficiency != null)
-    //                     {
-    //                         args.Data.Energieklasse = lastEfficiency.Energieklasse;
-    //                         args.Data.Energiebedarf = lastEfficiency.Energiebedarf;
-    //                         args.Data.Farbcode = lastEfficiency.Farbcode;
-    //                         args.Data.Bemerkung = lastEfficiency.Bemerkung;
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
-    // #endregion
 
     #region ActionCompleteHandler
     /// <summary>
@@ -539,7 +558,7 @@
         }
         else if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Delete))
         {
-            if (args.Data.Id == 0)
+            if (args.Data!.Id == 0)
             {
                 efficiencyList = await gwsP!.LoadDataAsync<EfficiencyModel>(urlEfficiency);
             }
@@ -548,7 +567,7 @@
                 efficiencyData = await gwsP!.DeleteDataAsync<EfficiencyModel>(urlEfficiency, Convert.ToString(args.Data.Id));
                 ShowToastMessage(true, "Datensatz gelöscht!");
             }
-            SfDataGrid?.Refresh();
+            sfDataGrid?.Refresh();
         }
     }
     #endregion
@@ -561,7 +580,7 @@
     {
         DialogVisible = false;
         efficiencyList = await gwsP!.LoadDataAsync<EfficiencyModel>(urlEfficiency);  // Daten neu laden
-        SfDataGrid?.Refresh();
+        sfDataGrid?.Refresh();
     }
     #endregion
 
@@ -604,7 +623,7 @@
                 ShowToastMessage(true, "Datensatz aktualisiert!");
             }
         }
-        SfDataGrid?.Refresh();
+        sfDataGrid?.Refresh();
     }
     #endregion
 
@@ -722,7 +741,7 @@
     /// </summary>
     private void OpenDialog(string header, string height, bool showButtons)
     {
-        Header = header;
+        this.header = header;
         dialogHeight = height;
         showDialogButtons = showButtons;
         this.DialogVisible = true;

@@ -112,12 +112,11 @@
             </GridSortSettings>
 
             <GridColumns>
-                <GridColumn IsPrimaryKey="true" Field="@nameof(Water_CounterModel.ID_Tag)" Visible="false"
-                AllowAdding="false"
-                AllowEditing="false"
-                AllowSorting="false"
-                AllowFiltering="false"
-                Width="35">
+                @* der Primärschlüssel muss unbedingt angegeben werden auch wenn er nicht sichtbar ist *@
+                <GridColumn
+                    Field="@nameof(Water_CounterModel.ID_Tag)" 
+                    IsPrimaryKey="true" 
+                    Visible="false">
                 </GridColumn>
 
                 <GridColumn Field=@nameof(Water_CounterModel.Anbieter)

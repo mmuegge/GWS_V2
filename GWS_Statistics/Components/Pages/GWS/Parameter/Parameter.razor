@@ -13,56 +13,55 @@
 
 <PageTitle>Parameter</PageTitle>
 
+
+@* Seiten-Überschrift *@
 <div class="container">
-    <div class="row">
-        <div class="col col-md-12">
-            <div class="text-center fs-3 fw-bold">
-                <span class="fa-solid fa-house-circle-check fa-3xs" aria-hidden="true"> </span>
-                @* <span><img src="energyEfficiency.png" width="50" height="50"></span> *@
-                <label>Parameter</label>
-            </div>
-        </div>
+    <div class="text-center fs-3 fw-bold">
+        <span class="fa-solid fa-house-circle-check fa-3xs" aria-hidden="true"> </span>
+        @* <span><img src="energyEfficiency.png" width="50" height="50"></span> *@
+        <label>Parameter</label>
     </div>
 </div>
 
 @* Chart*@
-@if (ParameterList != null && ParameterList.Count > 0)
+@if (parameterList != null)
 {
-    <div class="control-section" id="target" align="center">
-        <SfGrid ID="Grid" @ref="SfDataGrid" DataSource="@ParameterList"
-        AllowPaging="true"
-        AllowFiltering="true"
-        AllowReordering="true"
-        AllowResizing="true"
-        AllowExcelExport="true"
-        AllowPdfExport="true"
-        EnableHover="true"
-        AllowTextWrap="true"
-        AllowSelection="true"
-        AllowSorting="true"
-        Height="100%" Width="100%"
-        Toolbar=@toolbar
-        EnableStickyHeader="true">
+    <div class="control-section" id="target" align="left">
+        <SfGrid ID="Grid" @ref="sfDataGrid" DataSource="@parameterList"
+            AllowPaging="true"
+            AllowFiltering="true"
+            AllowReordering="true"
+            AllowResizing="true"
+            AllowExcelExport="true"
+            AllowPdfExport="true"
+            EnableHover="true"
+            AllowTextWrap="true"
+            AllowSelection="true"
+            AllowSorting="true"
+            Height="100%" Width="100%"
+            Toolbar=@toolbar
+            EnableStickyHeader="true">
 
-            <GridEditSettings AllowAdding="true"
-            AllowEditing="true"
-            AllowDeleting="true"
-            ShowDeleteConfirmDialog="true"
-            Mode="EditMode.Dialog"
-            Dialog="DialogParams">
+            <GridEditSettings 
+                AllowAdding="true"
+                AllowEditing="true"
+                AllowDeleting="true"
+                ShowDeleteConfirmDialog="false"
+                Mode="EditMode.Dialog"
+                Dialog="dialogParams">
 
                 <HeaderTemplate>
                     @{
-                        var DialogHeader = GetDialogHeader((context as ParameterModel)!);
+                        var DialogHeader = GetDialogHeader((context as ParameterModel));
                         <span>@DialogHeader</span>
                     }
                 </HeaderTemplate>
             </GridEditSettings>
 
             <GridEvents OnToolbarClick="ToolbarBtnClickHandler"
-            RowCreating="RowCreatingHandler"
-            OnActionComplete="ActionCompleteHandler"
-            TValue="ParameterModel">
+                RowCreating="RowCreatingHandler"
+                OnActionComplete="ActionBeginHandler"
+                TValue="ParameterModel">
             </GridEvents>
 
             <GridPageSettings PageSize="20" PageSizes="true"></GridPageSettings>
@@ -70,21 +69,20 @@
             <GridFilterSettings Type="Syncfusion.Blazor.Grids.FilterType.CheckBox"></GridFilterSettings>
 
             <GridColumns>
-                <GridColumn IsPrimaryKey="true" Field="@nameof(ParameterModel.Id)" Visible="false"
-                AllowAdding="false"
-                AllowEditing="false"
-                AllowSorting="false"
-                AllowFiltering="false"
-                Width="35">
+                @* der Primärschlüssel muss unbedingt angegeben werden auch wenn er nicht sichtbar ist *@
+                <GridColumn 
+                    Field="@nameof(ParameterModel.Id)" 
+                    IsPrimaryKey="true" 
+                    Visible="false">
                 </GridColumn>
 
                 <GridColumn Field=@nameof(ParameterModel.Baujahr)
-                EditType="EditType.DatePickerEdit"
-                Format="d"
-                Type="Syncfusion.Blazor.Grids.ColumnType.DateTime"
-                Width="110"
-                DefaultValue="DateTime.Now"
-                HeaderText="Baujahr Haus">
+                    EditType="EditType.DatePickerEdit"
+                    Format="d"
+                    Type="Syncfusion.Blazor.Grids.ColumnType.DateTime"
+                    Width="110"
+                    DefaultValue="DateTime.Now"
+                    HeaderText="Baujahr Haus">
 
                     <HeaderTemplate>
                         <SfTooltip Content="@GetTooltipContent("BJ")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
@@ -99,11 +97,12 @@
                 HeaderText="Wohnfläche">
 
                     <EditTemplate>
-                        <SfNumericTextBox Placeholder="Wohnfläche"
-                        FloatLabelType="FloatLabelType.Always"
-                        TValue="Double?"
-                        @bind-Value="@((context as ParameterModel)!.Wohnflaeche)"
-                        Format="###.## m2">
+                        <SfNumericTextBox 
+                            Placeholder="Wohnfläche"
+                            FloatLabelType="FloatLabelType.Always"
+                            TValue="Double?"
+                            @bind-Value="@((context as ParameterModel)!.Wohnflaeche)"
+                            Format="###.## m2">
                         </SfNumericTextBox>
                     </EditTemplate>
 
@@ -115,8 +114,8 @@
                 </GridColumn>
 
                 <GridColumn Field=@nameof(ParameterModel.Bemerkung)
-                Width="300"
-                HeaderText="Bemerkung">
+                    Width="300"
+                    HeaderText="Bemerkung">
 
                     <HeaderTemplate>
                         <SfTooltip Content="@GetTooltipContent("BM")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
@@ -155,13 +154,23 @@
                 </GridColumn>
             </GridColumns>
         </SfGrid>
+
+        @* Spinner für den Export *@
+        <SfSpinner Visible="@IsExporting"
+                   Label="Datei wird generiert, bitte warten..."
+                   Type="@SpinnerType.Material"
+                   Size="40"
+                   CssClass="e-spin-overlay e-custom-color">
+        </SfSpinner>
     </div>
-
-    <SfSpinner @bind-Visible="@SpinnerVisibleProperty" Type="SpinnerType.Tailwind" Size="40" CssClass="e-custom-color"></SfSpinner>
-
-    @* Dialog*@
-    <div>
-        <SfDialog Target="#target"
+}
+else
+{
+    <SfSpinner @bind-Visible="@spinnerVisibleProperty" Label="Lade Daten..." Size="40"></SfSpinner>
+}
+@* Dialog*@
+<div>
+    <SfDialog Target="#target"
         Width=@dialogWidth
         Height=@dialogHeight
         AllowDragging="true"
@@ -171,29 +180,44 @@
         IsModal="true"
         CssClass="MyCss">
 
-            <DialogTemplates>
-                <Header>@Header</Header>
-            </DialogTemplates>
+        <DialogTemplates>
+            <Header>@header</Header>
+        </DialogTemplates>
 
-            <DialogPositionData X="@dialogXValue" Y="@dialogYValue"></DialogPositionData>
-            <DialogAnimationSettings Effect="@animationEffect"></DialogAnimationSettings>
+        <DialogPositionData X="@dialogXValue" Y="@dialogYValue"></DialogPositionData>
+        <DialogAnimationSettings Effect="@animationEffect"></DialogAnimationSettings>
 
-            @if (showDialogButtons)
-            {
-                <DialogButtons>
-                    <DialogButton Content="Ja" IsPrimary="true" OnClick="@YesClick" />
-                    <DialogButton Content="Abbrechen" OnClick="@CancelClick" />
-                </DialogButtons>
-            }
-        </SfDialog>
-    </div>
-}
-else
-{
-    <SfSpinner @bind-Visible="@SpinnerVisibleProperty" Label="Lade Daten..." Size="40"></SfSpinner>
-}
+        @if (showDialogButtons)
+        {
+            <DialogButtons>
+                <DialogButton Content="Ja" IsPrimary="true" OnClick="@YesClick" />
+                <DialogButton Content="Abbrechen" OnClick="@CancelClick" />
+            </DialogButtons>
+        }
+    </SfDialog>
+</div>
 
 <style>
+/* 1. Zwingt das gesamte Spinner-Container-System nach ganz vorne */
+.e-spinner-pane.e-spin-overlay {
+    z-index: 99999 !important;
+    background-color: rgba(0, 0, 0, 0.4) !important; /* Macht den Hintergrund dunkel-transparent */
+}
+
+    /* 2. Zwingt das Ladesymbol und den Text, sich abzuheben */
+    .e-spinner-pane.e-spin-overlay .e-spinner-inner {
+        z-index: 100000 !important;
+    }
+
+    /* 3. HIER WIRD DER TEXT ERZWUNGEN UND SCHÖN FORMATIERT */
+    .e-spinner-pane.e-spin-overlay .e-spin-label {
+        color: #FFFFFF !important; /* Reines Weiß, damit es auf dem dunklen Overlay lesbar ist */
+        font-weight: bold !important; /* Fett gedruckt */
+        font-size: 16px !important; /* Etwas größer für bessere Lesbarkeit */
+        margin-top: 10px !important; /* Abstand zum drehenden Rad */
+        display: block !important; /* Sicherstellen, dass es nicht auf hidden steht */
+    }
+
     .e-dlg-overlay {
         background-color: slategray;
         opacity: 0.6;
@@ -264,13 +288,13 @@ else
     private bool save = false;
     private bool update = false;
 
-    private bool SpinnerVisibleProperty { get; set; } = false;
+    private bool spinnerVisibleProperty { get; set; } = false;
 
-    private DialogSettings DialogParams = new DialogSettings { MinHeight = "400px", Width = "600px" };
+    private DialogSettings dialogParams = new DialogSettings { MinHeight = "400px", Width = "600px" };
     public DialogEffect animationEffect = DialogEffect.Zoom;
     public bool DialogVisible { get; set; } = false;
     private bool showDialogButtons = false;
-    private string DialogText { get; set; } = string.Empty;
+    private string dialogText { get; set; } = string.Empty;
     private string dialogXValue = "center";
     private string dialogYValue = "center";
     private string dialogHeight = "130px";
@@ -280,16 +304,19 @@ else
 
     readonly string urlParameter = "parameter/";
 
-    string? Header { get; set; }
-    string? Content { get; set; }
+    string? header { get; set; }
+    string? content { get; set; }
 
     GWSProcessor? gwsP;
     ApiResponse? apiResponse;
 
-    private SfGrid<ParameterModel> SfDataGrid = new();
+    private SfGrid<ParameterModel> sfDataGrid = new();
 
-    private ParameterModel? ParameterData = new();
-    private List<ParameterModel>? ParameterList = null;
+    private enum GridOperation { None, Add, Edit, Delete }
+    private GridOperation currentOperation = GridOperation.None;
+
+    private ParameterModel? parameterData = new();
+    private List<ParameterModel>? parameterList = null;
 
     private List<object> toolbar = new List<object>() { "Add", "Cancel", "Search", "ExcelExport", "PdfExport" };
 
@@ -327,33 +354,30 @@ else
     /// <returns></returns>
     protected override async Task OnInitializedAsync()
     {
-        this.SpinnerVisibleProperty = true;
+        spinnerVisibleProperty = true;
 
         try
         {
             settings = await GetSetMyAppConfig.GetMyAppSettings.ReadSettingsAsync(myAppSettings);
+            if (settings == null) return;
+
             gwsP = new GWSProcessor(myHttpClient, settings!.GWSUri);
 
             // Parameter auslesen (Erster asynchroner Halt, UI zeichnet den Spinner)
-            ParameterList = await gwsP.LoadDataAsync<ParameterModel>(urlParameter);
+            parameterList = await gwsP.LoadDataAsync<ParameterModel>(urlParameter);
 
-            // Verwende .Count statt LINQ .Any() für bessere Performance bei Listen
-            if (ParameterList == null || ParameterList.Count == 0)
+            if (parameterList == null || !parameterList.Any())
             {
                 OpenDialog("Keine Parameter vorhanden!", "60px", "130px", false);
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // Sicherstellen, dass der Spinner auch bei einer Exception ausgeblendet wird
-            this.SpinnerVisibleProperty = false;
-            throw new Exception("Es konnten keine Parameter geladen werden");
+            throw new Exception("Es konnten keine Parameter geladen werden", ex);
         }
         finally
         {
-            this.SpinnerVisibleProperty = false;
-
-            StateHasChanged();
+            spinnerVisibleProperty = false;
         }
     }
     #endregion
@@ -364,110 +388,92 @@ else
     ///
     /// </summary>
     /// <param name="args"></param>
+    
+    private bool IsExporting { get; set; }
+
     public async Task ToolbarBtnClickHandler(Syncfusion.Blazor.Navigations.ClickEventArgs args)
     {
-        // 1. Null-Safety für die ID abfangen
         string? itemId = args.Item?.Id;
         if (string.IsNullOrEmpty(itemId)) return;
 
-        // Zeitstempel einmalig cachen (verhindert minimale Abweichungen und ist performanter)
-        string dateSuffix = DateTime.Now.ToString("ddMMyyyy");
-
-        // 2. Verwendung von OrdinalIgnoreCase für robuste String-Erkennung
-        if (itemId.Contains("_excelexport", StringComparison.OrdinalIgnoreCase))
+        try
         {
-            // Zielgerichtete Objekt-Initialisierung spart redundante Zeilen
-            ExcelExportProperties excelExportProperties = new()
-            {
-                FileName = $"Parameter_{dateSuffix}.xlsx",
-                Theme = new ExcelTheme()
-                {
-                    Header = new ExcelStyle { FontName = "Calibri", FontSize = 12, Bold = true },
-                    Record = new ExcelStyle { FontName = "Calibri", FontSize = 10, Bold = false }
-                }
-            };
+            // 1. Spinner aktivieren & UI aktualisieren
+            IsExporting = true;
 
-            if (SfDataGrid != null)
+            // Test Spinner sichtbar machen
+            // 2. ERZWINGEN, dass Blazor das UI JETZT sofort neu zeichnet
+            // StateHasChanged();
+            // 3. TEST: 3 Sekunden warten, um zu sehen, ob der Spinner auftaucht
+            // await Task.Delay(3000);
+
+            string dateSuffix = DateTime.Now.ToString("ddMMyyyy");
+
+            if (itemId.Contains("_excelexport", StringComparison.OrdinalIgnoreCase))
             {
-                await SfDataGrid.ExportToExcelAsync(excelExportProperties);
+                var excelExportProperties = new ExcelExportProperties
+                {
+                    FileName = $"Stromanbieter_{dateSuffix}.xlsx",
+                    Theme = new ExcelTheme
+                    {
+                        Header = new ExcelStyle { FontName = "Calibri", FontSize = 12, Bold = true },
+                        Record = new ExcelStyle { FontName = "Calibri", FontSize = 10, Bold = false }
+                    }
+                };
+
+                // 2. Optionale Optimierung: Bestimmte Spalten vor Export verstecken
+                await ToggleActionColumnsAsync(hide: true);
+
+                await sfDataGrid.ExportToExcelAsync(excelExportProperties);
+            }
+            else if (itemId.Contains("_pdfexport", StringComparison.OrdinalIgnoreCase))
+            {
+                var pdfExportProperties = new PdfExportProperties
+                {
+                    IsRepeatHeader = true,
+                    FileName = $"Stromanbieter_{dateSuffix}.pdf",
+                    PageOrientation = Syncfusion.Blazor.Grids.PageOrientation.Landscape,
+                    Header = new PdfHeader { FromTop = 0, Height = 80, Contents = HeaderContent },
+                    Footer = new PdfFooter { FromBottom = 0, Height = 80, Contents = FooterContent },
+                    Theme = new PdfTheme
+                    {
+                        Header = new PdfThemeStyle { FontColor = "Blue", FontName = "Calibri", FontSize = 8, Bold = true }
+                    }
+                };
+
+                await ToggleActionColumnsAsync(hide: true);
+
+                await sfDataGrid.ExportToPdfAsync(pdfExportProperties);
             }
         }
-        else if (itemId.Contains("_pdfexport", StringComparison.OrdinalIgnoreCase))
+        catch (Exception ex)
         {
-            PdfExportProperties pdfExportProperties = new()
-            {
-                IsRepeatHeader = true,
-                FileName = $"Parameter_{dateSuffix}.pdf",
-                PageOrientation = Syncfusion.Blazor.Grids.PageOrientation.Landscape,
-                Header = new PdfHeader { FromTop = 0, Height = 80, Contents = HeaderContent },
-                Footer = new PdfFooter { FromBottom = 0, Height = 80, Contents = FooterContent },
-                Theme = new PdfTheme()
-                {
-                    Header = new PdfThemeStyle { FontColor = "Blue", FontName = "Calibri", FontSize = 8, Bold = true }
-                }
-            };
-
-            if (SfDataGrid != null)
-            {
-                await SfDataGrid.ExportToPdfAsync(pdfExportProperties);
-            }
+            // Hier optionales Logging oder Benutzer-Fehlermeldung integrieren
+            Console.WriteLine($"Export fehlgeschlagen: {ex.Message}");
         }
-        else if (itemId.Contains("XmlExport", StringComparison.OrdinalIgnoreCase))
+        finally
         {
-            // Unbenutzten Code sauber protokollieren oder optional ganz löschen
-            System.Diagnostics.Debug.WriteLine("Export to Xml function called (not implemented)");
+            // 3. Spalten wieder einblenden & Spinner deaktivieren (läuft IMMER durch)
+            await ToggleActionColumnsAsync(hide: false);
+            IsExporting = false;
         }
     }
 
-    #endregion
-
-    #region ActionBeginHandler
-    /// <summary>
-    /// ActionBeginHandler: Wird aufgerufen, bevor eine Aktion (Add, Edit, Delete) im Grid ausgeführt wird.
-    /// </summary>
-    /// <param name="args"></param>
-    public async Task ActionCompleteHandler(ActionEventArgs<ParameterModel> args)
+    // Hilfsmethode zum Ein-/Ausblenden von Grid-Spalten (z.B. "Aktionen" oder "Id")
+    private async Task ToggleActionColumnsAsync(bool hide)
     {
-        // 1. Sichere und schnellere Enums-Vergleiche (== statt .Equals)
-        if (args.RequestType == Syncfusion.Blazor.Grids.Action.Save)
-        {
-            // 2. String-Vergleiche mit StringComparison absichern gegen Tippfehler
-            if (string.Equals(args.Action, "Add", StringComparison.OrdinalIgnoreCase))
-            {
-                save = true;
-                update = false; // Zustand explizit zurücksetzen, um Seiteneffekte zu vermeiden
-                ParameterData = args.Data;
+        // Nutzen Sie die Field-Namen Ihrer Spalten, die nicht exportiert werden sollen
+        var columnsToToggle = new[] { "Id", "Actions" };
 
-                OpenDialog("Datensatz speichern ?", "130px", "220px", true);
-            }
-            else if (string.Equals(args.Action, "Edit", StringComparison.OrdinalIgnoreCase))
-            {
-                update = true;
-                save = false; // Zustand explizit zurücksetzen
-                ParameterData = args.Data;
-
-                OpenDialog("Datensatz ändern ?", "130px", "220px", true);
-            }
-        }
-        else if (args.RequestType == Syncfusion.Blazor.Grids.Action.Delete)
+        foreach (var field in columnsToToggle)
         {
-            // 3. Logik-Check: Wenn die ID 0 ist, ist der Datensatz noch gar nicht in der DB.
-            // Ein kompletter API-Reload aller Daten ist hier meist unnötig und bremst das UI.
-            if (args.Data?.Id == 0)
+            if (hide)
             {
-                // Falls das Grid den lokalen (noch nicht gespeicherten) Eintrag bereits gelöscht hat,
-                // reicht oft ein einfaches Refresh() ohne HTTP-Request:
-                await SfDataGrid.Refresh();
+                await sfDataGrid.HideColumnAsync(field);
             }
             else
             {
-                // Id direkt via Interpolation übergeben (schneller als Convert.ToString)
-                ParameterData = await gwsP!.DeleteDataAsync<ParameterModel>(urlParameter, $"{args.Data?.Id}");
-                ShowToastMessage(true, "Datensatz gelöscht!");
-
-                // 4. Nach asynchronen API-Löschungen empfiehlt sich ein StateHasChanged vor dem Grid-Refresh
-                StateHasChanged();
-                await SfDataGrid.Refresh();
+                await sfDataGrid.ShowColumnAsync(field);
             }
         }
     }
@@ -479,29 +485,29 @@ else
     /// </summary>
     private async Task CancelClick()
     {
+        // Schließt den Dialog sofort visuell
         DialogVisible = false;
 
-        try
+        // Setzt den aktuellen Operationstyp zurück, um sicherzustellen, dass keine Aktion mehr aussteht
+        currentOperation = GridOperation.None;
+
+        // 3. Setzt die temporäre Datenstruktur zurück
+        parameterData = null;
+
+        // 4. DIE RETTUNG: Daten frisch von der API laden, um die UI-Änderungen zu verwerfen
+        if (gwsP is not null && parameterData is not null)
         {
-            // 2. Daten asynchron nachladen
-            ParameterList = await gwsP!.LoadDataAsync<ParameterModel>(urlParameter);
-
-            // 3. Dem UI-Thread mitteilen, dass sich die Daten geändert haben,
-            // bevor das Grid neu gezeichnet wird
-            StateHasChanged();
-
-            if (SfDataGrid != null)
-            {
-                await SfDataGrid.Refresh();
-            }
+            // Nutzen Sie hier die URL-Variable, die Sie auch beim initialen Laden verwenden (z.B. urlCounter)
+            // Lädt gezielt die Zählerstände für den aktuell ausgewählten Anbieter neu
+            parameterList = await gwsP.LoadDataAsync<ParameterModel>($"{urlParameter}{parameterData.Id}");
         }
-        catch (Exception ex)
+
+        // 5. Grid zwingen, die frischen Daten anzuzeigen
+        if (sfDataGrid is not null)
         {
-            // 4. Fehlerbehandlung hinzufügen, um App-Abstürze zu verhindern
-            OpenDialog($"Fehler beim Abbrechen/Aktualisieren: {ex.Message}", "60px", "380px", false);
+            await sfDataGrid.Refresh();
         }
     }
-
     #endregion
 
     #region YesClick
@@ -511,84 +517,91 @@ else
     private async Task YesClick()
     {
         DialogVisible = false;
+        if (gwsP is null || parameterData is null || currentOperation == GridOperation.None) return;
 
         try
         {
-            if (save) // Datensatz speichern
+            bool isSuccess = false;
+            string successMessage = string.Empty;
+            string defaultErrorMessage = "Aktion konnte nicht ausgeführt werden.";
+
+            // Vor jedem Aufruf die alte API-Response zurücksetzen!
+            apiResponse = null;
+
+            switch (currentOperation)
             {
-                if (ParameterData != null)
+                case GridOperation.Add:
+                    apiResponse = await gwsP.PostDataAsync<ParameterModel>(urlParameter, parameterData);
+                    isSuccess = apiResponse?.MyHttpStatusCode == HttpStatusCode.Created;
+                    successMessage = "Datensatz erfolgreich gespeichert!";
+                    defaultErrorMessage = "Datensatz konnte nicht gespeichert werden.";
+                    break;
+
+                case GridOperation.Edit:
+                    string urlEdit = $"{urlParameter.TrimEnd('/')}/{parameterData.Id}";
+                    apiResponse = await gwsP.UpdateDataAsync<ParameterModel>(urlEdit, parameterData);
+                    isSuccess = apiResponse?.MyHttpStatusCode == HttpStatusCode.NoContent;
+                    successMessage = "Datensatz erfolgreich aktualisiert!";
+                    defaultErrorMessage = "Datensatz konnte nicht aktualisiert werden.";
+                    break;
+
+                case GridOperation.Delete:
+                    string deleteUrl = urlParameter.EndsWith("/") ? urlParameter : urlParameter + "/";
+                    string idToDelete = parameterData.Id.ToString();
+
+                    var deletedData = await gwsP.DeleteDataAsync<ParameterModel>(deleteUrl, idToDelete);
+
+                    // Falls DeleteDataAsync intern doch die apiResponse befüllt,
+                    // wäre es ideal, diese hier zuzuweisen. Wenn nicht, reicht das:
+                    isSuccess = deletedData is not null;
+                    successMessage = "Datensatz erfolgreich gelöscht!";
+                    defaultErrorMessage = "Datensatz konnte nicht gelöscht werden.";
+                    break;
+            }
+
+            if (isSuccess)
+            {
+                ShowToast(true, successMessage);
+
+                // Zwinge das Grid zum sofortigen UI-Update, indem du das Element lokal entfernst
+                if (parameterList is not null)
                 {
-                    save = false;
-
-                    apiResponse = await gwsP!.PostDataAsync<ParameterModel>(urlParameter, ParameterData); // POST
-
-                    if (apiResponse.MyHttpStatusCode == HttpStatusCode.Created)
+                    var itemToRemove = parameterList.FirstOrDefault(x => x.Id == parameterData.Id);
+                    if (itemToRemove is not null)
                     {
-                        ShowToastMessage(true, "Datensatz gespeichert!");
-                        // Daten neu laden, damit die von der DB generierte neue ID im Grid ankommt
-                        ParameterList = await gwsP!.LoadDataAsync<ParameterModel>(urlParameter);
-                    }
-                    else
-                    {
-                        ShowToastMessage(false, "Datensatz nicht gespeichert!");
+                        parameterList.Remove(itemToRemove);
                     }
                 }
+
+                // Erst danach im Hintergrund die Liste frisch vom Server holen
+                parameterList = await gwsP.LoadDataAsync<ParameterModel>(urlParameter);
             }
-            else if (update) // Datensatz updaten
+            else
             {
-                if (ParameterData != null)
+                string errorMessage = defaultErrorMessage;
+                // Die Prüfung stellt sicher, dass wir nicht aus Versehen alte Response-Daten anzeigen
+                if (apiResponse is not null && !string.IsNullOrWhiteSpace(apiResponse.MyResponseString))
                 {
-                    update = false;
-
-                    // String-Interpolation ist sauberer und performanter als Convert.ToString
-                    string url = $"{urlParameter}{ParameterData.Id}";
-
-                    apiResponse = await gwsP!.UpdateDataAsync<ParameterModel>(url, ParameterData); // PUT
-
-                    // WICHTIG: Nach dem Update ebenfalls die Liste neu laden,
-                    // damit geänderte Werte sofort im Grid sichtbar werden
-                    ParameterList = await gwsP!.LoadDataAsync<ParameterModel>(urlParameter);
-
-                    ShowToastMessage(true, "Datensatz aktualisiert!");
+                    errorMessage = $"Fehler ({apiResponse.MyHttpStatusCode}): {apiResponse.MyResponseString}";
                 }
+                ShowToast(false, errorMessage);
             }
 
-            // 2. Dem UI signalisieren, dass sich die 'parameterList' geändert hat
-            StateHasChanged();
-
-            if (SfDataGrid != null)
+            if (sfDataGrid is not null)
             {
-                await SfDataGrid.Refresh();
+                await sfDataGrid.Refresh();
             }
         }
         catch (Exception ex)
         {
-            // 3. Robustes Exception-Handling hinzugefügt
-            ShowToastMessage(false, $"Fehler bei der Datenbank-Aktion: {ex.Message}");
+            ShowToast(false, $"Netzwerkfehler: {ex.Message}");
+        }
+        finally
+        {
+            currentOperation = GridOperation.None;
         }
     }
 
-    #endregion
-
-    #region ShowToastMessage
-    /// <summary>
-    /// Anzeige einer Toast-Nachricht, die den Erfolg oder Misserfolg einer Aktion signalisiert
-    /// </summary>
-    /// <param name="success"></param>
-    /// <param name="message"></param>
-    /// <returns></returns>
-    private void ShowToastMessage(bool success, string message)
-    {
-        // Falls die Nachricht null sein sollte, sichern wir sie ab
-        var safeMessage = message ?? string.Empty;
-
-        // Nutze eine Switch-Expression, um die Parameter basierend auf 'success' elegant zu bestimmen
-        var (title, cssClass, icon) = success ?
-            ("Erfolg", "e-toast-success", "e-circle-check") :
-            ("Fehler", "e-toast-danger", "e-circle-close");
-
-        ShowToast(title, safeMessage, cssClass, icon);
-    }
     #endregion
 
     #region ShowToast
@@ -599,83 +612,33 @@ else
     /// <param name="content"></param>
     /// <param name="cssClass"></param>
     /// <param name="icon"></param>
-    private void ShowToast(string title, string content, string cssClass = "e-toast-info", string icon = "e-info")
+    private void ShowToast(bool success, string message)
     {
-        // Null-Conditional-Operator (?.) verhindert Abstürze, falls der Service nicht injiziert wurde
-        this.ToastService?.Open(new ToastOption()
+        var (title, cssClass, icon) = success switch
         {
-            // Null-Coalescing (??) sichert ab, dass keine leeren Texte an das UI übergeben werden
-            Title = title ?? string.Empty,
-            Content = content ?? string.Empty,
+            true => ("Erfolg", "e-toast-success", "e-circle-check"),
+            false => ("Fehler", "e-toast-danger", "e-circle-close")
+        };
+
+        this.ToastService.Open(new()
+        {
+            Title = title,
+            Content = message ?? string.Empty,
             CssClass = cssClass,
-            Icon = icon
+            Icon = icon,
         });
     }
-
     #endregion
 
     #region GetTooltipContent
     /// <summary>
-    /// GetTooltipContent(string headerText)
+    /// Header-Text in Tooltip-Content umwandeln. Wenn keine Beschreibung vorhanden ist, wird ein Standardtext zurückgegeben.
     /// </summary>
     /// <param name="headerText"></param>
     /// <returns></returns>
-    // Method to get tooltip content dynamically based on HeaderText
     public string GetTooltipContent(string headerText)
     {
-        // Falls der übergebene Header null oder leer ist, direkt abbrechen
-        if (string.IsNullOrEmpty(headerText))
-        {
-            return "No description available.";
-        }
-
-        // Führt nur einen einzigen Lookup im Dictionary durch (O(1))
-        if (ColumnDescriptions.TryGetValue(headerText, out var description))
-        {
-            return description;
-        }
-
-        return "No description available.";
-    }
-    #endregion
-
-    #region GetDialogHeader
-    /// <summary>
-    /// GetDialogHeader
-    /// </summary>
-    /// <param name="GetDialogHeader"></param>
-    /// <returns></returns>
-    public string GetDialogHeader(ParameterModel para)
-    {
-        return para.Id == 0
-            ? "Parameter: neuer Parameter"
-            : "Parameter: " + para.Id;
-    }
-    #endregion
-
-    #region RowCreatingHandler
-    /// <summary>
-    /// ein neuer Datebsatz wird angelegt
-    /// </summary>
-    /// <param name="args"></param>
-    public void RowCreatingHandler(RowCreatingEventArgs<ParameterModel> args)
-    {
-        // 1. Null-Safety & .Count statt LINQ-.Any() für echte Listen
-        if (ParameterList == null || ParameterList.Count == 0 || args.Data == null)
-        {
-            return;
-        }
-
-        // 2. Logik-Fix: .LastOrDefault() statt .FirstOrDefault(), um den LETZTEN Eintrag zu erhalten
-        var lastParameter = ParameterList.LastOrDefault();
-
-        if (lastParameter != null)
-        {
-            // 3. Sichere Zuweisung der Vorbesetzungswerte
-            args.Data.Baujahr = lastParameter.Baujahr;
-            args.Data.Wohnflaeche = lastParameter.Wohnflaeche;
-            args.Data.Bemerkung = lastParameter.Bemerkung;
-        }
+        return ColumnDescriptions.ContainsKey(headerText) ? ColumnDescriptions[headerText] : "Keine Beschreibung verfügbar.";
     }
     #endregion
 
@@ -685,7 +648,7 @@ else
     /// </summary>
     private void OpenDialog(string header, string height = "auto", string width = "500px", bool showButtons = true)
     {
-        Header = header;
+        this.header = header;
         dialogHeight = height;
         dialogWidth = width;
         showDialogButtons = showButtons;
@@ -696,4 +659,90 @@ else
     }
     #endregion
 
+    #region GetDialogHeader
+    /// <summary>
+    /// GetDialogHeader
+    /// </summary>
+    /// <param name="GetDialogHeader"></param>
+    /// <returns></returns>
+    public string GetDialogHeader(ParameterModel? parameter) =>
+    parameter is not { Id: > 0 }
+        ? "Parameter: neuer Parameter"
+        : $"Parameter: {parameter.Id}";
+    #endregion
+
+    #region RowCreatingHandler
+    /// <summary>
+    /// ein neuer Datebsatz wird angelegt
+    /// </summary>
+    /// <param name="args"></param>
+    public void RowCreatingHandler(RowCreatingEventArgs<ParameterModel> args)
+    {
+        if (args?.Data == null) return;
+
+        // 1. Anbieter-Daten direkt zuweisen (Vermeidung von LINQ-Suche auf Listen)
+        if (parameterData != null)
+        {
+            args.Data.Id = parameterData.Id;
+        }
+
+        // 2. Effizientes Holen des letzten Eintrags (Vermeidung von Any() + LastOrDefault())
+        var lastParameter = parameterList?.LastOrDefault();
+        if (lastParameter != null)
+        {
+            args.Data.Baujahr = lastParameter.Baujahr;
+            args.Data.Wohnflaeche = lastParameter.Wohnflaeche;
+            args.Data.Bemerkung = lastParameter.Bemerkung;
+        }
+    }
+    #endregion
+
+    #region ActionBeginHandler
+    /// <summary>
+    /// ActionBeginHandler: Wird aufgerufen, bevor eine Aktion (Add, Edit, Delete) im Grid ausgeführt wird.
+    /// </summary>
+    /// <param name="args"></param>
+    public async Task ActionBeginHandler(ActionEventArgs<ParameterModel> args)
+    {
+        if (args?.Data is null) return;
+
+        switch (args.RequestType)
+        {
+            case Syncfusion.Blazor.Grids.Action.Save:
+                args.Cancel = true;
+                parameterData = args.Data;
+
+                if (args.Action == "Add")
+                {
+                    currentOperation = GridOperation.Add;
+                    OpenDialog("Datensatz speichern ?", "130px", "220px", true);
+                }
+                else if (args.Action == "Edit")
+                {
+                    currentOperation = GridOperation.Edit;
+                    OpenDialog("Datensatz ändern ?", "130px", "220px", true);
+                }
+                break;
+
+            case Syncfusion.Blazor.Grids.Action.Delete:
+                // 1. Automatische Grid-Löschung stoppen, damit wir die Kontrolle behalten
+                args.Cancel = true;
+
+                // Sicherheitshalber prüfen, ob eine gültige ID vorliegt
+                if (args.Data.Id <= 0)
+                {
+                    ShowToast(false, "Ungültiger Datensatz. Löschen nicht möglich!");
+                    return;
+                }
+
+                // 2. Daten für die 'YesClick'-Methode zwischenspeichern
+                parameterData = args.Data;
+                currentOperation = GridOperation.Delete;
+
+                // 3. Bestätigungsdialog für das Löschen öffnen
+                OpenDialog("Datensatz wirklich löschen ?", "130px", "300px", true);
+                break;
+        }
+    }
+    #endregion
 }

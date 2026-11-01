@@ -54,19 +54,19 @@
 @* Grid *@
 <div class="control-section" id="target" align="left">
     <SfGrid ID="Grid" @ref="SfDataGrid" DataSource="@counterChangeList"
-    AllowPaging="true"
-    AllowFiltering="true"
-    AllowReordering="true"
-    AllowResizing="true"
-    AllowExcelExport="true"
-    AllowPdfExport="true"
-    EnableHover="true"
-    AllowTextWrap="true"
-    AllowSelection="true"
-    AllowSorting="true"
-    Height="100%" Width="100%"
-    Toolbar=@toolbar
-    EnableStickyHeader="true">
+        AllowPaging="true"
+        AllowFiltering="true"
+        AllowReordering="true"
+        AllowResizing="true"
+        AllowExcelExport="true"
+        AllowPdfExport="true"
+        EnableHover="true"
+        AllowTextWrap="true"
+        AllowSelection="true"
+        AllowSorting="true"
+        Height="100%" Width="100%"
+        Toolbar=@toolbar
+        EnableStickyHeader="true">
 
         <GridEditSettings AllowAdding="true"
         AllowEditing="true"
@@ -104,12 +104,11 @@
         </GridSortSettings>
 
         <GridColumns>
-            <GridColumn IsPrimaryKey="true" Field="@nameof(Water_CounterChangeModel.Id)" Visible="false"
-            AllowAdding="false"
-            AllowEditing="false"
-            AllowSorting="false"
-            AllowFiltering="false"
-            Width="35">
+            @* der Primärschlüssel muss unbedingt angegeben werden auch wenn er nicht sichtbar ist *@
+            <GridColumn 
+                IsPrimaryKey="true" 
+                Field="@nameof(Water_CounterChangeModel.Id)" 
+                Visible="false">
             </GridColumn>
 
             <GridColumn Field=@nameof(Water_CounterChangeModel.Anbieter)

@@ -1,6 +1,5 @@
 using GWS_Api.Models;
 using GWS_Api.Models.Electric;
-using GWS_Api.Models.Water;
 using Microsoft.EntityFrameworkCore;
 
 namespace GWS_Api.Repositories.Electric
