@@ -1,0 +1,59 @@
+﻿/* --------------------------------------------------------------------------
+   1. HOVER-EFFEKT (Minimales Anheben beim Drüberfahren)
+   -------------------------------------------------------------------------- */
+.elevated-grid-container .e-grid .e-row:hover:not(:has(.e-selectionbackground)):not(.e-active) {
+    position: relative !important;
+    z-index: 5 !important;
+}
+
+    .elevated-grid-container .e-grid .e-row:hover:not(:has(.e-selectionbackground)):not(.e-active) .e-rowcell {
+        transform: translateY(-1.5px) !important;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12) !important;
+        transition: transform 0.15s ease-out, box-shadow 0.15s ease-out !important;
+    }
+
+/* --------------------------------------------------------------------------
+   2. SELEKTIONS-EFFEKT (Volles Anheben bei Auswahl)
+   -------------------------------------------------------------------------- */
+.elevated-grid-container .e-grid .e-row:has(.e-selectionbackground),
+.elevated-grid-container .e-grid .e-row.e-active {
+    position: relative !important;
+    z-index: 99 !important;
+}
+
+    .elevated-grid-container .e-grid .e-row:has(.e-selectionbackground) .e-rowcell,
+    .elevated-grid-container .e-grid .e-row.e-active .e-rowcell,
+    .elevated-grid-container .e-grid .e-rowcell.e-selectionbackground {
+        transform: translateY(-5px) !important;
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3) !important;
+        border-top: 1.5px solid #1a73e8 !important;
+        border-bottom: 1.5px solid #1a73e8 !important;
+        vertical-align: middle !important;
+    }
+
+/* Flüssiges Zurückgleiten der Zellen bei Abwahl oder Verlassen mit der Maus */
+.elevated-grid-container .e-grid .e-row .e-rowcell {
+    transition: transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.2s ease, border 0.2s ease !important;
+}
+
+/* --------------------------------------------------------------------------
+   3. KANTEN-RADII (Abrundung der Ecken inkl. der farbigen Energiebalken)
+   -------------------------------------------------------------------------- */
+
+/* Linke Außenkante (Erste Spalte mit deinen Farbbalken A+, A, B...) */
+.elevated-grid-container .e-grid .e-row:has(.e-selectionbackground) .e-rowcell:first-child,
+.elevated-grid-container .e-grid .e-row.e-active .e-rowcell:first-child,
+.elevated-grid-container .e-grid .e-row:hover .e-rowcell:first-child {
+    border-left: 1.5px solid #1a73e8 !important;
+    border-top-left-radius: 6px !important;
+    border-bottom-left-radius: 6px !important;
+}
+
+/* Rechte Außenkante (Letzte Spalte mit den Funktion-Icons) */
+.elevated-grid-container .e-grid .e-row:has(.e-selectionbackground) .e-rowcell:last-child,
+.elevated-grid-container .e-grid .e-row.e-active .e-rowcell:last-child,
+.elevated-grid-container .e-grid .e-row:hover .e-rowcell:last-child {
+    border-right: 1.5px solid #1a73e8 !important;
+    border-top-right-radius: 6px !important;
+    border-bottom-right-radius: 6px !important;
+}

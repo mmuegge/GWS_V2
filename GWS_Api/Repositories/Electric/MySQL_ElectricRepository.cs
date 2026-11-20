@@ -1,425 +1,660 @@
 using GWS_Api.Models;
 using GWS_Api.Models.Electric;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace GWS_Api.Repositories.Electric
 {
-    public class MySQL_ElectricRepository(GWS_DbContext context) : IElectricRepository
+    public class MySQL_ElectricRepository(GWS_DbContext context, ILogger<MySQL_ElectricRepository> logger) : IElectricRepository
     {
         #region Variablendeklaration
-        private readonly GWS_DbContext _context = context;
+        private readonly GWS_DbContext _context = context ?? throw new ArgumentNullException(nameof(context));
+        private readonly ILogger<MySQL_ElectricRepository> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         #endregion
 
         #region ADD
-        public async Task<ElectricTarif?> AddSupplierAsync(ElectricTarif supplier)
+        #region AddSupplierAsync
+        public Task<ElectricTarif> AddSupplierAsync(ElectricTarif supplier, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(supplier);
-            var result = await _context.Strom_tarif.AddAsync(supplier);
-            return result.Entity;
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var result = _context.Strom_tarif.Add(supplier);
+            _logger.LogDebug("Elektrizitäts-Tarif zur Nachverfolgung (ChangeTracker) hinzugefügt.");
+            return Task.FromResult(result.Entity);
         }
-        public async Task<ElectricCounter?> AddCounterAsync(ElectricCounter zaehlerstand)
+        #endregion
+
+        #region AddCounterAsync
+        public async Task<ElectricCounter?> AddCounterAsync(ElectricCounter zaehlerstand, CancellationToken cancellationToken = default)
         {
-            // Sicherheitsnetz: Null-Prüfung wie bei den anderen Methoden
             ArgumentNullException.ThrowIfNull(zaehlerstand);
 
-            // prüfen ob Ablesedatum in der Zukunft liegt
-            if (zaehlerstand.Ablesetag > DateTime.Now)
+            // 1. Prüfen, ob Ablesetag gesetzt ist (löst den CS1061-Fehler)
+            if (zaehlerstand.Ablesetag is not DateTime rawDate)
             {
+                _logger.LogWarning("Ablesetag ist null und kann nicht gespeichert werden.");
                 return null;
             }
 
-            // BEHOBEN: Prüfen, ob der Ablesetag FÜR DIESEN SPEZIFISCHEN LIEFERANTEN/ZÄHLER schon vorhanden ist
-            int count = await _context.Strom_zaehlerstand
-                .Where(m => m.Ablesetag == zaehlerstand.Ablesetag && m.ID_Anbieter == zaehlerstand.ID_Anbieter)
-                .CountAsync();
+            // 2. Datum auf 00:00:00 normalisieren
+            var ablesetag = rawDate.Date;
+            var heute = DateTime.UtcNow.Date;
 
-            if (count > 0)
+            if (ablesetag > heute)
             {
+                _logger.LogWarning("Ablesetag {Ablesetag:yyyy-MM-dd} liegt in der Zukunft.", ablesetag);
                 return null;
             }
 
-            var result = await _context.Strom_zaehlerstand.AddAsync(zaehlerstand);
-            return result.Entity;
+            // 3. Schneller exakter Index-Seek, da in der DB immer 00:00:00 steht
+            bool exists = await _context.Strom_zaehlerstand
+                .AnyAsync(m => m.ID_Anbieter == zaehlerstand.ID_Anbieter
+                            && m.Ablesetag == ablesetag,
+                          cancellationToken);
+
+            if (exists)
+            {
+                if (_logger.IsEnabled(LogLevel.Information))
+                {
+                    _logger.LogInformation(
+                        "Eintrag für Anbieter {AnbieterId} am {Ablesetag:yyyy-MM-dd} existiert bereits.",
+                        zaehlerstand.ID_Anbieter,
+                        ablesetag);
+                }
+                return null;
+            }
+
+            // 4. Sicherstellen, dass auch der neue Eintrag sauber mit 00:00:00 gespeichert wird
+            zaehlerstand.Ablesetag = ablesetag;
+
+            var entry = _context.Strom_zaehlerstand.Add(zaehlerstand);
+            _logger.LogDebug("ElectricCounter für {Ablesetag:yyyy-MM-dd} zum ChangeTracker hinzugefügt.", ablesetag);
+
+            return entry.Entity;
         }
-        public async Task<ElectricPayment?> AddPaymentAsync(ElectricPayment payment)
+        #endregion
+
+        #region AddPaymentAsync
+        public Task<ElectricPayment> AddPaymentAsync(ElectricPayment payment, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(payment);
-            var result = await _context.Strom_zahlungen.AddAsync(payment);
-            return result.Entity;
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var entry = _context.Strom_zahlungen.Add(payment);
+
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "ElectricPayment für Anbieter {AnbieterId} zum ChangeTracker hinzugefügt.",
+                    payment.ID_Anbieter);
+            }
+
+            return Task.FromResult(entry.Entity);
         }
-        public async Task<ElectricCost?> AddCostAsync(ElectricCost cost)
+        #endregion
+
+        #region AddCostAsync
+        public Task<ElectricCost> AddCostAsync(ElectricCost cost, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(cost);
-            var result = await _context.Strom_kosten.AddAsync(cost);
-            return result.Entity;
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var entry = _context.Strom_kosten.Add(cost);
+
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "ElectricCost für Anbieter {AnbieterId} zum ChangeTracker hinzugefügt.",
+                    cost.Id_Anbieter);
+            }
+
+            return Task.FromResult(entry.Entity);
         }
-        public async Task<ElectricCounterChange?> AddCounterChangeAsync(ElectricCounterChange counterChange)
+        #endregion
+
+        #region AddCounterChangeAsync
+        public Task<ElectricCounterChange> AddCounterChangeAsync(ElectricCounterChange counterChange, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(counterChange);
-            var result = await _context.Strom_zaehlerwechsel.AddAsync(counterChange);
-            return result.Entity;
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var entry = _context.Strom_zaehlerwechsel.Add(counterChange);
+
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "ElectricCounterChange für Anbieter {AnbieterId} zum ChangeTracker hinzugefügt.",
+                    counterChange.Id_Anbieter);
+            }
+
+            return Task.FromResult(entry.Entity);
         }
+        #endregion
         #endregion
 
         #region DELETE
-        public async Task DeleteSupplierAsync(ElectricTarif supplier)
+        #region DeleteSupplierAsync
+        public async Task DeleteSupplierAsync(ElectricTarif supplier, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(supplier);
 
-            var result = await _context.Strom_tarif.FirstOrDefaultAsync(m => m.Id == supplier.Id)
-                            ?? throw new KeyNotFoundException($"Tarif mit ID {supplier.Id} nicht gefunden.");
+            var result = await _context.Strom_tarif.FindAsync([supplier.Id], cancellationToken)
+                ?? throw new KeyNotFoundException($"Tarif mit ID {supplier.Id} nicht gefunden.");
 
-            _context.Remove(result);
-        }
-        public async Task DeleteCounterAsync(ElectricCounter counter)
-        {
-            ArgumentNullException.ThrowIfNull(counter);
+            _context.Strom_tarif.Remove(result);
 
-            var result = await _context.Strom_zaehlerstand
-                .FirstOrDefaultAsync(m => m.ID_Tag == counter.ID_Tag)
-                ?? throw new KeyNotFoundException($"Zählerstand mit ID {counter.ID_Tag} nicht gefunden.");
-
-            _context.Remove(result);
-        }
-        public async Task DeletePaymentAsync(ElectricPayment payment)
-        {
-            ArgumentNullException.ThrowIfNull(payment);
-
-            var result = await _context.Strom_zahlungen.FirstOrDefaultAsync(m => m.ID_Zahlung == payment.ID_Zahlung)
-                 ?? throw new KeyNotFoundException($"Zahlung mit ID {payment.ID_Zahlung} nicht gefunden.");
-
-            _context.Remove(result);
-        }
-        public async Task DeleteCostAsync(ElectricCost cost)
-        {
-            ArgumentNullException.ThrowIfNull(cost);
-
-            var result = await _context.Strom_kosten.FirstOrDefaultAsync(m => m.Id == cost.Id)
-                            ?? throw new KeyNotFoundException($"Kosten-Eintrag mit ID {cost.Id} nicht gefunden.");
-
-            _context.Remove(result);
-        }
-        public async Task DeleteCounterChangeAsync(ElectricCounterChange counterChange)
-        {
-            ArgumentNullException.ThrowIfNull(counterChange);
-
-            var result = await _context.Strom_zaehlerwechsel.FirstOrDefaultAsync(m => m.Id == counterChange.Id)
-                            ?? throw new KeyNotFoundException($"Zählerwechsel mit ID {counterChange.Id} nicht gefunden.");
-            _context.Remove(result);
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("ElectricTarif mit ID {TarifId} im ChangeTracker zum Löschen markiert.", supplier.Id);
+            }
         }
         #endregion
 
-        #region GET
-        public async Task<ElectricTarif?> GetSupplierByIdAsync(int supplierId)
+        #region DeleteCounterAsync
+        public async Task DeleteCounterAsync(ElectricCounter counter, CancellationToken cancellationToken = default)
         {
-            return await _context.Strom_tarif.FirstOrDefaultAsync(m => m.Id == supplierId);
-        }
-        public async Task<IEnumerable<ElectricTarif?>> GetSuppliersAsync()
-        {
-            return await _context.Strom_tarif.ToListAsync();
-        }
-        public async Task<IEnumerable<ElectricCounter?>> GetCountersAsync()
-        {
-            var counters = await _context.Strom_zaehlerstand.ToListAsync();
+            ArgumentNullException.ThrowIfNull(counter);
 
-            // Wir erstellen ein schnelles Dictionary für die Namenssuche (Key: Id, Value: Anbietername)
-            var tarifDict = await _context.Strom_tarif
-                .ToDictionaryAsync(x => x.Id, x => x.Anbieter);
+            var result = await _context.Strom_zaehlerstand.FindAsync([counter.ID_Tag], cancellationToken)
+                ?? throw new KeyNotFoundException($"Zählerstand mit ID {counter.ID_Tag} nicht gefunden.");
+
+            _context.Strom_zaehlerstand.Remove(result);
+
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("ElectricCounter mit ID {CounterId} im ChangeTracker zum Löschen markiert.", counter.ID_Tag);
+            }
+        }
+        #endregion
+
+        #region DeletePaymentAsync
+        public async Task DeletePaymentAsync(ElectricPayment payment, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(payment);
+
+            var result = await _context.Strom_zahlungen.FindAsync([payment.ID_Zahlung], cancellationToken)
+                 ?? throw new KeyNotFoundException($"Zahlung mit ID {payment.ID_Zahlung} nicht gefunden.");
+
+            _context.Strom_zahlungen.Remove(result);
+
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("ElectricPayment mit ID {PaymentId} im ChangeTracker zum Löschen markiert.", payment.ID_Zahlung);
+            }
+        }
+        #endregion
+
+        #region DeleteCostAsync
+        public async Task DeleteCostAsync(ElectricCost cost, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(cost);
+
+            var result = await _context.Strom_kosten.FindAsync([cost.Id], cancellationToken)
+                 ?? throw new KeyNotFoundException($"Kosten-Eintrag mit ID {cost.Id} nicht gefunden.");
+
+            _context.Strom_kosten.Remove(result);
+
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("ElectricCost mit ID {CostId} im ChangeTracker zum Löschen markiert.", cost.Id);
+            }
+        }
+        #endregion
+
+        #region DeleteCounterChangeAsync
+        public async Task DeleteCounterChangeAsync(ElectricCounterChange counterChange, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(counterChange);
+
+            var result = await _context.Strom_zaehlerwechsel.FindAsync([counterChange.Id], cancellationToken)
+                            ?? throw new KeyNotFoundException($"Zählerwechsel mit ID {counterChange.Id} nicht gefunden.");
+            _context.Remove(result);
+
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("ElectricCounterChange mit ID {CounterChangeId} im ChangeTracker zum Löschen markiert.", counterChange.Id);
+            }
+        }
+        #endregion
+        #endregion
+
+        #region GET
+        #region GetSupplierByIdAsync
+        public Task<ElectricTarif?> GetSupplierByIdAsync(int supplierId, CancellationToken cancellationToken = default)
+        {
+            return _context.Strom_tarif
+                .AsNoTracking()
+                .FirstOrDefaultAsync(m => m.Id == supplierId, cancellationToken);
+        }
+        #endregion
+
+        #region GetSuppliersAsync
+        public async Task<IEnumerable<ElectricTarif>> GetSuppliersAsync(CancellationToken cancellationToken = default)
+        {
+            return await _context.Strom_tarif
+               .AsNoTracking()
+               .ToListAsync(cancellationToken);
+        }
+        #endregion
+
+        #region GetCountersAsync
+        public async Task<IEnumerable<ElectricCounter>> GetCountersAsync(CancellationToken cancellationToken = default)
+        {
+            var counters = await _context.Strom_zaehlerstand
+               .AsNoTracking()
+               .ToListAsync(cancellationToken);
+
+            var tarifDict = await _context.Wasser_tarif
+                .AsNoTracking()
+                .ToDictionaryAsync(x => x.Id, x => x.Anbieter, cancellationToken);
 
             foreach (var counter in counters)
             {
-                // Sicherer Zugriff: Falls die ID im Dictionary existiert, Namen zuweisen
                 if (tarifDict.TryGetValue(counter.ID_Anbieter, out var name))
                 {
-                    counter.Anbieter = name ?? string.Empty; // Null-safe abgesichert;
+                    counter.Anbieter = name ?? string.Empty;
                 }
             }
+
             return counters;
         }
-        public async Task<IEnumerable<ElectricCounter?>> GetCountersBySupplierAsync(int supplierId)
+        #endregion
+
+        #region GetCountersBySupplierAsync
+        public async Task<IEnumerable<ElectricCounter>> GetCountersBySupplierAsync(int supplierId, CancellationToken cancellationToken = default)
         {
-            var result = await _context.Strom_zaehlerstand.Where(m => m.ID_Anbieter == supplierId).ToListAsync();
+            var result = await _context.Strom_zaehlerstand
+                .AsNoTracking()
+                .Where(m => m.ID_Anbieter == supplierId)
+                .ToListAsync(cancellationToken);
+
+            if (result.Count == 0)
+            {
+                return result;
+            }
 
             var supplierName = await _context.Strom_tarif
+                .AsNoTracking()
                 .Where(m => m.Id == supplierId)
                 .Select(x => x.Anbieter)
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(cancellationToken);
 
-            if (supplierName != null)
+            if (supplierName is not null)
             {
                 foreach (var counter in result)
                 {
-                    counter.Anbieter = supplierName ?? string.Empty; // Null-safe abgesichert;
+                    counter.Anbieter = supplierName;
                 }
             }
+
             return result;
         }
-        public async Task<ElectricCounter?> GetCounterByIdAsync(int id)
-        {
-            var counter = await _context.Strom_zaehlerstand.FirstOrDefaultAsync(m => m.ID_Tag == id);
-            if (counter != null)
-            {
-                var tarif = await _context.Strom_tarif.FirstOrDefaultAsync(m => m.Id == counter.ID_Anbieter);
-                counter.Anbieter = tarif?.Anbieter ?? string.Empty; // Null-safe abgesichert
-            }
-            return counter;
-        }
-        public async Task<ElectricCounter?> GetCounterByDateAsync(DateTime date)
-        {
-            var counter = await _context.Strom_zaehlerstand.FirstOrDefaultAsync(m => m.Ablesetag == date);
-            if (counter != null)
-            {
-                var tarif = await _context.Strom_tarif.FirstOrDefaultAsync(m => m.Id == counter.ID_Anbieter);
-                counter.Anbieter = tarif?.Anbieter ?? string.Empty;
-            }
-            return counter;
-        }
-        public async Task<IEnumerable<ElectricPayment?>> GetPaymentsAsync()
-        {
-            var payments = await _context.Strom_zahlungen.ToListAsync();
+        #endregion
 
-            // Auch hier: Dictionary-Optimierung statt unzuverlässiger Sortierungsschleife
+        #region GetCounterByIdAsync
+        public async Task<ElectricCounter?> GetCounterByIdAsync(int id, CancellationToken cancellationToken = default)
+        {
+            var counter = await _context.Strom_zaehlerstand
+                .AsNoTracking()
+                .FirstOrDefaultAsync(m => m.ID_Tag == id, cancellationToken);
+
+            if (counter is not null)
+            {
+                var anbieterName = await _context.Strom_tarif
+                    .AsNoTracking()
+                    .Where(m => m.Id == counter.ID_Anbieter)
+                    .Select(m => m.Anbieter)
+                    .FirstOrDefaultAsync(cancellationToken);
+
+                counter.Anbieter = anbieterName ?? string.Empty;
+            }
+
+            return counter;
+        }
+        #endregion
+
+        #region GetCounterByDateAsync
+        public async Task<ElectricCounter?> GetCounterByDateAsync(DateTime date, CancellationToken cancellationToken = default)
+        {
+            var targetDate = date.Date;
+
+            var counter = await _context.Strom_zaehlerstand
+                .AsNoTracking()
+                .FirstOrDefaultAsync(m => m.Ablesetag == targetDate, cancellationToken);
+
+            if (counter is not null)
+            {
+                var anbieterName = await _context.Strom_tarif
+                    .AsNoTracking()
+                    .Where(m => m.Id == counter.ID_Anbieter)
+                    .Select(m => m.Anbieter)
+                    .FirstOrDefaultAsync(cancellationToken);
+
+                counter.Anbieter = anbieterName ?? string.Empty;
+            }
+
+            return counter;
+        }
+        #endregion
+
+        #region GetPaymentsAsync
+        public async Task<IEnumerable<ElectricPayment>> GetPaymentsAsync(CancellationToken cancellationToken = default)
+        {
+            var payments = await _context.Strom_zahlungen
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
+
             var tarifDict = await _context.Strom_tarif
-                .ToDictionaryAsync(x => x.Id, x => x.Anbieter);
+                .AsNoTracking()
+                .ToDictionaryAsync(x => x.Id, x => x.Anbieter, cancellationToken);
 
             foreach (var payment in payments)
             {
                 if (tarifDict.TryGetValue(payment.ID_Anbieter, out var name))
                 {
-                    payment.Anbieter = name;
+                    payment.Anbieter = name ?? string.Empty;
                 }
             }
+
             return payments;
         }
-        public async Task<IEnumerable<ElectricPayment?>> GetPaymentsBySupplierAsync(int supplierId)
+        #endregion
+
+        #region GetPaymentsBySupplierAsync
+        public async Task<IEnumerable<ElectricPayment>> GetPaymentsBySupplierAsync(int supplierId, CancellationToken cancellationToken = default)
         {
-            var result = await _context.Strom_zahlungen.Where(m => m.ID_Anbieter == supplierId).ToListAsync();
+            var result = await _context.Strom_zahlungen
+                .AsNoTracking()
+                .Where(m => m.ID_Anbieter == supplierId)
+                .ToListAsync(cancellationToken);
+
+            if (result.Count == 0)
+            {
+                return result;
+            }
 
             var supplierName = await _context.Strom_tarif
+                .AsNoTracking()
                 .Where(m => m.Id == supplierId)
                 .Select(x => x.Anbieter)
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(cancellationToken);
 
-            if (supplierName != null)
+            if (supplierName is not null)
             {
                 foreach (var payment in result)
                 {
                     payment.Anbieter = supplierName;
                 }
             }
-            return result;
-        }
-        public async Task<ElectricPayment?> GetPaymentByIdAsync(int paymentId)
-        {
-            var payment = await _context.Strom_zahlungen.FirstOrDefaultAsync(m => m.ID_Zahlung == paymentId);
-            if (payment != null)
-            {
-                var tarif = await _context.Strom_tarif.FirstOrDefaultAsync(m => m.Id == payment.ID_Anbieter);
-                payment.Anbieter = tarif?.Anbieter ?? string.Empty;
-            }
-            return payment;
-        }
-        public async Task<IEnumerable<PaymentMethod?>> GetPaymentMethodsAsync()
-        {
-            return await _context.Zahlungsarten.ToListAsync();
-        }
-        public async Task<IEnumerable<ElectricCost?>> GetCostsAsync()
-        {
-            return await _context.Strom_kosten.ToListAsync();
-        }
-        public async Task<IEnumerable<ElectricCost?>> GetCostsBySupplierIdAsync(int supplierId)
-        {
-            var result = await _context.Strom_kosten.Where(m => m.Id_Anbieter == supplierId).ToListAsync();
 
-            var supplierName = await _context.Strom_tarif
-                .Where(m => m.Id == supplierId)
-                .Select(x => x.Anbieter)
-                .FirstOrDefaultAsync();
-
-            if (supplierName != null)
-            {
-                foreach (var costs in result)
-                {
-                    costs.Anbieter = supplierName ?? string.Empty;
-                }
-            }
-            return result;
-        }
-        public async Task<ElectricCost?> GetCostByIdAsync(int costId)
-        {
-            return await _context.Strom_kosten.FirstOrDefaultAsync(m => m.Id == costId);
-        }
-        public async Task<IEnumerable<ElectricCounterChange?>> GetCounterChangesAsync()
-        {
-            return await _context.Strom_zaehlerwechsel.ToListAsync();
-        }
-        public async Task<ElectricCounterChange?> GetCounterChangeByIdAsync(int counterChangeId)
-        {
-            return await _context.Strom_zaehlerwechsel.FirstOrDefaultAsync(m => m.Id == counterChangeId);
-        }
-        public async Task<IEnumerable<ElectricCounterChange?>> GetCounterChangesBySupplierAsync(int supplierId)
-        {
-            var result = await _context.Strom_zaehlerwechsel.Where(m => m.Id_Anbieter == supplierId).ToListAsync();
-
-            var supplierName = await _context.Strom_tarif
-                .Where(m => m.Id == supplierId)
-                .Select(x => x.Anbieter)
-                .FirstOrDefaultAsync();
-
-            if (supplierName != null)
-            {
-                foreach (var counterChange in result)
-                {
-                    counterChange.Anbieter = supplierName ?? string.Empty;
-                }
-            }
             return result;
         }
         #endregion
 
+        #region GetPaymentByIdAsync
+        public async Task<ElectricPayment?> GetPaymentByIdAsync(int id, CancellationToken cancellationToken = default)
+        {
+            var counter = await _context.Strom_zahlungen
+                .AsNoTracking()
+                .FirstOrDefaultAsync(m => m.ID_Zahlung == id, cancellationToken);
+
+            if (counter is not null)
+            {
+                var anbieterName = await _context.Strom_tarif
+                    .AsNoTracking()
+                    .Where(m => m.Id == counter.ID_Anbieter)
+                    .Select(m => m.Anbieter)
+                    .FirstOrDefaultAsync(cancellationToken);
+
+                counter.Anbieter = anbieterName ?? string.Empty;
+            }
+
+            return counter;
+        }
+        #endregion
+
+        #region GetPaymentMethodsAsync
+        public async Task<IEnumerable<PaymentMethod>> GetPaymentMethodsAsync(CancellationToken cancellationToken = default)
+        {
+            return await _context.Zahlungsarten
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
+        }
+        #endregion
+
+        #region GetCostsAsync
+        public async Task<IEnumerable<ElectricCost>> GetCostsAsync(CancellationToken cancellationToken = default)
+        {
+            return await _context.Strom_kosten
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
+        }
+        #endregion
+
+        #region GetCostsBySupplierIdAsync
+        public async Task<IEnumerable<ElectricCost>> GetCostsBySupplierIdAsync(int supplierId, CancellationToken cancellationToken = default)
+        {
+            var result = await _context.Strom_kosten
+                .AsNoTracking()
+                .Where(m => m.Id_Anbieter == supplierId)
+                .ToListAsync(cancellationToken);
+
+            if (result.Count == 0)
+            {
+                return result;
+            }
+
+            var supplierName = await _context.Strom_tarif
+                .AsNoTracking()
+                .Where(m => m.Id == supplierId)
+                .Select(x => x.Anbieter)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (supplierName is not null)
+            {
+                foreach (var cost in result)
+                {
+                    cost.Anbieter = supplierName;
+                }
+            }
+
+            return result;
+        }
+        #endregion
+
+        #region GetCostByIdAsync
+        public async Task<ElectricCost?> GetCostByIdAsync(int costId, CancellationToken cancellationToken = default)
+        {
+            return await _context.Strom_kosten
+               .AsNoTracking()
+               .FirstOrDefaultAsync(m => m.Id == costId, cancellationToken);
+        }
+        #endregion
+
+        #region GetCounterChangesAsync
+        public async Task<IEnumerable<ElectricCounterChange>> GetCounterChangesAsync(CancellationToken cancellationToken = default)
+        {
+            return await _context.Strom_zaehlerwechsel
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
+        }
+        #endregion
+
+        #region GetCounterChangeByIdAsync
+        public async Task<ElectricCounterChange?> GetCounterChangeByIdAsync(int counterChangeId, CancellationToken cancellationToken = default)
+        {
+            return await _context.Strom_zaehlerwechsel
+                .AsNoTracking()
+                .FirstOrDefaultAsync(m => m.Id == counterChangeId, cancellationToken);
+        }
+        #endregion
+
+        #region GetCounterChangesBySupplierAsync
+        public async Task<IEnumerable<ElectricCounterChange>> GetCounterChangesBySupplierAsync(int supplierId, CancellationToken cancellationToken = default)
+        {
+            var result = await _context.Strom_zaehlerwechsel
+                .AsNoTracking()
+                .Where(m => m.Id_Anbieter == supplierId)
+                .ToListAsync(cancellationToken);
+
+            if (result.Count == 0)
+            {
+                return result;
+            }
+
+            var supplierName = await _context.Strom_tarif
+                .AsNoTracking()
+                .Where(m => m.Id == supplierId)
+                .Select(x => x.Anbieter)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (supplierName is not null)
+            {
+                foreach (var counterChange in result)
+                {
+                    counterChange.Anbieter = supplierName;
+                }
+            }
+
+            return result;
+        }
+        #endregion
+        #endregion
+
         #region UPDATE
-        public async Task<ElectricTarif?> UpdateSupplierAsync(ElectricTarif supplier)
+        #region UpdateSupplierAsync
+        public async Task<ElectricTarif?> UpdateSupplierAsync(ElectricTarif supplier, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(supplier);
 
-            var result = await _context.Strom_tarif.FirstOrDefaultAsync(m => m.Id == supplier.Id);
-            if (result != null)
+            var result = await _context.Strom_tarif.FindAsync([supplier.Id], cancellationToken);
+            if (result is null)
             {
-                result.Anbieter = supplier.Anbieter;
-                result.Tarif = supplier.Tarif;
-                result.Zaehlernummer = supplier.Zaehlernummer;
-                result.Kuendigungsfrist = supplier.Kuendigungsfrist;
-                result.Zeitraum_Start = supplier.Zeitraum_Start;
-                result.Zeitraum_Ende = supplier.Zeitraum_Ende;
-                result.Start_Zaehlerstand = supplier.Start_Zaehlerstand;
-                result.Ende_Zaehlerstand = supplier.Ende_Zaehlerstand;
-                result.Start_Zaehlerstand_280 = supplier.Start_Zaehlerstand_280;
-                result.Ende_Zaehlerstand_280 = supplier.Ende_Zaehlerstand_280;
-                result.Start_Zaehlerstand_Enfluri = supplier.Start_Zaehlerstand_Enfluri;
-                result.Ende_Zaehlerstand_Enfluri = supplier.Ende_Zaehlerstand_Enfluri;
-                result.Arbeitspreis = supplier.Arbeitspreis;
-                result.Grundpreis = supplier.Grundpreis;
-                result.Zaehlermiete = supplier.Zaehlermiete;
-                result.Anzahl_Personen = supplier.Anzahl_Personen;
-                result.Bemerkung = supplier.Bemerkung;
-                return result;
+                return null;
             }
-            return null;
+
+            _context.Entry(result).CurrentValues.SetValues(supplier);
+            return result;
         }
-        public async Task<ElectricCounter?> UpdateCounterAsync(ElectricCounter zaehlerstand)
+        #endregion
+
+        #region UpdateCounterAsync
+        public async Task<ElectricCounter?> UpdateCounterAsync(ElectricCounter zaehlerstand, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(zaehlerstand);
 
-            var result = await _context.Strom_zaehlerstand.FirstOrDefaultAsync(m => m.ID_Tag == zaehlerstand.ID_Tag);
-            if (result != null)
+            var result = await _context.Strom_zaehlerstand.FindAsync([zaehlerstand.ID_Tag], cancellationToken);
+            if (result is null)
             {
-                result.ID_Anbieter = zaehlerstand.ID_Anbieter;
-                result.Anbieter = zaehlerstand.Anbieter;
-                result.Ablesetag = zaehlerstand.Ablesetag;
-                result.Zaehlerstand = zaehlerstand.Zaehlerstand;
-                result.Uhrzeit = zaehlerstand.Uhrzeit;
-                result.Temperatur_aussen = zaehlerstand.Temperatur_aussen;
-                result.Temperatur_innen = zaehlerstand.Temperatur_innen;
-                result.Bemerkungen = zaehlerstand.Bemerkungen;
-                return result;
+                return null;
             }
-            return null;
+
+            _context.Entry(result).CurrentValues.SetValues(zaehlerstand);
+            return result;
         }
-        public async Task<ElectricPayment?> UpdatePaymentAsync(ElectricPayment payment)
+        #endregion
+
+        #region UpdatePaymentAsync
+        public async Task<ElectricPayment?> UpdatePaymentAsync(ElectricPayment payment, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(payment);
 
-            var result = await _context.Strom_zahlungen.FirstOrDefaultAsync(m => m.ID_Zahlung == payment.ID_Zahlung);
-            if (result != null)
+            var result = await _context.Strom_zahlungen.FindAsync([payment.ID_Zahlung], cancellationToken);
+            if (result is null)
             {
-                result.ID_Zahlung = payment.ID_Zahlung;
-                result.ID_Anbieter = payment.ID_Anbieter;
-                result.Anbieter = payment.Anbieter;
-                result.Datum = payment.Datum;
-                result.Zahlungsart = payment.Zahlungsart;
-                result.Zahlungen = payment.Zahlungen;
-                result.Bemerkungen = payment.Bemerkungen;
-                return result;
+                return null;
             }
-            return null;
+
+            _context.Entry(result).CurrentValues.SetValues(payment);
+            return result;
         }
-        public async Task<ElectricCost?> UpdateCostAsync(ElectricCost cost)
+        #endregion
+
+        #region UpdateCostAsync
+        public async Task<ElectricCost?> UpdateCostAsync(ElectricCost cost, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(cost);
 
-            var result = await _context.Strom_kosten.FirstOrDefaultAsync(m => m.Id == cost.Id);
-
-            if (result != null)
+            var result = await _context.Strom_kosten.FindAsync([cost.Id], cancellationToken);
+            if (result is null)
             {
-                result.Id = cost.Id;
-                result.Id_Anbieter = cost.Id_Anbieter;
-                result.Anbieter = cost.Anbieter;
-                result.Grundpreis = cost.Grundpreis;
-                result.Arbeitspreis = cost.Arbeitspreis;
-                result.Zaehlermiete = cost.Zaehlermiete;
-                result.Bemerkung = cost.Bemerkung;
+                return null;
             }
 
-            return await Task.FromResult(result);
+            _context.Entry(result).CurrentValues.SetValues(cost);
+            return result;
         }
-        public async Task<ElectricCounterChange?> UpdateCounterChangeAsync(ElectricCounterChange counterChange)
+
+        #endregion
+
+        #region UpdateCounterChangeAsync
+        public async Task<ElectricCounterChange?> UpdateCounterChangeAsync(ElectricCounterChange counterChange, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(counterChange);
 
-            var result = await _context.Strom_zaehlerwechsel.FirstOrDefaultAsync(m => m.Id == counterChange.Id);
-            if (result != null)
+            var result = await _context.Strom_zaehlerwechsel.FindAsync([counterChange.Id], cancellationToken);
+            if (result is null)
             {
-                result.Id = counterChange.Id;
-                result.Id_Anbieter = counterChange.Id_Anbieter;
-                result.Anbieter = counterChange.Anbieter;
-                result.Wechsel_Datum = counterChange.Wechsel_Datum;
-                result.Zaehlerstand_alt = counterChange.Zaehlerstand_alt;
-                result.Zaehlerstand_neu = counterChange.Zaehlerstand_neu;
-                result.Zaehlerstand_280_alt = counterChange.Zaehlerstand_280_alt;
-                result.Zaehlerstand_280_neu = counterChange.Zaehlerstand_280_neu;
-                result.Zaehlerstand_Enfluri_alt = counterChange.Zaehlerstand_Enfluri_alt;
-                result.Zaehlerstand_Enfluri_neu = counterChange.Zaehlerstand_Enfluri_neu;
-                result.Bemerkung = counterChange.Bemerkung;
-                return result;
+                return null;
             }
-            return null;
+
+            _context.Entry(result).CurrentValues.SetValues(counterChange);
+            return result;
         }
+        #endregion
         #endregion
 
         #region SaveChanges
         // Zwingend erforderlich, damit EF Core die obigen Updates an die MySQL-DB schickt
-        public async Task<bool> SaveChangesAsync()
+        public async Task<bool> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
+            //try
+            //{
+            //    // Wir führen das Speichern aus. 
+            //    // Ob 0 oder mehr Zeilen geändert wurden, ist für den reinen Erfolg egal.
+            //    await _context.SaveChangesAsync();
+            //    return true;
+            //}
+            //catch (Exception)
+            //{
+            //    // Nur wenn die Datenbank wirklich einen Fehler wirft, geben wir false zurück
+            //    return false;
+            //}
             try
             {
-                // Wir führen das Speichern aus. 
-                // Ob 0 oder mehr Zeilen geändert wurden, ist für den reinen Erfolg egal.
-                await _context.SaveChangesAsync();
+                await _context.SaveChangesAsync(cancellationToken);
                 return true;
             }
-            catch (Exception)
+            catch (OperationCanceledException)
             {
-                // Nur wenn die Datenbank wirklich einen Fehler wirft, geben wir false zurück
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Fehler beim Speichern in die Datenbank.");
                 return false;
             }
         }
 
         // nur zum Testen
-        public async Task<IEnumerable<ElectricTarif>> Search(string tarif, double? zaehlermiete)
+        public async Task<IEnumerable<ElectricTarif>> SearchAsync(string tarif, double? zaehlermiete, CancellationToken cancellationToken = default)
         {
-            IQueryable<ElectricTarif> query = _context.Strom_tarif;
+            IQueryable<ElectricTarif> query = _context.Strom_tarif.AsNoTracking();
 
-            if (!string.IsNullOrEmpty(tarif))
+            if (!string.IsNullOrWhiteSpace(tarif))
             {
-                query = query.Where(m => m.Tarif!.Contains(tarif));
+                var searchTerm = tarif.Trim();
+                query = query.Where(m => m.Tarif != null && m.Tarif.Contains(searchTerm));
             }
 
-            if (zaehlermiete != null)
+            if (zaehlermiete.HasValue)
             {
-                query = query.Where(m => m.Zaehlermiete == zaehlermiete);
+                query = query.Where(m => m.Zaehlermiete == zaehlermiete.Value);
             }
 
-            return await query.ToListAsync();
+            return await query.ToListAsync(cancellationToken);
         }
         #endregion
     }

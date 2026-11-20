@@ -54,7 +54,7 @@
 @* Grid *@
 @if (supplierList != null && supplierList.Count > 0)
 {
-    <div class="control-section" id="target" align="center">
+    <div class="control-section elevated-grid-container" id="target" align="center">
         <SfGrid ID="Grid" @ref="sfDataGrid" DataSource="@costsList"
                 AllowPaging="true"
                 AllowFiltering="true"
@@ -70,10 +70,10 @@
                 Toolbar=@toolbar
                 EnableStickyHeader="true">
 
-            <GridEditSettings AllowAdding="true"
+            @* <GridEditSettings AllowAdding="true"
                               AllowEditing="true"
                               AllowDeleting="true"
-                              ShowDeleteConfirmDialog="true"
+                              ShowDeleteConfirmDialog="false"
                               Mode="EditMode.Dialog"
                               Dialog="dialogParams">
 
@@ -83,12 +83,79 @@
                         <span>@DialogHeader</span>
                     }
                 </HeaderTemplate>
+            </GridEditSettings> *@
+
+            <GridEditSettings 
+                AllowAdding="true" 
+                AllowEditing="true" 
+                AllowDeleting="true" 
+                ShowDeleteConfirmDialog="false" 
+                Mode="EditMode.Dialog" 
+                Dialog="dialogParams">
+
+                <HeaderTemplate>
+                    @{
+                        var dialogHeader = GetDialogHeader((context as Gas_CostModel)!);
+                        <span>@dialogHeader</span>
+                    }
+                </HeaderTemplate>
+
+                <Template>
+                    @{
+                        var costData = (context as Gas_CostModel)!;
+                    }
+        
+                    <div style="padding: 10px;">
+                        <div class="form-row" style="margin-bottom: 15px;">
+                            <div class="form-group col-md-12">
+                               <SfDropDownList Placeholder="Anbieter"
+                                                FloatLabelType="FloatLabelType.Always"
+                                                ID="Anbieter"
+                                                TItem="Gas_SupplierDataModel"
+                                                TValue="string" 
+                                                @bind-Value="@costData.Anbieter"
+                                                DataSource="@supplierList">
+                                    <DropDownListFieldSettings Value="Anbieter" Text="Anbieter"></DropDownListFieldSettings>
+                                </SfDropDownList>
+                            </div>
+                        </div>
+
+                        <div class="form-row" style="margin-bottom: 15px;">
+                            <div class="form-group col-md-12">
+                                <SfDatePicker TValue="DateTime" @bind-Value="costData.Gueltig_Ab" FloatLabelType="FloatLabelType.Always" Placeholder="Datum" Format="d"></SfDatePicker>
+                            </div>
+                        </div>
+            
+                        <div class="form-row" style="margin-bottom: 15px;">
+                            <div class="form-group col-md-12">
+                                <SfNumericTextBox TValue="double?" @bind-Value="costData.Grundpreis" FloatLabelType="FloatLabelType.Always" Placeholder="Gesamt-Verbrauch" Format="##0 kWh"></SfNumericTextBox>
+                            </div>
+                        </div>
+
+                        <div class="form-row" style="margin-bottom: 15px;">
+                            <div class="form-group col-md-12">
+                                <SfNumericTextBox TValue="double?" @bind-Value="costData.Arbeitspreis" FloatLabelType="FloatLabelType.Always" Placeholder="Heizung-Verbrauch" Format="##0 kWh"></SfNumericTextBox>
+                            </div>
+                        </div>
+
+                        <div class="form-row" style="margin-bottom: 15px;">
+                            <div class="form-group col-md-12">
+                                <SfNumericTextBox TValue="double?" @bind-Value="costData.Zaehlermiete" FloatLabelType="FloatLabelType.Always" Placeholder="Warmwasser-Verbrauch" Format="##0 kWh"></SfNumericTextBox>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group col-md-12">
+                                <SfTextBox @bind-Value="costData.Bemerkung" FloatLabelType="FloatLabelType.Always" Placeholder="Bemerkung"></SfTextBox>
+                            </div>
+                        </div>
+                    </div>
+                </Template>
             </GridEditSettings>
 
             <GridEvents OnToolbarClick="ToolbarBtnClickHandler"
                         RowCreating="RowCreatingHandler"
-                        RowEditing="RowEditingHandler"
-                        OnActionComplete="ActionCompleteHandler"
+                        OnActionBegin="ActionBeginHandler"
                         TValue="Gas_CostModel">
             </GridEvents>
 
@@ -110,7 +177,11 @@
                 <GridColumn 
                     Field="@nameof(Gas_CostModel.Id)" 
                     IsPrimaryKey="true" 
-                    Visible="false">
+                    Visible="false"
+                    Width="0"
+                    AllowSorting="false"
+                    AllowFiltering="false"
+                    AllowEditing="false">
                 </GridColumn>
 
                 <GridColumn Field=@nameof(Gas_CostModel.Anbieter)
@@ -277,13 +348,13 @@ else
 
 @* Dialog*@
 <div>
-    <SfDialog Target="#target"
+    <SfDialog Target="body"
               Width=@dialogWidth
               Height=@dialogHeight
               AllowDragging="true"
               ShowCloseIcon=" true"
               @bind-Visible="DialogVisible"
-              AllowPrerender="true"
+              AllowPrerender="false"
               IsModal="true"
               CssClass="MyCss">
 
@@ -291,7 +362,7 @@ else
             <Header>@header</Header>
         </DialogTemplates>
 
-        <DialogPositionData X="@dialogXValue" Y="@dialogYValue"></DialogPositionData>
+        <DialogPositionData X="center" Y="center"></DialogPositionData>
 
         <DialogAnimationSettings Effect="@animationEffect"></DialogAnimationSettings>
 
@@ -412,8 +483,6 @@ else
     public bool DialogVisible { get; set; } = false;
     private bool showDialogButtons = false;
     private string dialogText { get; set; } = string.Empty;
-    private string dialogXValue = "center";
-    private string dialogYValue = "center";
     private string dialogHeight = "130px";
     private string dialogWidth = "380px";
 
@@ -431,7 +500,7 @@ else
 
     private SfGrid<Gas_CostModel> sfDataGrid = new();
 
-    private enum GridOperation { None, Add, Edit }
+    private enum GridOperation { None, Add, Edit, Delete }
     private GridOperation currentOperation = GridOperation.None;
 
     private List<Gas_SupplierDataModel>? supplierList = new();
@@ -695,59 +764,6 @@ else
     }
     #endregion
 
-    #region ActionCompleteHandler
-    /// <summary>
-    /// Action Complete Handler für das Grid. Behandelt das Speichern, Bearbeiten und Löschen von Datensätzen.
-    /// </summary>
-    /// <param name="args"></param>
-    public async Task ActionCompleteHandler(ActionEventArgs<Gas_CostModel> args)
-    {
-        if (args?.Data is null) return;
-
-        switch (args.RequestType)
-        {
-            case Syncfusion.Blazor.Grids.Action.Save:
-                costData = args.Data;
-
-                if (args.Action == "Add")
-                {
-                    currentOperation = GridOperation.Add;
-                    OpenDialog("Datensatz speichern ?", "130px", "220px", true);
-                }
-                else if (args.Action == "Edit")
-                {
-                    currentOperation = GridOperation.Edit;
-                    OpenDialog("Datensatz ändern ?", "130px", "220px", true);
-                }
-                break;
-
-            case Syncfusion.Blazor.Grids.Action.Delete:
-                if (args.Data.Id <= 0)
-                {
-                    if (gwsP is not null)
-                    {
-                        costsList = await gwsP.LoadDataAsync<Gas_CostModel>(urlCostSupplier);
-                    }
-                    ShowToast(false, "Datensatz nicht gelöscht!");
-                }
-                else
-                {
-                    if (gwsP is not null)
-                    {
-                        costData = await gwsP.DeleteDataAsync<Gas_CostModel>(urlCost, args.Data.Id.ToString());
-                        ShowToast(true, "Datensatz gelöscht!");
-                    }
-                }
-
-                if (sfDataGrid is not null)
-                {
-                    await sfDataGrid.Refresh();
-                }
-                break;
-        }
-    }
-    #endregion
-
     #region CancelClick
     /// <summary>
     /// Abbrechen-Button im Dialog wurde geklickt, schließt den Dialog und setzt den aktuellen Operationstyp zurück.
@@ -760,6 +776,14 @@ else
         // Setzt den aktuellen Operationstyp zurück, um sicherzustellen, dass keine Aktion mehr aussteht
         currentOperation = GridOperation.None;
 
+        // 4. DIE RETTUNG: Daten frisch von der API laden, um die UI-Änderungen zu verwerfen
+        if (gwsP is not null && costData is not null)
+        {
+            // Nutzen Sie hier die URL-Variable, die Sie auch beim initialen Laden verwenden (z.B. urlCounter)
+            // Lädt gezielt die Zählerstände für den aktuell ausgewählten Anbieter neu
+            costsList = await gwsP.LoadDataAsync<Gas_CostModel>(urlCostSupplier);
+        }
+
         // Setzt die temporären Datenstrukturen zurück, falls diese im Grid gebunden waren
         costData = null;
     }
@@ -767,12 +791,11 @@ else
 
     #region YesClick
     /// <summary>
-    /// YesClick
+    /// Yes-Button im Dialog wurde geklickt, führt die entsprechende Aktion (Add, Edit, Delete) aus und aktualisiert die UI.
     /// </summary>
-    private async Task YesClick()
+    private async void YesClick()
     {
         DialogVisible = false;
-
         if (gwsP is null || costData is null || currentOperation == GridOperation.None) return;
 
         try
@@ -780,6 +803,9 @@ else
             bool isSuccess = false;
             string successMessage = string.Empty;
             string defaultErrorMessage = "Aktion konnte nicht ausgeführt werden.";
+
+            // Vor jedem Aufruf die alte API-Response zurücksetzen!
+            apiResponse = null;
 
             switch (currentOperation)
             {
@@ -791,32 +817,60 @@ else
                     break;
 
                 case GridOperation.Edit:
-                    string url = $"{urlCost.TrimEnd('/')}/{costData.Id}";
-                    apiResponse = await gwsP.UpdateDataAsync<Gas_CostModel>(url, costData);
+                    string urlEdit = $"{urlCost.TrimEnd('/')}/{costData.Id}";
+                    apiResponse = await gwsP.UpdateDataAsync<Gas_CostModel>(urlEdit, costData);
                     isSuccess = apiResponse?.MyHttpStatusCode == HttpStatusCode.NoContent;
                     successMessage = "Datensatz erfolgreich aktualisiert!";
                     defaultErrorMessage = "Datensatz konnte nicht aktualisiert werden.";
+                    break;
+
+                case GridOperation.Delete:
+                    string deleteUrl = urlCost.EndsWith("/") ? urlCost : urlCost + "/";
+                    string idToDelete = costData.Id.ToString();
+
+                    var deletedData = await gwsP.DeleteDataAsync<Gas_CostModel>(deleteUrl, idToDelete);
+
+                    // Falls DeleteDataAsync intern doch die apiResponse befüllt,
+                    // wäre es ideal, diese hier zuzuweisen. Wenn nicht, reicht das:
+                    isSuccess = deletedData is not null;
+                    successMessage = "Datensatz erfolgreich gelöscht!";
+                    defaultErrorMessage = "Datensatz konnte nicht gelöscht werden.";
                     break;
             }
 
             if (isSuccess)
             {
                 ShowToast(true, successMessage);
+
+                // Zwinge das Grid zum sofortigen UI-Update, indem du das Element lokal entfernst
+                if (costsList is not null)
+                {
+                    var itemToRemove = costsList.FirstOrDefault(x => x.Id == costData.Id);
+                    if (itemToRemove is not null)
+                    {
+                        costsList.Remove(itemToRemove);
+                    }
+                }
+
+                // Erst danach im Hintergrund die Liste frisch vom Server holen
                 costsList = await gwsP.LoadDataAsync<Gas_CostModel>($"{urlCostSupplier}{supplierData!.Id}");
             }
             else
             {
-                // Dynamische Fehlerursache aus MyResponseString ermitteln
                 string errorMessage = defaultErrorMessage;
-
+                // Die Prüfung stellt sicher, dass wir nicht aus Versehen alte Response-Daten anzeigen
                 if (apiResponse is not null && !string.IsNullOrWhiteSpace(apiResponse.MyResponseString))
                 {
-                    // Wenn die API direkt Text zurückgibt, nutzen wir ihn.
-                    // Falls es JSON ist (z.B. bei Validierungsfehlern), könnte man es hier parsen.
                     errorMessage = $"Fehler ({apiResponse.MyHttpStatusCode}): {apiResponse.MyResponseString}";
                 }
-
                 ShowToast(false, errorMessage);
+
+                // WICHTIG: Wenn das EDITIEREN fehlschlägt, müssen wir die manipulierten
+                // RAM-Objekte im Grid ebenfalls mit den alten Serverdaten überschreiben!
+                if (currentOperation == GridOperation.Edit)
+                {
+                    costsList = await gwsP.LoadDataAsync<Gas_CostModel>($"{urlCostSupplier}{supplierData!.Id}");
+                }
             }
 
             if (sfDataGrid is not null)
@@ -827,10 +881,18 @@ else
         catch (Exception ex)
         {
             ShowToast(false, $"Netzwerkfehler: {ex.Message}");
+
+            // Auch bei einem Netzwerkfehler während des Edtierens das Grid zurücksetzen
+            if (currentOperation == GridOperation.Edit && supplierData is not null)
+            {
+                costsList = await gwsP.LoadDataAsync<Gas_CostModel>($"{urlCostSupplier}{supplierData.Id}");
+                if (sfDataGrid is not null) await sfDataGrid.Refresh();
+            }
         }
         finally
         {
             currentOperation = GridOperation.None;
+            //costData = null; // Sauber den Zustand nullen 
         }
     }
     #endregion
@@ -876,7 +938,7 @@ else
 
     #region OpenDialog
     /// <summary>
-    /// OpenDialog
+    /// Dialog öffnen mit den angegebenen Parametern. Standardwerte werden verwendet, wenn keine angegeben sind.
     /// </summary>
     private void OpenDialog(string header, string height = "auto", string width = "500px", bool showButtons = true)
     {
@@ -893,7 +955,7 @@ else
 
     #region GetDialogHeader
     /// <summary>
-    /// GetDialogHeader
+    /// Dialog-Header generieren. Wenn kein Kostenmodell vorhanden ist, wird ein Standardtext angezeigt.
     /// </summary>
     /// <param name="cost"></param>
     /// <returns></returns>
@@ -905,7 +967,7 @@ else
 
     #region RowCreatingHandler
     /// <summary>
-    /// ein neuer Datebsatz wird angelegt
+    /// Handler für das Erstellen einer neuen Zeile im Grid. Setzt Standardwerte basierend auf den letzten Einträgen und dem ausgewählten Anbieter.
     /// </summary>
     /// <param name="args"></param>
     public void RowCreatingHandler(RowCreatingEventArgs<Gas_CostModel> args)
@@ -939,18 +1001,53 @@ else
     }
     #endregion
 
-    #region RowEditingHandler
+    #region ActionBeginHandler
     /// <summary>
-    /// Datenzeile wird editiert
+    /// Handler für den Beginn einer Aktion im Grid. Behandelt das Hinzufügen, Bearbeiten und Löschen von Datensätzen.
     /// </summary>
     /// <param name="args"></param>
-    public void RowEditingHandler(RowEditingEventArgs<Gas_CostModel> args)
+    /// <returns></returns>
+    public async Task ActionBeginHandler(ActionEventArgs<Gas_CostModel> args)
     {
-        // Best Practice: Null-Check für die Argumente und Daten
         if (args?.Data is null) return;
 
-        // Daten aus Dropdown "Anbieter" auslesen und Anbieter-Feld in Grid vorbesetzen
-        DropDownValueSupplier = args.Data.Id_Anbieter;
+        switch (args.RequestType)
+        {
+            case Syncfusion.Blazor.Grids.Action.Save:
+                args.Cancel = true;
+                costData = args.Data;
+
+                if (args.Action == "Add")
+                {
+                    currentOperation = GridOperation.Add;
+                    OpenDialog("Datensatz speichern ?", "130px", "220px", true);
+                }
+                else if (args.Action == "Edit")
+                {
+                    currentOperation = GridOperation.Edit;
+                    OpenDialog("Datensatz ändern ?", "130px", "220px", true);
+                }
+                break;
+
+            case Syncfusion.Blazor.Grids.Action.Delete:
+                // 1. Automatische Grid-Löschung stoppen, damit wir die Kontrolle behalten
+                args.Cancel = true;
+
+                // Sicherheitshalber prüfen, ob eine gültige ID vorliegt
+                if (args.Data.Id <= 0)
+                {
+                    ShowToast(false, "Ungültiger Datensatz. Löschen nicht möglich!");
+                    return;
+                }
+
+                // 2. Daten für die 'YesClick'-Methode zwischenspeichern
+                costData = args.Data;
+                currentOperation = GridOperation.Delete;
+
+                // 3. Bestätigungsdialog für das Löschen öffnen
+                OpenDialog("Datensatz wirklich löschen ?", "130px", "300px", true);
+                break;
+        }
     }
     #endregion
 }

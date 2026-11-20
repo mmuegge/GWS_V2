@@ -18,11 +18,9 @@
 
 @* Seiten-Überschrift*@
 <div class="container">
-    <div class="row">
-        <div class="text-center fs-3 fw-bold">
-            <span class="fa-solid fa-plug fa-3xs" aria-hidden="true"> </span>
-            <label>Strom- Verbräuche</label>
-        </div>
+    <div class="text-center fs-3 fw-bold">
+        <span class="fa-solid fa-plug fa-3xs" aria-hidden="true"> </span>
+        <label>Strom- Verbräuche</label>
     </div>
 </div>
 
@@ -62,7 +60,7 @@
             <div class="col-6 col-xl-3">
                 <div class="control-wrapper">
                     <label class="control-label fw-bold mb-sm-1 me-1">Start-Datum</label>
-                    <SfDatePicker TValue="DateTime?" Value="@(supplierSelectEnabled ? StartDate : StartDateYearly)" Min="@MinDate" Format="dd.MM.yyyy" AllowEdit="false" Readonly="true"></SfDatePicker>
+                    <SfDatePicker TValue="DateTime?" Value="@(supplierSelectEnabled ? startDate : startDateYearly)" Min="@minDate" Format="dd.MM.yyyy" AllowEdit="false" Readonly="true"></SfDatePicker>
                 </div>
             </div>
 
@@ -70,7 +68,7 @@
             <div class="col-6 col-xl-3">
                 <div class="control-wrapper">
                     <label class="control-label fw-bold mb-sm-1 me-1">Ende-Datum</label>
-                    <SfDatePicker TValue="DateTime?" Value="@(supplierSelectEnabled ? EndDate : EndDateYearly)" Min="@MinDate" Format="dd.MM.yyyy" AllowEdit="false" Readonly="true"></SfDatePicker>
+                    <SfDatePicker TValue="DateTime?" Value="@(supplierSelectEnabled ? endDate : endDateYearly)" Min="@minDate" Format="dd.MM.yyyy" AllowEdit="false" Readonly="true"></SfDatePicker>
                 </div>
             </div>
         </div>
@@ -260,16 +258,43 @@ else
 
 @* Dialog*@
 <div>
-    <SfDialog Target="#target" Width="@dialogWidth" Height="@dialogHeight" AllowDragging="true" ShowCloseIcon="true" @bind-Visible="@DialogVisible" AllowPrerender="true" IsModal="true">
+    <SfDialog Target="body" 
+              Width="@dialogWidth" 
+              Height="@dialogHeight" 
+              AllowDragging="true" 
+              ShowCloseIcon="true" 
+              @bind-Visible="@dialogVisible" 
+              AllowPrerender="false" 
+              IsModal="true">
         <DialogTemplates>
-            <Header>@Header</Header>
+            <Header>@header</Header>
         </DialogTemplates>
-        <DialogPositionData X="@dialogXValue" Y="@dialogYValue"></DialogPositionData>
+        <DialogPositionData X="center" Y="center"></DialogPositionData>
         <DialogAnimationSettings Effect="@animationEffect"></DialogAnimationSettings>
     </SfDialog>
 </div>
 
 <style>
+    /* 1. Zwingt das gesamte Spinner-Container-System nach ganz vorne */
+    .e-spinner-pane.e-spin-overlay {
+        z-index: 99999 !important;
+        background-color: rgba(0, 0, 0, 0.4) !important; /* Macht den Hintergrund dunkel-transparent */
+    }
+
+        /* 2. Zwingt das Ladesymbol und den Text, sich abzuheben */
+        .e-spinner-pane.e-spin-overlay .e-spinner-inner {
+            z-index: 100000 !important;
+        }
+
+        /* 3. HIER WIRD DER TEXT ERZWUNGEN UND SCHÖN FORMATIERT */
+        .e-spinner-pane.e-spin-overlay .e-spin-label {
+            color: #FFFFFF !important; /* Reines Weiß, damit es auf dem dunklen Overlay lesbar ist */
+            font-weight: bold !important; /* Fett gedruckt */
+            font-size: 16px !important; /* Etwas größer für bessere Lesbarkeit */
+            margin-top: 10px !important; /* Abstand zum drehenden Rad */
+            display: block !important; /* Sicherstellen, dass es nicht auf hidden steht */
+        }
+
     .e-dlg-overlay {
         background-color: slategray;
         opacity: 0.6;
@@ -323,11 +348,9 @@ else
 
     #region DialogBox
     DialogEffect animationEffect = DialogEffect.Zoom;
-    bool DialogVisible { get; set; } = false;
+    private bool dialogVisible { get; set; } = false;
     private bool showDialogButtons = false;
     private string DialogText { get; set; } = string.Empty;
-    private string dialogXValue = "center";
-    private string dialogYValue = "center";
     private string dialogHeight = "130px";
     private string dialogWidth = "380px";
     #endregion
@@ -350,12 +373,12 @@ else
     #endregion
 
     #region DateTime
-    private DateTime MinDate { get; set; } = new DateTime(1990, 1, 1);
-    private DateTime MaxDate { get; set; } = DateTime.Now;
-    private DateTime? StartDate { get; set; } = new DateTime(2000, 1, 1);
-    private DateTime? EndDate { get; set; } = new DateTime(2000, 1, 1);
-    private DateTime? StartDateYearly { get; set; } = DateTime.MaxValue;
-    private DateTime? EndDateYearly { get; set; } = DateTime.MinValue;
+    private DateTime minDate { get; set; } = new DateTime(1990, 1, 1);
+    private DateTime maxDate { get; set; } = DateTime.Now;
+    private DateTime? startDate { get; set; } = new DateTime(2000, 1, 1);
+    private DateTime? endDate { get; set; } = new DateTime(2000, 1, 1);
+    private DateTime? startDateYearly { get; set; } = DateTime.MaxValue;
+    private DateTime? endDateYearly { get; set; } = DateTime.MinValue;
     #endregion
 
     #region App-Settings
@@ -369,8 +392,8 @@ else
     readonly string urlCounterChangeAllSuppliers = "strom/zaehlerwechsel";
     #endregion
 
-    string? Header { get; set; }
-    string? Content { get; set; }
+    string? header { get; set; }
+    string? content { get; set; }
 
     #region Http
     GWSProcessor? gwsP;
@@ -403,7 +426,7 @@ else
 
     public string DateTimeFormat { get; set; } = "dd.MM.yyyy";
 
-    private Theme Theme { get; set; }
+    private Theme theme { get; set; }
     public string Width { get; set; } = "100%";
     public string Height { get; set; } = "160%";
     public double Rotation { get; set; } = 0;
@@ -493,8 +516,8 @@ else
 
                 if (supplierData != null)
                 {
-                    StartDate = supplierData.Zeitraum_Start ?? DateTime.Now;
-                    EndDate = supplierData.Zeitraum_Ende ?? DateTime.Now;
+                    startDate = supplierData.Zeitraum_Start ?? DateTime.Now;
+                    endDate = supplierData.Zeitraum_Ende ?? DateTime.Now;
                 }
             }
             else
@@ -514,21 +537,15 @@ else
             await Task.WhenAll(counterTask, changeAllTask, changeTask);
 
             // Ergebnisse sicher auslesen, sortieren und Null-Safe absichern
-            var rawCounters = counterTask.Result;
-            counterList = rawCounters != null
-                ? rawCounters.OrderBy(c => c.Ablesetag).ToList()
-                : [];
+            var rawCounters = await counterTask;
+            counterList = rawCounters?.OrderBy(c => c.Ablesetag).ToList() ?? [];
 
-            var rawChanges = changeTask.Result;
-            counterChangeList = rawChanges != null
-                ? rawChanges.OrderBy(cc => cc.Wechsel_Datum).ToList()
-                : [];
+            var rawChanges = await changeTask;
+            counterChangeList = rawChanges?.OrderBy(cc => cc.Wechsel_Datum).ToList() ?? [];
 
             // Einmaliges Laden und Sortieren der globalen Gesamtliste für die Jahresansicht
-            var rawAllChanges = changeAllTask.Result;
-            counterChangeListAllSuppliers = rawAllChanges != null
-                ? rawAllChanges.OrderBy(cc => cc.Wechsel_Datum).ToList()
-                : [];
+            var rawAllChanges = await changeAllTask;
+            counterChangeListAllSuppliers = rawAllChanges?.OrderBy(cc => cc.Wechsel_Datum).ToList() ?? [];
 
             // 4. Verbräuche verarbeiten
             if (counterList.Count > 0)
@@ -583,8 +600,8 @@ else
 
             if (gwsP != null && supplierData != null && supplierData.Id > 0)
             {
-                StartDate = supplierData.Zeitraum_Start ?? DateTime.Now;
-                EndDate = supplierData.Zeitraum_Ende ?? DateTime.Now;
+                startDate = supplierData.Zeitraum_Start ?? DateTime.Now;
+                endDate = supplierData.Zeitraum_Ende ?? DateTime.Now;
 
                 // 3. Beide Tasks parallel vorbereiten und starten (OHNE await!)
                 var counterTask = gwsP.LoadDataAsync<Electric_CounterModel>($"{urlMeter}{supplierData.Id}");
@@ -651,8 +668,6 @@ else
         {
             // 11. Künstliches Delay entfernt und Spinner-Garantie
             this.spinnerVisibleProperty = false;
-
-            StateHasChanged();
         }
     }
     #endregion
@@ -836,16 +851,16 @@ else
             OpenDialog("Strom-Anbieter nicht vorhanden", "60px", "380px", false);
             return;
         }
-        StartDateYearly = DateTime.MaxValue;
-        EndDateYearly = DateTime.MinValue;
+        startDateYearly = DateTime.MaxValue;
+        endDateYearly = DateTime.MinValue;
         foreach (Electric_SupplierModel supplier in suppliers)
         {
             if (supplier.Zeitraum_Start != null && supplier.Zeitraum_Ende != null)
             {
                 if (supplier.Zeitraum_Ende < DateTime.Now)
                 {
-                    StartDateYearly = supplier.Zeitraum_Start < StartDateYearly ? supplier.Zeitraum_Start : StartDateYearly;
-                    EndDateYearly = supplier.Zeitraum_Ende > EndDateYearly ? supplier.Zeitraum_Ende : EndDateYearly;
+                    startDateYearly = supplier.Zeitraum_Start < startDateYearly ? supplier.Zeitraum_Start : startDateYearly;
+                    endDateYearly = supplier.Zeitraum_Ende > endDateYearly ? supplier.Zeitraum_Ende : endDateYearly;
                 }
             }
         }
@@ -880,26 +895,6 @@ else
     /// <param name="interval"></param>
     public async Task SelectChartData(Interval interval)
     {
-        // Vorab-Abfrage für den Spezialfall (verhindert unnötige Aufrufe im Default-Zweig)
-        // if (interval == Interval.jährlich)
-        // {
-        //     counterChangeListAllSuppliers = await gwsP!.LoadDataAsync<Electric_CounterChangeModel>(urlCounterChangeAllSuppliers);
-        // }
-        // else
-        // {
-        //     counterChangeList = await gwsP!.LoadDataAsync<Electric_CounterChangeModel>($"{urlCounterChange}{supplierData?.Id}");
-        // }
-
-        // Kompakte Zuweisung der Tasks via Switch-Expression
-        // Task chartTask = interval switch
-        // {
-        //     Interval.monatlich => GetChartDataMonthly(supplierData, counterList),
-        //     Interval.jährlich => GetChartDataYearly(supplierList),
-        //     _ => GetChartDataDaily(supplierData, counterList) // deckt täglich und default ab
-        // };
-
-        // await chartTask;
-
         // Vorab-Abfrage für das Laden der Zählerwechsel-Daten (nur bei jährlich)
         if (interval == Interval.jährlich)
         {
@@ -924,44 +919,6 @@ else
     /// </summary>
     public void CalcAverageSum()
     {
-        // if (supplierData is null || ChartPointList is null || ChartPointList.Count == 0)
-        // {
-        //     ConsMin_kWh = 0;
-        //     ConsMax_kWh = 0;
-        //     TempAverage = 0;
-        //     return;
-        // }
-        // ConsAverage_kWh = Math.Round(ChartPointList.Average(x => x.Cons_kWh).GetValueOrDefault(), 2);
-
-        // // Berechnung der Summe kWh: Wenn Start- und End-Zählerstand vorhanden, dann Differenz berechnen, ansonsten Summe der Verbrauchswerte
-        // // 1. Früher Abbruch/Sonderfall: Bei jährlich wird die Summe immer geleert
-        // if (DdlInterval == Interval.jährlich)
-        // {
-        //     ConsSum_kWh = null;
-        // }
-        // // 2. Fall A: Beide offiziellen Zählerstände sind vorhanden (Schnelle Perioden-Berechnung)
-        // else if (supplierData?.Ende_Zaehlerstand != null && supplierData?.Start_Zaehlerstand != null)
-        // {
-        //     ConsSum_kWh = CalculatePeriodConsumptionWithChanges(
-        //         supplierData.Start_Zaehlerstand.Value,
-        //         supplierData.Ende_Zaehlerstand.Value,
-        //         counterChangeList ?? new()
-        //     );
-        // }
-        // // 3. Fall B: Zählerstände fehlen -> Berechnung über feinere Tagesdaten (Detaillierte Berechnung)
-        // else
-        // {
-        //     ConsSum_kWh = CalculateTotalConsumption(
-        //         supplierData?.Start_Zaehlerstand ?? 0,
-        //         supplierData?.Zeitraum_Start ?? DateTime.Now,
-        //         counterList ?? new(),
-        //         counterChangeList ?? new()
-        //     );
-        // }
-        // ConsMin_kWh = Math.Round(ChartPointList.Min(x => x.Cons_kWh).GetValueOrDefault(), 2);
-        // ConsMax_kWh = Math.Round(ChartPointList.Max(x => x.Cons_kWh).GetValueOrDefault(), 2);
-        // TempAverage = Math.Round(ChartPointList.Average(x => x.Temp).GetValueOrDefault(), 2);
-
         if (supplierData is null || ChartPointList is null || ChartPointList.Count == 0)
         {
             ConsMin_kWh = 0;
@@ -1018,32 +975,36 @@ else
     /// <param name="endPeriod"></param>
     public void GetMockChartData(DateTime? startPeriod, DateTime? endPeriod)
     {
-        const int days = 364;
-        DateTime dayToday = DateTime.Today; // .Today statt .Now, da Uhrzeit für den Tagesvergleich meist irrelevant ist
-        DateTime startDate = startPeriod ?? new DateTime(1970, 1, 1);
+        DateTime dayToday = DateTime.Today;
 
-        // Kapazität direkt zuweisen verhindert Speicher-Reallozierungen
-        var temporaryList = new List<ColumnChartData>(days);
+        // Sinnvollerer Fallback: Wenn kein Startdatum da ist, nehmen wir 364 Tage vor dem Enddatum
+        DateTime endDate = endPeriod ?? dayToday;
+        DateTime startDate = startPeriod ?? endDate.AddDays(-363);
 
-        for (int i = 0; i < days; i++)
+        // Kapazität exakt zuweisen
+        var temporaryList = new List<ColumnChartData>(364);
+
+        for (int i = 0; i < 364; i++)
         {
             DateTime currentDate = startDate.AddDays(i);
-            if (currentDate > dayToday)
+            if (currentDate > dayToday || currentDate > endDate)
             {
                 break;
             }
 
-            // Random.Shared ist thread-safe und performanter (ab .NET 6)
             double consumption = Random.Shared.Next(0, 10);
             double temperature = Random.Shared.Next(-10, 30);
 
             temporaryList.Add(new ColumnChartData
-                {
-                    Date = currentDate,
-                    Cons_kWh = consumption,
-                    Temp = temperature,
-                });
+            {
+                Date = currentDate,
+                Cons_kWh = consumption,
+                Temp = temperature,
+            });
         }
+
+        ChartPointList = temporaryList;
+        GetChartMinMaxRange(ChartPointList);
     }
     #endregion
 
@@ -1103,11 +1064,11 @@ else
     /// </summary>
     private void OpenDialog(string header, string height="auto", string width="500px", bool showButtons=true)
     {
-        Header = header;
+        this.header = header;
         dialogHeight = height;
         dialogWidth = width;
         showDialogButtons = showButtons;
-        this.DialogVisible = true;
+        this.dialogVisible = true;
 
         // Erzwingt das Neu-Rendern der UI (wichtig in Blazor für Dialoge)
         this.StateHasChanged();
@@ -1120,11 +1081,11 @@ else
     /// </summary>
     private void ClearSumAverage()
     {
-        ConsAverage_kWh = 0.0d;
-        ConsSum_kWh = 0.0d;
-        ConsMin_kWh = 0.0d;
-        ConsMax_kWh = 0.0d;
-        TempAverage = 0.0d;
+        ConsAverage_kWh = 0;
+        ConsSum_kWh = 0;
+        ConsMin_kWh = 0;
+        ConsMax_kWh = 0;
+        TempAverage = 0;
     }
     #endregion
 

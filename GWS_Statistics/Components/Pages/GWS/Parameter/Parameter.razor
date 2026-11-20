@@ -24,9 +24,9 @@
 </div>
 
 @* Chart*@
-@if (parameterList != null)
+@if (parameterList != null && parameterList.Count > 0)
 {
-    <div class="control-section" id="target" align="left">
+    <div class="control-section elevated-grid-container" id="target" align="left">
         <SfGrid ID="Grid" @ref="sfDataGrid" DataSource="@parameterList"
             AllowPaging="true"
             AllowFiltering="true"
@@ -73,7 +73,11 @@
                 <GridColumn 
                     Field="@nameof(ParameterModel.Id)" 
                     IsPrimaryKey="true" 
-                    Visible="false">
+                    Visible="false"
+                    Width="0"
+                    AllowSorting="false"
+                    AllowFiltering="false"
+                    AllowEditing="false">
                 </GridColumn>
 
                 <GridColumn Field=@nameof(ParameterModel.Baujahr)
@@ -170,21 +174,21 @@ else
 }
 @* Dialog*@
 <div>
-    <SfDialog Target="#target"
-        Width=@dialogWidth
-        Height=@dialogHeight
-        AllowDragging="true"
-        ShowCloseIcon=" true"
-        @bind-Visible="DialogVisible"
-        AllowPrerender="true"
-        IsModal="true"
-        CssClass="MyCss">
+    <SfDialog Target="body"
+              Width=@dialogWidth
+              Height=@dialogHeight
+              AllowDragging="true"
+              ShowCloseIcon=" true"
+              @bind-Visible="DialogVisible"
+              AllowPrerender="false"
+              IsModal="true"
+              CssClass="MyCss">
 
         <DialogTemplates>
             <Header>@header</Header>
         </DialogTemplates>
 
-        <DialogPositionData X="@dialogXValue" Y="@dialogYValue"></DialogPositionData>
+        <DialogPositionData X="center" Y="center"></DialogPositionData>
         <DialogAnimationSettings Effect="@animationEffect"></DialogAnimationSettings>
 
         @if (showDialogButtons)
@@ -295,8 +299,6 @@ else
     public bool DialogVisible { get; set; } = false;
     private bool showDialogButtons = false;
     private string dialogText { get; set; } = string.Empty;
-    private string dialogXValue = "center";
-    private string dialogYValue = "center";
     private string dialogHeight = "130px";
     private string dialogWidth = "380px";
 

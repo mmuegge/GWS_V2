@@ -1,429 +1,644 @@
 using GWS_Api.Models;
 using GWS_Api.Models.Water;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace GWS_Api.Repositories.Water
 {
-    public class MySQL_WaterRepository : IWaterRepository
+    public class MySQL_WaterRepository(GWS_DbContext context, ILogger<MySQL_WaterRepository> logger) : IWaterRepository
     {
         #region Variablendeklaration
-        private readonly GWS_DbContext _context;
-        public MySQL_WaterRepository(GWS_DbContext context)
-        {
-            _context = context;
-        }
+        private readonly GWS_DbContext _context = context ?? throw new ArgumentNullException(nameof(context));
+        private readonly ILogger<MySQL_WaterRepository> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         #endregion
 
         #region ADD
-        public async Task<WaterTarif> AddSupplierAsync(WaterTarif supplier)
+        #region AddSupplierAsync
+        public Task<WaterTarif> AddSupplierAsync(WaterTarif supplier, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(supplier);
-            var result = await _context.Wasser_tarif.AddAsync(supplier);
-            return result.Entity;
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var result = _context.Wasser_tarif.Add(supplier);
+            _logger.LogDebug("Wassertarif zur Nachverfolgung (ChangeTracker) hinzugefügt.");
+            return Task.FromResult(result.Entity);
         }
-        public async Task<WaterCounter?> AddCounterAsync(WaterCounter zaehlerstand)
+        #endregion
+
+        #region AddCounterAsync
+        public async Task<WaterCounter?> AddCounterAsync(WaterCounter zaehlerstand, CancellationToken cancellationToken = default)
         {
-            // Sicherheitsnetz: Null-Prüfung wie bei den anderen Methoden
             ArgumentNullException.ThrowIfNull(zaehlerstand);
 
-            // prüfen ob Ablesedatum in der Zukunft liegt
-            if (zaehlerstand.Ablesetag > DateTime.Now)
+            // 1. Prüfen, ob Ablesetag gesetzt ist (löst den CS1061-Fehler)
+            if (zaehlerstand.Ablesetag is not DateTime rawDate)
             {
+                _logger.LogWarning("Ablesetag ist null und kann nicht gespeichert werden.");
                 return null;
             }
 
-            // BEHOBEN: Prüfen, ob der Ablesetag FÜR DIESEN SPEZIFISCHEN LIEFERANTEN/ZÄHLER schon vorhanden ist
-            int count = await _context.Wasser_zaehlerstand
-                .Where(m => m.Ablesetag == zaehlerstand.Ablesetag && m.ID_Anbieter == zaehlerstand.ID_Anbieter)
-                .CountAsync();
+            // 2. Datum auf 00:00:00 normalisieren
+            var ablesetag = rawDate.Date;
+            var heute = DateTime.UtcNow.Date;
 
-            if (count > 0)
+            if (ablesetag > heute)
             {
+                _logger.LogWarning("Ablesetag {Ablesetag:yyyy-MM-dd} liegt in der Zukunft.", ablesetag);
                 return null;
             }
 
-            var result = await _context.Wasser_zaehlerstand.AddAsync(zaehlerstand);
-            return result.Entity;
+            // 3. Schneller exakter Index-Seek, da in der DB immer 00:00:00 steht
+            bool exists = await _context.Wasser_zaehlerstand
+                .AnyAsync(m => m.ID_Anbieter == zaehlerstand.ID_Anbieter
+                            && m.Ablesetag == ablesetag,
+                          cancellationToken);
+
+            if (exists)
+            {
+                if (_logger.IsEnabled(LogLevel.Information))
+                {
+                    _logger.LogInformation(
+                        "Eintrag für Anbieter {AnbieterId} am {Ablesetag:yyyy-MM-dd} existiert bereits.",
+                        zaehlerstand.ID_Anbieter,
+                        ablesetag);
+                }
+                return null;
+            }
+
+            // 4. Sicherstellen, dass auch der neue Eintrag sauber mit 00:00:00 gespeichert wird
+            zaehlerstand.Ablesetag = ablesetag;
+
+            var entry = _context.Wasser_zaehlerstand.Add(zaehlerstand);
+            _logger.LogDebug("WaterCounter für {Ablesetag:yyyy-MM-dd} zum ChangeTracker hinzugefügt.", ablesetag);
+
+            return entry.Entity;
         }
-        public async Task<WaterPayment> AddPaymentAsync(WaterPayment payment)
+        #endregion
+
+        #region AddPaymentAsync
+        public Task<WaterPayment> AddPaymentAsync(WaterPayment payment, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(payment);
-            var result = await _context.Wasser_zahlungen.AddAsync(payment);
-            return result.Entity;
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var entry = _context.Wasser_zahlungen.Add(payment);
+
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "WaterPayment für Anbieter {AnbieterId} zum ChangeTracker hinzugefügt.",
+                    payment.ID_Anbieter);
+            }
+
+            return Task.FromResult(entry.Entity);
         }
-        public async Task<WaterCost> AddCostAsync(WaterCost cost)
+        #endregion
+
+        #region AddCostAsync
+        public Task<WaterCost> AddCostAsync(WaterCost cost, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(cost);
-            var result = await _context.Wasser_kosten.AddAsync(cost);
-            return result.Entity;
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var entry = _context.Wasser_kosten.Add(cost);
+
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "WaterCost für Anbieter {AnbieterId} zum ChangeTracker hinzugefügt.",
+                    cost.Id_Anbieter);
+            }
+
+            return Task.FromResult(entry.Entity);
         }
-        public async Task<WaterCounterChange> AddCounterChangeAsync(WaterCounterChange counterChange)
+        #endregion
+
+        #region AddCounterChangeAsync
+        public Task<WaterCounterChange> AddCounterChangeAsync(WaterCounterChange counterChange, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(counterChange);
-            var result = await _context.Wasser_zaehlerwechsel.AddAsync(counterChange);
-            return result.Entity;
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var entry = _context.Wasser_zaehlerwechsel.Add(counterChange);
+
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "WaterCounterChange für Anbieter {AnbieterId} zum ChangeTracker hinzugefügt.",
+                    counterChange.Id_Anbieter);
+            }
+
+            return Task.FromResult(entry.Entity);
         }
+        #endregion
         #endregion
 
         #region DELETE
-        public async Task DeleteSupplierAsync(WaterTarif supplier)
+        #region DeleteSupplierAsync
+        public async Task DeleteSupplierAsync(WaterTarif supplier, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(supplier);
 
-            var result = await _context.Wasser_tarif.FirstOrDefaultAsync(m => m.Id == supplier.Id)
-                            ?? throw new KeyNotFoundException($"Tarif mit ID {supplier.Id} nicht gefunden.");
+            var result = await _context.Wasser_tarif.FindAsync([supplier.Id], cancellationToken)
+                ?? throw new KeyNotFoundException($"Tarif mit ID {supplier.Id} nicht gefunden.");
 
-            _context.Remove(result);
-        }
-        public async Task DeleteCounterAsync(WaterCounter counter)
-        {
-            ArgumentNullException.ThrowIfNull(counter);
+            _context.Wasser_tarif.Remove(result);
 
-            var result = await _context.Wasser_zaehlerstand
-                .FirstOrDefaultAsync(m => m.ID_Tag == counter.ID_Tag)
-                ?? throw new KeyNotFoundException($"Zählerstand mit ID {counter.ID_Tag} nicht gefunden.");
-
-            _context.Remove(result);
-        }
-        public async Task DeletePaymentAsync(WaterPayment payment)
-        {
-            ArgumentNullException.ThrowIfNull(payment);
-
-            var result = await _context.Wasser_zahlungen.FirstOrDefaultAsync(m => m.ID_Zahlung == payment.ID_Zahlung)
-                 ?? throw new KeyNotFoundException($"Zahlung mit ID {payment.ID_Zahlung} nicht gefunden.");
-
-            _context.Remove(result);
-        }
-        public async Task DeleteCostAsync(WaterCost cost)
-        {
-            ArgumentNullException.ThrowIfNull(cost);
-
-            var result = await _context.Wasser_kosten.FirstOrDefaultAsync(m => m.Id == cost.Id)
-                            ?? throw new KeyNotFoundException($"Kosten-Eintrag mit ID {cost.Id} nicht gefunden.");
-
-            _context.Remove(result);
-        }
-        public async Task DeleteCounterChangeAsync(WaterCounterChange counterChange)
-        {
-            ArgumentNullException.ThrowIfNull(counterChange);
-
-            var result = await _context.Wasser_zaehlerwechsel.FirstOrDefaultAsync(m => m.Id == counterChange.Id)
-                            ?? throw new KeyNotFoundException($"Zählerwechsel mit ID {counterChange.Id} nicht gefunden.");
-            _context.Remove(result);
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("WaterTarif mit ID {TarifId} im ChangeTracker zum Löschen markiert.", supplier.Id);
+            }
         }
         #endregion
 
-        #region GET
-        public async Task<WaterTarif?> GetSupplierByIdAsync(int supplierId)
+        #region DeleteCounterAsync
+        public async Task DeleteCounterAsync(WaterCounter counter, CancellationToken cancellationToken = default)
         {
-            return await _context.Wasser_tarif.FirstOrDefaultAsync(m => m.Id == supplierId);
-        }
-        public async Task<IEnumerable<WaterTarif>> GetSuppliersAsync()
-        {
-            return await _context.Wasser_tarif.ToListAsync();
-        }
-        public async Task<IEnumerable<WaterCounter?>> GetCountersAsync()
-        {
-            var counters = await _context.Wasser_zaehlerstand.ToListAsync();
+            ArgumentNullException.ThrowIfNull(counter);
 
-            // Wir erstellen ein schnelles Dictionary für die Namenssuche (Key: Id, Value: Anbietername)
+            var result = await _context.Wasser_zaehlerstand.FindAsync([counter.ID_Tag], cancellationToken)
+                ?? throw new KeyNotFoundException($"Zählerstand mit ID {counter.ID_Tag} nicht gefunden.");
+
+            _context.Wasser_zaehlerstand.Remove(result);
+
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("WaterCounter mit ID {CounterId} im ChangeTracker zum Löschen markiert.", counter.ID_Tag);
+            }
+        }
+        #endregion
+
+        #region DeletePaymentAsync
+        public async Task DeletePaymentAsync(WaterPayment payment, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(payment);
+
+            var result = await _context.Wasser_zahlungen.FindAsync([payment.ID_Zahlung], cancellationToken)
+                 ?? throw new KeyNotFoundException($"Zahlung mit ID {payment.ID_Zahlung} nicht gefunden.");
+
+            _context.Wasser_zahlungen.Remove(result);
+
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("WaterPayment mit ID {PaymentId} im ChangeTracker zum Löschen markiert.", payment.ID_Zahlung);
+            }
+        }
+        #endregion
+
+        #region DeleteCostAsync
+        public async Task DeleteCostAsync(WaterCost cost, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(cost);
+
+            var result = await _context.Wasser_kosten.FindAsync([cost.Id], cancellationToken)
+                 ?? throw new KeyNotFoundException($"Kosten-Eintrag mit ID {cost.Id} nicht gefunden.");
+
+            _context.Wasser_kosten.Remove(result);
+
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("WaterCost mit ID {CostId} im ChangeTracker zum Löschen markiert.", cost.Id);
+            }
+        }
+        #endregion
+
+        #region DeleteCounterChangeAsync
+        public async Task DeleteCounterChangeAsync(WaterCounterChange counterChange, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(counterChange);
+
+            var result = await _context.Wasser_zaehlerwechsel.FindAsync([counterChange.Id], cancellationToken   )
+                            ?? throw new KeyNotFoundException($"Zählerwechsel mit ID {counterChange.Id} nicht gefunden.");
+            _context.Remove(result);
+
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("WaterCounterChange mit ID {CounterChangeId} im ChangeTracker zum Löschen markiert.", counterChange.Id);
+            }
+        }
+        #endregion
+        #endregion
+
+        #region GET
+        #region GetSupplierByIdAsync
+        public Task<WaterTarif?> GetSupplierByIdAsync(int supplierId, CancellationToken cancellationToken = default)
+        {
+            return _context.Wasser_tarif
+                .AsNoTracking()
+                .FirstOrDefaultAsync(m => m.Id == supplierId, cancellationToken);
+        }
+        #endregion
+
+        #region GetSuppliersAsync
+        public async Task<IEnumerable<WaterTarif>> GetSuppliersAsync(CancellationToken cancellationToken = default)
+        {
+            return await _context.Wasser_tarif
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
+        }
+        #endregion
+
+        #region GetCountersAsync
+        public async Task<IEnumerable<WaterCounter>> GetCountersAsync(CancellationToken cancellationToken = default)
+        {
+            var counters = await _context.Wasser_zaehlerstand
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
+
             var tarifDict = await _context.Wasser_tarif
-                .ToDictionaryAsync(x => x.Id, x => x.Anbieter);
+                .AsNoTracking()
+                .ToDictionaryAsync(x => x.Id, x => x.Anbieter, cancellationToken);
 
             foreach (var counter in counters)
             {
-                // Sicherer Zugriff: Falls die ID im Dictionary existiert, Namen zuweisen
                 if (tarifDict.TryGetValue(counter.ID_Anbieter, out var name))
                 {
-                    counter.Anbieter = name ?? string.Empty; // Null-safe abgesichert;
+                    counter.Anbieter = name ?? string.Empty;
                 }
             }
+
             return counters;
         }
-        public async Task<IEnumerable<WaterCounter?>> GetCountersBySupplierAsync(int supplierId)
+        #endregion
+
+        #region GetCountersBySupplierAsync
+        public async Task<IEnumerable<WaterCounter>> GetCountersBySupplierAsync(int supplierId, CancellationToken cancellationToken = default)
         {
-            var result = await _context.Wasser_zaehlerstand.Where(m => m.ID_Anbieter == supplierId).ToListAsync();
+            var result = await _context.Wasser_zaehlerstand
+                .AsNoTracking()
+                .Where(m => m.ID_Anbieter == supplierId)
+                .ToListAsync(cancellationToken);
+
+            if (result.Count == 0)
+            {
+                return result;
+            }
 
             var supplierName = await _context.Wasser_tarif
+                .AsNoTracking()
                 .Where(m => m.Id == supplierId)
                 .Select(x => x.Anbieter)
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(cancellationToken);
 
-            if (supplierName != null)
+            if (supplierName is not null)
             {
                 foreach (var counter in result)
                 {
-                    counter.Anbieter = supplierName ?? string.Empty; // Null-safe abgesichert;
+                    counter.Anbieter = supplierName;
                 }
             }
+
             return result;
         }
-        public async Task<WaterCounter?> GetCounterByIdAsync(int id)
-        {
-            var counter = await _context.Wasser_zaehlerstand.FirstOrDefaultAsync(m => m.ID_Tag == id);
-            if (counter != null)
-            {
-                var tarif = await _context.Wasser_tarif.FirstOrDefaultAsync(m => m.Id == counter.ID_Anbieter);
-                counter.Anbieter = tarif?.Anbieter ?? string.Empty; // Null-safe abgesichert
-            }
-            return counter;
-        }
-        public async Task<WaterCounter?> GetCounterByDateAsync(DateTime date)
-        {
-            var counter = await _context.Wasser_zaehlerstand.FirstOrDefaultAsync(m => m.Ablesetag == date);
-            if (counter != null)
-            {
-                var tarif = await _context.Wasser_tarif.FirstOrDefaultAsync(m => m.Id == counter.ID_Anbieter);
-                counter.Anbieter = tarif?.Anbieter ?? string.Empty;
-            }
-            return counter;
-        }
-        public async Task<IEnumerable<WaterPayment?>> GetPaymentsAsync()
-        {
-            var payments = await _context.Wasser_zahlungen.ToListAsync();
+        #endregion
 
-            // Auch hier: Dictionary-Optimierung statt unzuverlässiger Sortierungsschleife
+        #region GetCounterByIdAsync
+        public async Task<WaterCounter?> GetCounterByIdAsync(int id, CancellationToken cancellationToken = default)
+        {
+            var counter = await _context.Wasser_zaehlerstand
+                .AsNoTracking()
+                .FirstOrDefaultAsync(m => m.ID_Tag == id, cancellationToken);
+
+            if (counter is not null)
+            {
+                var anbieterName = await _context.Wasser_tarif
+                    .AsNoTracking()
+                    .Where(m => m.Id == counter.ID_Anbieter)
+                    .Select(m => m.Anbieter)
+                    .FirstOrDefaultAsync(cancellationToken);
+
+                counter.Anbieter = anbieterName ?? string.Empty;
+            }
+
+            return counter;
+        }
+        #endregion
+
+        #region GetCounterByDateAsync
+        public async Task<WaterCounter?> GetCounterByDateAsync(DateTime date, CancellationToken cancellationToken = default)
+        {
+            var targetDate = date.Date;
+
+            var counter = await _context.Wasser_zaehlerstand
+                .AsNoTracking()
+                .FirstOrDefaultAsync(m => m.Ablesetag == targetDate, cancellationToken);
+
+            if (counter is not null)
+            {
+                var anbieterName = await _context.Wasser_tarif
+                    .AsNoTracking()
+                    .Where(m => m.Id == counter.ID_Anbieter)
+                    .Select(m => m.Anbieter)
+                    .FirstOrDefaultAsync(cancellationToken);
+
+                counter.Anbieter = anbieterName ?? string.Empty;
+            }
+
+            return counter;
+        }
+        #endregion
+
+        #region GetPaymentsAsync
+        public async Task<IEnumerable<WaterPayment>> GetPaymentsAsync(CancellationToken cancellationToken = default)
+        {
+            var payments = await _context.Wasser_zahlungen
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
+
             var tarifDict = await _context.Wasser_tarif
-                .ToDictionaryAsync(x => x.Id, x => x.Anbieter);
+                .AsNoTracking()
+                .ToDictionaryAsync(x => x.Id, x => x.Anbieter, cancellationToken);
 
             foreach (var payment in payments)
             {
                 if (tarifDict.TryGetValue(payment.ID_Anbieter, out var name))
                 {
-                    payment.Anbieter = name;
+                    payment.Anbieter = name ?? string.Empty;
                 }
             }
+
             return payments;
         }
-        public async Task<IEnumerable<WaterPayment?>> GetPaymentsBySupplierAsync(int supplierId)
+        #endregion
+
+        #region GetPaymentsBySupplierAsync
+        public async Task<IEnumerable<WaterPayment>> GetPaymentsBySupplierAsync(int supplierId, CancellationToken cancellationToken = default)
         {
-            var result = await _context.Wasser_zahlungen.Where(m => m.ID_Anbieter == supplierId).ToListAsync();
+            var result = await _context.Wasser_zahlungen
+                .AsNoTracking()
+                .Where(m => m.ID_Anbieter == supplierId)
+                .ToListAsync(cancellationToken);
+
+            if (result.Count == 0)
+            {
+                return result;
+            }
 
             var supplierName = await _context.Wasser_tarif
+                .AsNoTracking()
                 .Where(m => m.Id == supplierId)
                 .Select(x => x.Anbieter)
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(cancellationToken);
 
-            if (supplierName != null)
+            if (supplierName is not null)
             {
                 foreach (var payment in result)
                 {
                     payment.Anbieter = supplierName;
                 }
             }
+
             return result;
         }
-        public async Task<WaterPayment?> GetPaymentByIdAsync(int paymentId)
+        #endregion
+
+        #region GetPaymentByIdAsync
+        public async Task<WaterPayment?> GetPaymentByIdAsync(int id, CancellationToken cancellationToken = default)
         {
-            var payment = await _context.Wasser_zahlungen.FirstOrDefaultAsync(m => m.ID_Zahlung == paymentId);
-            if (payment != null)
+            var counter = await _context.Wasser_zahlungen
+                .AsNoTracking()
+                .FirstOrDefaultAsync(m => m.ID_Zahlung == id, cancellationToken);
+
+            if (counter is not null)
             {
-                var tarif = await _context.Wasser_tarif.FirstOrDefaultAsync(m => m.Id == payment.ID_Anbieter);
-                payment.Anbieter = tarif?.Anbieter ?? string.Empty;
+                var anbieterName = await _context.Wasser_tarif
+                    .AsNoTracking()
+                    .Where(m => m.Id == counter.ID_Anbieter)
+                    .Select(m => m.Anbieter)
+                    .FirstOrDefaultAsync(cancellationToken);
+
+                counter.Anbieter = anbieterName ?? string.Empty;
             }
-            return payment;
+
+            return counter;
         }
-        public async Task<IEnumerable<PaymentMethod?>> GetPaymentMethodsAsync()
+        #endregion
+
+        #region GetPaymentMethodsAsync
+        public async Task<IEnumerable<PaymentMethod>> GetPaymentMethodsAsync(CancellationToken cancellationToken = default)
         {
-            return await _context.Zahlungsarten.ToListAsync();
+            return await _context.Zahlungsarten
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
         }
-        public async Task<IEnumerable<WaterCost?>> GetCostsAsync()
+        #endregion
+
+        #region GetCostsAsync
+        public async Task<IEnumerable<WaterCost>> GetCostsAsync(CancellationToken cancellationToken = default)
         {
-            return await _context.Wasser_kosten.ToListAsync();
+            return await _context.Wasser_kosten
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
         }
-        public async Task<IEnumerable<WaterCounterChange?>> GetCounterChangesAsync()
+        #endregion
+
+        #region GetCostsBySupplierIdAsync
+        public async Task<IEnumerable<WaterCost>> GetCostsBySupplierIdAsync(int supplierId, CancellationToken cancellationToken = default)
         {
-            return await _context.Wasser_zaehlerwechsel.ToListAsync();
-        }
-        public async Task<WaterCounterChange?> GetCounterChangeByIdAsync(int counterChangeId)
-        {
-            return await _context.Wasser_zaehlerwechsel.FirstOrDefaultAsync(m => m.Id == counterChangeId);
-        }
-        public async Task<IEnumerable<WaterCost?>> GetCostsBySupplierIdAsync(int supplierId)
-        {
-            var result = await _context.Wasser_kosten.Where(m => m.Id_Anbieter == supplierId).ToListAsync();
+            var result = await _context.Wasser_kosten
+                .AsNoTracking()
+                .Where(m => m.Id_Anbieter == supplierId)
+                .ToListAsync(cancellationToken);
+
+            if (result.Count == 0)
+            {
+                return result;
+            }
 
             var supplierName = await _context.Wasser_tarif
+                .AsNoTracking()
                 .Where(m => m.Id == supplierId)
                 .Select(x => x.Anbieter)
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(cancellationToken);
 
-            if (supplierName != null)
+            if (supplierName is not null)
             {
-                foreach (var costs in result)
+                foreach (var cost in result)
                 {
-                    costs.Anbieter = supplierName ?? string.Empty; ;
+                    cost.Anbieter = supplierName;
                 }
             }
+
             return result;
         }
-        public async Task<WaterCost?> GetCostByIdAsync(int costId)
+        #endregion
+
+        #region GetCostByIdAsync
+        public async Task<WaterCost?> GetCostByIdAsync(int costId, CancellationToken cancellationToken = default)
         {
-            return await _context.Wasser_kosten.FirstOrDefaultAsync(m => m.Id == costId);
+            return await _context.Wasser_kosten
+                .AsNoTracking()
+                .FirstOrDefaultAsync(m => m.Id == costId, cancellationToken);
         }
-        public async Task<IEnumerable<WaterCounterChange?>> GetCounterChangesBySupplierAsync(int supplierId)
+        #endregion
+
+        #region GetCounterChangesAsync
+        public async Task<IEnumerable<WaterCounterChange>> GetCounterChangesAsync(CancellationToken cancellationToken = default)
         {
-            var result = await _context.Wasser_zaehlerwechsel.Where(m => m.Id_Anbieter == supplierId).ToListAsync();
+            return await _context.Wasser_zaehlerwechsel
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
+        }
+        #endregion
+
+        #region GetCounterChangeByIdAsync
+        public async Task<WaterCounterChange?> GetCounterChangeByIdAsync(int counterChangeId, CancellationToken cancellationToken = default)
+        {
+            return await _context.Wasser_zaehlerwechsel
+                .AsNoTracking()
+                .FirstOrDefaultAsync(m => m.Id == counterChangeId, cancellationToken);
+        }
+        #endregion
+
+        #region GetCounterChangesBySupplierAsync
+        public async Task<IEnumerable<WaterCounterChange>> GetCounterChangesBySupplierAsync(int supplierId, CancellationToken cancellationToken = default)
+        {
+            var result = await _context.Wasser_zaehlerwechsel
+                .AsNoTracking()
+                .Where(m => m.Id_Anbieter == supplierId)
+                .ToListAsync(cancellationToken);
+
+            if (result.Count == 0)
+            {
+                return result;
+            }
 
             var supplierName = await _context.Wasser_tarif
+                .AsNoTracking()
                 .Where(m => m.Id == supplierId)
                 .Select(x => x.Anbieter)
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(cancellationToken);
 
-            if (supplierName != null)
+            if (supplierName is not null)
             {
                 foreach (var counterChange in result)
                 {
                     counterChange.Anbieter = supplierName;
                 }
             }
+
+            return result;
+        }
+        #endregion
+        #endregion
+
+        #region UPDATE
+        #region UpdateSupplierAsync
+        public async Task<WaterTarif?> UpdateSupplierAsync(WaterTarif supplier, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(supplier);
+
+            var result = await _context.Wasser_tarif.FindAsync([supplier.Id], cancellationToken);
+            if (result is null)
+            {
+                return null;
+            }
+
+            _context.Entry(result).CurrentValues.SetValues(supplier);
             return result;
         }
         #endregion
 
-        #region UPDATE
-        public async Task<WaterTarif?> UpdateSupplierAsync(WaterTarif supplier)
-        {
-            ArgumentNullException.ThrowIfNull(supplier);
-
-            var result = await _context.Wasser_tarif.FirstOrDefaultAsync(m => m.Id == supplier.Id);
-            if (result != null)
-            {
-                result.Anbieter = supplier.Anbieter;
-                result.Tarif = supplier.Tarif;
-                result.Zaehlernummer = supplier.Zaehlernummer;
-                result.Kuendigungsfrist = supplier.Kuendigungsfrist;
-                result.Zeitraum_Start = supplier.Zeitraum_Start;
-                result.Zeitraum_Ende = supplier.Zeitraum_Ende;
-                result.Start_Zaehlerstand = supplier.Start_Zaehlerstand;
-                result.Ende_Zaehlerstand = supplier.Ende_Zaehlerstand;
-                result.Start_Zaehlerstand_aussen = supplier.Start_Zaehlerstand_aussen;
-                result.Ende_Zaehlerstand_aussen = supplier.Ende_Zaehlerstand_aussen;
-                result.Trinkwasserpreis = supplier.Trinkwasserpreis;
-                result.Verbrauch_Trinkwasser = supplier.Verbrauch_Trinkwasser;
-                result.Abwasserpreis = supplier.Abwasserpreis;
-                result.Verbrauch_Abwasser = supplier.Verbrauch_Abwasser;
-                result.Grundpreis = supplier.Grundpreis;
-                result.Zaehlermiete = supplier.Zaehlermiete;
-                result.Bemerkung = supplier.Bemerkung;
-                return result;
-            }
-            return null;
-        }
-
-        public async Task<WaterCounter?> UpdateCounterAsync(WaterCounter zaehlerstand)
+        #region UpdateCounterAsync
+        public async Task<WaterCounter?> UpdateCounterAsync(WaterCounter zaehlerstand, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(zaehlerstand);
 
-            var result = await _context.Wasser_zaehlerstand.FirstOrDefaultAsync(m => m.ID_Tag == zaehlerstand.ID_Tag);
-            if (result != null)
+            var result = await _context.Wasser_zaehlerstand.FindAsync([zaehlerstand.ID_Tag], cancellationToken);
+            if (result is null)
             {
-                result.ID_Anbieter = zaehlerstand.ID_Anbieter;
-                result.Anbieter = zaehlerstand.Anbieter;
-                result.Ablesetag = zaehlerstand.Ablesetag;
-                result.Zaehlerstand = zaehlerstand.Zaehlerstand;
-                result.Uhrzeit = zaehlerstand.Uhrzeit;
-                result.Temperatur_aussen = zaehlerstand.Temperatur_aussen;
-                result.Temperatur_innen = zaehlerstand.Temperatur_innen;
-                result.Bemerkungen = zaehlerstand.Bemerkungen;
-                result.Zaehlerstand_aussen = zaehlerstand.Zaehlerstand_aussen;
-                return result;
+                return null;
             }
-            return null;
-        }
 
-        public async Task<WaterPayment?> UpdatePaymentAsync(WaterPayment payment)
-        {
-            ArgumentNullException.ThrowIfNull(payment);
-
-            var result = await _context.Wasser_zahlungen.FirstOrDefaultAsync(m => m.ID_Zahlung == payment.ID_Zahlung);
-            if (result != null)
-            {
-                result.ID_Anbieter = payment.ID_Anbieter;
-                result.Anbieter = payment.Anbieter;
-                result.Datum = payment.Datum;
-                result.Zahlungsart = payment.Zahlungsart;
-                result.Zahlungen = payment.Zahlungen;
-                result.Bemerkungen = payment.Bemerkungen;
-                return result;
-            }
-            return null;
-        }
-
-        public async Task<WaterCost?> UpdateCostAsync(WaterCost cost)
-        {
-            ArgumentNullException.ThrowIfNull(cost);
-
-            var result = await _context.Wasser_kosten.FirstOrDefaultAsync(m => m.Id == cost.Id);
-            if (result != null)
-            {
-                result.Id_Anbieter = cost.Id_Anbieter;
-                result.Anbieter = cost.Anbieter;
-                result.Grundpreis = cost.Grundpreis;
-                result.Trinkwasserpreis = cost.Trinkwasserpreis;
-                result.Abwasserpreis = cost.Abwasserpreis;
-                result.Zaehlermiete = cost.Zaehlermiete;
-                result.Bemerkung = cost.Bemerkung;
-                return result;
-            }
-            return null;
-        }
-
-        public async Task<WaterCounterChange?> UpdateCounterChangeAsync(WaterCounterChange counterChange)
-        {
-            ArgumentNullException.ThrowIfNull(counterChange);
-
-            var result = await _context.Wasser_zaehlerwechsel.FirstOrDefaultAsync(m => m.Id == counterChange.Id);
-            if (result != null)
-            {
-                result.Id_Anbieter = counterChange.Id_Anbieter;
-                result.Anbieter = counterChange.Anbieter;
-                result.Wechsel_Datum = counterChange.Wechsel_Datum;
-                result.Zaehlerstand_alt = counterChange.Zaehlerstand_alt;
-                result.Zaehlerstand_neu = counterChange.Zaehlerstand_neu;
-                result.Zaehlerstand_aussen_alt = counterChange.Zaehlerstand_aussen_alt;
-                result.Zaehlerstand_aussen_neu = counterChange.Zaehlerstand_aussen_neu;
-                result.Bemerkung = counterChange.Bemerkung;
-                return result;
-            }
-            return null;
+            _context.Entry(result).CurrentValues.SetValues(zaehlerstand);
+            return result;
         }
         #endregion
 
+        #region UpdatePaymentAsync
+        public async Task<WaterPayment?> UpdatePaymentAsync(WaterPayment payment, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(payment);
+
+            var result = await _context.Wasser_zahlungen.FindAsync([payment.ID_Zahlung], cancellationToken);
+            if (result is null)
+            {
+                return null;
+            }
+
+            _context.Entry(result).CurrentValues.SetValues(payment);
+            return result;
+        }
+        #endregion
+
+        #region UpdateCostAsync
+        public async Task<WaterCost?> UpdateCostAsync(WaterCost cost, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(cost);
+
+            var result = await _context.Wasser_kosten.FindAsync([cost.Id], cancellationToken);
+            if (result is null)
+            {
+                return null;
+            }
+
+            _context.Entry(result).CurrentValues.SetValues(cost);
+            return result;
+        }
+        #endregion
+
+        #region UpdateCounterChangeAsync
+        public async Task<WaterCounterChange?> UpdateCounterChangeAsync(WaterCounterChange counterChange, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(counterChange);
+
+            var result = await _context.Wasser_zaehlerwechsel.FindAsync([counterChange.Id], cancellationToken);
+            if (result is null)
+            {
+                return null;
+            }
+
+            _context.Entry(result).CurrentValues.SetValues(counterChange);
+            return result;
+        }
+        #endregion
+        #endregion
+
         #region SaveChanges
-        // Zwingend erforderlich, damit EF Core die obigen Updates an die MySQL-DB schickt
-        public async Task<bool> SaveChangesAsync()
+        public async Task<bool> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
             try
             {
-                // Wir führen das Speichern aus. 
-                // Ob 0 oder mehr Zeilen geändert wurden, ist für den reinen Erfolg egal.
-                await _context.SaveChangesAsync();
+                await _context.SaveChangesAsync(cancellationToken);
                 return true;
             }
-            catch (Exception)
+            catch (OperationCanceledException)
             {
-                // Nur wenn die Datenbank wirklich einen Fehler wirft, geben wir false zurück
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Fehler beim Speichern in die Datenbank.");
                 return false;
             }
         }
 
-        // nur zum Testen
-        public async Task<IEnumerable<WaterTarif>> Search(string tarif, double? zaehlermiete)
+        public async Task<IEnumerable<WaterTarif>> SearchAsync(string tarif, double? zaehlermiete, CancellationToken cancellationToken = default)
         {
-            IQueryable<WaterTarif> query = _context.Wasser_tarif;
+            IQueryable<WaterTarif> query = _context.Wasser_tarif.AsNoTracking();
 
-            if (!string.IsNullOrEmpty(tarif))
+            if (!string.IsNullOrWhiteSpace(tarif))
             {
-                query = query.Where(m => m.Tarif!.Contains(tarif));
+                var searchTerm = tarif.Trim();
+                query = query.Where(m => m.Tarif != null && m.Tarif.Contains(searchTerm));
             }
 
-            if (zaehlermiete != null)
+            if (zaehlermiete.HasValue)
             {
-                query = query.Where(m => m.Zaehlermiete == zaehlermiete);
+                query = query.Where(m => m.Zaehlermiete == zaehlermiete.Value);
             }
 
-            return await query.ToListAsync();
+            return await query.ToListAsync(cancellationToken);
         }
         #endregion
     }

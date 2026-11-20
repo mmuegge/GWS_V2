@@ -5,7 +5,6 @@
 
 @using GWS_Statistics.Components.Services
 @using GWS_Statistics.Helper
-@using System.Globalization
 @using System.Net
 
 @inject MyAppConfigModel myAppSettings
@@ -61,23 +60,26 @@
 @* Grid *@
 @if (counterList != null && counterList.Count > 0)
 {
-    <div class="control-section" id="target" align="left">
-        <SfGrid ID="Grid" @ref="sfDataGrid" DataSource="@counterList"
-        AllowPaging="true"
-        AllowFiltering="true"
-        AllowReordering="true"
-        AllowResizing="true"
-        AllowExcelExport="true"
-        AllowPdfExport="true"
-        EnableHover="true"
-        AllowTextWrap="true"
-        AllowSelection="true"
-        AllowSorting="true"
-        Height="100%" Width="100%"
-        Toolbar=@toolbar
-        EnableStickyHeader="true">
+    <div class="control-section elevated-grid-container" id="target" align="center" style="position: relative; min-height: 200px;">
+        <SfGrid ID="Grid" @ref="sfDataGrid" 
+                DataSource="@counterList"
+                AllowPaging="true"
+                AllowFiltering="true"
+                AllowReordering="true"
+                AllowResizing="true"
+                AllowExcelExport="true"
+                AllowPdfExport="true"
+                EnableHover="true"
+                AllowTextWrap="true"
+                AllowSelection="true"
+                AllowSorting="true"
+                Height="100%" 
+                Width="100%"
+                Toolbar=@toolbar
+                EnableStickyHeader="true">
 
-            <GridEditSettings AllowAdding="true"
+            <GridEditSettings 
+                AllowAdding="true"
                 AllowEditing="true"
                 AllowDeleting="true"
                 ShowDeleteConfirmDialog="true"
@@ -92,11 +94,12 @@
                 </HeaderTemplate>
             </GridEditSettings>
 
-            <GridEvents OnToolbarClick="ToolbarBtnClickHandler"
-            RowCreating="RowCreatingHandler"
-            RowEditing="RowEditingHandler"
-            OnActionComplete="ActionCompleteHandler"
-            TValue="Water_CounterModel">
+            <GridEvents 
+                OnToolbarClick="ToolbarBtnClickHandler"
+                RowCreating="RowCreatingHandler"
+                RowEditing="RowEditingHandler"
+                OnActionBegin="ActionBeginHandler"
+                TValue="Water_CounterModel">
             </GridEvents>
 
             <GridPageSettings PageSize="20" PageSizes="true"></GridPageSettings>
@@ -116,22 +119,32 @@
                 <GridColumn
                     Field="@nameof(Water_CounterModel.ID_Tag)" 
                     IsPrimaryKey="true" 
-                    Visible="false">
+                    Visible="false"
+                    Width="0"
+                    AllowSorting="false"
+                    AllowFiltering="false"
+                    AllowEditing="false">
                 </GridColumn>
 
-                <GridColumn Field=@nameof(Water_CounterModel.Anbieter)
-                Width="200"
-                EditType="EditType.DropDownEdit"
-                HeaderText=" Anbieter">
+                <GridColumn Field=@nameof(Water_CounterModel.ID_Anbieter) Width="200" EditType="EditType.DropDownEdit" HeaderText="Anbieter">
+                    @* Zeigt im normalen Grid-Modus den Text statt der ID an --> *@
+                    <Template>
+                        @{
+                            var payment = (context as Water_CounterModel);
+                            var supplierName = supplierList?.FirstOrDefault(s => s.Id == payment?.ID_Anbieter)?.Anbieter;
+                            <span>@supplierName</span>
+                        }
+                    </Template>
 
                     <EditTemplate>
-                        <SfDropDownList Placeholder="Anbieter"
-                        FloatLabelType="FloatLabelType.Always"
-                        TValue="int?" 
-                        TItem="Water_SupplierDataModel"
-                        DataSource="@supplierList" 
-                        @bind-Value="@DropDownValueSupplier">
-
+                        <SfDropDownList Placeholder="Anbieter wählen"
+                                        FloatLabelType="FloatLabelType.Always"
+                                        ID="ID_Anbieter"
+                                        TItem="Water_SupplierDataModel"
+                                        TValue="int"
+                                        @bind-Value="@((context as Water_CounterModel)!.ID_Anbieter)"
+                                        DataSource="@supplierList">
+                            @* Value="Id" (int) wird in ID_Anbieter gespeichert, Text="Anbieter" (string) wird angezeigt *@
                             <DropDownListFieldSettings Value="Id" Text="Anbieter"></DropDownListFieldSettings>
                         </SfDropDownList>
                     </EditTemplate>
@@ -222,10 +235,10 @@
 
                     <EditTemplate>
                         <SfNumericTextBox Placeholder="Zählerstand Nebenzähler"
-                        FloatLabelType="FloatLabelType.Always"
-                        TValue="Double?"
-                        @bind-Value="@((context as Water_CounterModel)!.Zaehlerstand_aussen)"
-                        Format="0.### m³">
+                            FloatLabelType="FloatLabelType.Always"
+                            TValue="Double?"
+                            @bind-Value="@((context as Water_CounterModel)!.Zaehlerstand_aussen)"
+                            Format="0.### m³">
                         </SfNumericTextBox>
                     </EditTemplate>
 
@@ -242,12 +255,13 @@
                 HeaderText="Temperatur aussen">
 
                     <EditTemplate>
-                        <SfNumericTextBox Placeholder="Temperatur aussen"
-                        FloatLabelType="FloatLabelType.Always"
-                        TValue="double?"
-                        @bind-Value="@temperatureOutside"
-                        Format="0 °C">
-                        </SfNumericTextBox>
+                        <SfNumericTextBox 
+                            Placeholder="Temperatur aussen"
+                            FloatLabelType="FloatLabelType.Always"
+                            TValue="double?"
+                            @bind-Value="@((context as Water_CounterModel)!.Temperatur_aussen)"
+                            Format="0 °C">
+                            </SfNumericTextBox>
                     </EditTemplate>
 
                     <HeaderTemplate>
@@ -263,11 +277,12 @@
                 HeaderText="Temperatur innen">
 
                     <EditTemplate>
-                        <SfNumericTextBox Placeholder="Temperatur innen"
-                        FloatLabelType="FloatLabelType.Always"
-                        TValue="double?"
-                        @bind-Value="@temperatureInside"
-                        Format="0 °C">
+                        <SfNumericTextBox 
+                            Placeholder="Temperatur innen"
+                            FloatLabelType="FloatLabelType.Always"
+                            TValue="double?"
+                            @bind-Value="@((context as Water_CounterModel)!.Temperatur_innen)"
+                            Format="0 °C">
                         </SfNumericTextBox>
                     </EditTemplate>
 
@@ -341,21 +356,21 @@ else
 
 @* Dialog*@
 <div>
-    <SfDialog Target="#target"
-                Width="@dialogWidth"
-                Height="@dialogHeight"
-                AllowDragging="true"
-                ShowCloseIcon=" true"
-                AllowPrerender="true"
-                IsModal="true"
-                CssClass="MyCss"
-                @bind-Visible="@DialogVisible">
+    <SfDialog Target="body"
+              Width="@dialogWidth"
+              Height="@dialogHeight"
+              AllowDragging="true"
+              ShowCloseIcon=" true"
+              AllowPrerender="false"
+              IsModal="true"
+              CssClass="MyCss"
+              @bind-Visible="@DialogVisible">
 
         <DialogTemplates>
             <Header>@header</Header>
         </DialogTemplates>
 
-        <DialogPositionData X="@dialogXValue" Y="@dialogYValue"></DialogPositionData>
+        <DialogPositionData X="center" Y="center"></DialogPositionData>
 
         <DialogAnimationSettings Effect="@animationEffect"></DialogAnimationSettings>
 
@@ -440,8 +455,6 @@ else
     public bool DialogVisible { get; set; } = false;
     private bool showDialogButtons = false;
     private string DialogText { get; set; } = string.Empty;
-    private string dialogXValue = "center";
-    private string dialogYValue = "center";
     private string dialogHeight = "130px";
     private string dialogWidth = "380px";
 
@@ -466,7 +479,7 @@ else
 
     private SfGrid<Water_CounterModel> sfDataGrid { get; set; } = new();
 
-    private enum GridOperation { None, Add, Edit }
+    private enum GridOperation { None, Add, Edit, Delete }
     private GridOperation currentOperation = GridOperation.None;
 
     private List<Water_CounterModel>? counterList = null;
@@ -745,59 +758,6 @@ else
     }
     #endregion
 
-    #region ActionCompleteHandler
-    /// <summary>
-    /// Action Complete Handler für das Grid. Behandelt das Speichern, Bearbeiten und Löschen von Datensätzen.
-    /// </summary>
-    /// <param name="args"></param>
-    public async Task ActionCompleteHandler(ActionEventArgs<Water_CounterModel> args)
-    {
-        if (args?.Data is null) return;
-
-        switch (args.RequestType)
-        {
-            case Syncfusion.Blazor.Grids.Action.Save:
-                counterData = args.Data;
-
-                if (args.Action == "Add")
-                {
-                    currentOperation = GridOperation.Add;
-                    OpenDialog("Datensatz speichern ?", "130px", "220px", true);
-                }
-                else if (args.Action == "Edit")
-                {
-                    currentOperation = GridOperation.Edit;
-                    OpenDialog("Datensatz ändern ?", "130px", "220px", true);
-                }
-                break;
-
-            case Syncfusion.Blazor.Grids.Action.Delete:
-                if (args.Data.ID_Tag <= 0)
-                {
-                    if (gwsP is not null)
-                    {
-                        counterList = await gwsP.LoadDataAsync<Water_CounterModel>(urlCounter);
-                    }
-                    ShowToast(false, "Datensatz nicht gelöscht!");
-                }
-                else
-                {
-                    if (gwsP is not null)
-                    {
-                        counterData = await gwsP.DeleteDataAsync<Water_CounterModel>(urlCounter, args.Data.ID_Tag.ToString());
-                        ShowToast(true, "Datensatz gelöscht!");
-                    }
-                }
-
-                if (sfDataGrid is not null)
-                {
-                    await sfDataGrid.Refresh();
-                }
-                break;
-        }
-    }
-    #endregion
-
     #region CancelClick
     /// <summary>
     /// Abbrechen-Button im Dialog wurde geklickt, schließt den Dialog und setzt den aktuellen Operationstyp zurück.
@@ -1030,14 +990,20 @@ else
 
             // Optimierung: Redundanten Null-Check (?) entfernt, da args.Data oben geprüft wurde.
             // Berücksichtigung Ihres Signalwerts (99) für den Fall, dass die letzte Temperatur NULL war:
-            temperatureOutside = args.Data.Temperatur_aussen ?? 99;
-            temperatureInside = args.Data.Temperatur_innen ?? 99;
+            // temperatureOutside = args.Data.Temperatur_aussen ?? 99;
+            // temperatureInside = args.Data.Temperatur_innen ?? 99;
         }
         else
         {
             // Falls die Liste komplett leer ist, Startwerte für die UI-Variablen setzen
-            temperatureOutside = 99;
-            temperatureInside = 99;
+            // temperatureOutside = 99;
+            // temperatureInside = 99;
+
+            args.Data.Zaehlerstand = 0;
+            args.Data.Zaehlerstand_aussen = 0;
+            args.Data.Temperatur_aussen = 0;
+            args.Data.Temperatur_innen = 0;
+            args.Data.Bemerkungen = "keine letzten Daten";
         }
     }
     #endregion
@@ -1055,8 +1021,60 @@ else
         // Daten aus Dropdown "Anbieter" auslesen und Anbieter-Feld in Grid vorbesetzen
         DropDownValueSupplier = args.Data.ID_Anbieter;
 
-        temperatureOutside = args.Data?.Temperatur_aussen ?? 99;
-        temperatureInside = args.Data?.Temperatur_innen ?? 99;
+        // temperatureOutside = args.Data?.Temperatur_aussen ?? 99;
+        // temperatureInside = args.Data?.Temperatur_innen ?? 99;
+
+      
+    }
+    #endregion
+
+    #region ActionBeginHandler
+    /// <summary>
+    /// Action Begin Handler für das Grid. Behandelt das Speichern, Bearbeiten und Löschen von Datensätzen.
+    /// </summary>
+    /// <param name="args"></param>
+    /// <returns></returns>
+    public async Task ActionBeginHandler(ActionEventArgs<Water_CounterModel> args)
+    {
+        if (args?.Data is null) return;
+
+        switch (args.RequestType)
+        {
+            case Syncfusion.Blazor.Grids.Action.Save:
+                args.Cancel = true;
+               counterData = args.Data;
+
+                if (args.Action == "Add")
+                {
+                    currentOperation = GridOperation.Add;
+                    OpenDialog("Datensatz speichern ?", "130px", "220px", true);
+                }
+                else if (args.Action == "Edit")
+                {
+                    currentOperation = GridOperation.Edit;
+                    OpenDialog("Datensatz ändern ?", "130px", "220px", true);
+                }
+                break;
+
+            case Syncfusion.Blazor.Grids.Action.Delete:
+                // 1. Automatische Grid-Löschung stoppen, damit wir die Kontrolle behalten
+                args.Cancel = true;
+
+                // Sicherheitshalber prüfen, ob eine gültige ID vorliegt
+                if (args.Data.ID_Tag <= 0)
+                {
+                    ShowToast(false, "Ungültiger Datensatz. Löschen nicht möglich!");
+                    return;
+                }
+
+                // 2. Daten für die 'YesClick'-Methode zwischenspeichern
+                counterData = args.Data;
+                currentOperation = GridOperation.Delete;
+
+                // 3. Bestätigungsdialog für das Löschen öffnen
+                OpenDialog("Datensatz wirklich löschen ?", "130px", "300px", true);
+                break;
+        }
     }
     #endregion
 }

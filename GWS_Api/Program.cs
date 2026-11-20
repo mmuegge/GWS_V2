@@ -10,8 +10,19 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Newtonsoft.Json.Serialization;
 using Microsoft.OpenApi;
+using GWS_Api.Middleware;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Serilog direkt aus der appsettings.json konfigurieren
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(builder.Configuration)
+    .CreateLogger();
+
+
+// Standard-Logger durch Serilog ersetzen
+builder.Host.UseSerilog();
 
 var connectionString = builder.Configuration.GetConnectionString("MySqlConnection");
 
@@ -34,29 +45,49 @@ builder.Services.AddControllers().AddNewtonsoftJson(s =>
 //builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 builder.Services.AddAutoMapper(cfg => 
 {
+    cfg.LicenseKey = builder.Configuration["AutoMapper:LicenseKey"];
     cfg.AddMaps(AppDomain.CurrentDomain.GetAssemblies());
 });  // Automapper für die gesamte Assembly
 
-// MySql-Repository
-builder.Services.AddScoped<IGWSRepository, MySQL_GWSRepository>();
-builder.Services.AddScoped<IParameterRepository, MySQL_ParameterRepository>();
-builder.Services.AddScoped<IWaterRepository, MySQL_WaterRepository>();  // hier können noch mehr services eingefügt werden
-builder.Services.AddScoped<IGasRepository, MySQL_GasRepository>();  // hier können noch mehr services eingefügt werden
-builder.Services.AddScoped<IElectricRepository, MySQL_ElectricRepository>();  // hier können noch mehr services eingefügt werden
-
-// Mock-Repository
-//builder.Services.AddScoped<IGWSRepository, Mock_GWSRepository>();  // hier können noch mehr services eingefügt werden
-//builder.Services.AddScoped<IParameterRepository, Mock_ParameterRepository>();  // hier können noch mehr services eingefügt werden
-//builder.Services.AddScoped<IWaterRepository, Mock_WaterRepository>();  // hier können noch mehr services eingefügt werden
-//builder.Services.AddScoped<IGasRepository, Mock_GasRepository>();  // hier können noch mehr services eingefügt werden
-//builder.Services.AddScoped<IElectricRepository, Mock_ElectricRepository>();  // hier können noch mehr services eingefügt werden
+if (builder.Environment.IsDevelopment())
+{
+    // Mock-Repository
+    builder.Services.AddSingleton<IGWSRepository, Mock_GWSRepository>();  // hier können noch mehr services eingefügt werden
+    builder.Services.AddSingleton<IParameterRepository, Mock_ParameterRepository>();  // hier können noch mehr services eingefügt werden
+    builder.Services.AddSingleton<IWaterRepository, Mock_WaterRepository>();  // hier können noch mehr services eingefügt werden
+    builder.Services.AddSingleton<IGasRepository, Mock_GasRepository>();  // hier können noch mehr services eingefügt werden
+    builder.Services.AddSingleton<IElectricRepository, Mock_ElectricRepository>();  // hier können noch mehr services eingefügt werden
+}
+else
+{
+    // MySql-Repository
+    builder.Services.AddScoped<IGWSRepository, MySQL_GWSRepository>();
+    builder.Services.AddScoped<IParameterRepository, MySQL_ParameterRepository>();
+    builder.Services.AddScoped<IWaterRepository, MySQL_WaterRepository>();  // hier können noch mehr services eingefügt werden
+    builder.Services.AddScoped<IGasRepository, MySQL_GasRepository>();  // hier können noch mehr services eingefügt werden
+    builder.Services.AddScoped<IElectricRepository, MySQL_ElectricRepository>();  // hier können noch mehr services eingefügt werden
+}
 
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo { Title = "GWS_Api", Version = "v1" });   // Aufruf im Browser mit http://localhost:5000/swagger
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "GWS_Api", Version = "v1" });
+
+    c.CustomOperationIds(apiDesc =>
+    {
+        var controller = apiDesc.ActionDescriptor.RouteValues["controller"];
+        var action = apiDesc.ActionDescriptor.RouteValues["action"];
+        return $"{controller}_{action}";
+    });
 });
 
+// Globaler Exception Handler registrieren
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
+
 var app = builder.Build();
+
+// Globaler Exception Handler Middleware
+app.UseExceptionHandler();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -81,7 +112,7 @@ if (app.Environment.IsProduction())
 
 // Development: Starten über Konsole --> dotnet run --environment Development
 // Vorher in Verzeichnis GWS_Api wechseln
-// Swagger im Browser: http://localhost:5000/swagger/index.html
+// Swagger im Browser: http://localhost:5202/swagger/index.html
 // oder über Properties/launchSettings.json
 // unter GWS_Api/Properties/PublishedProfiles/launchSettings.json,
 // zusätzlich muss appsettings.json vorhanden sein mit Eintrag:

@@ -15,19 +15,18 @@
 
 <PageTitle>Strom- Kostenübersicht</PageTitle>
 
+@* Seiten-Überschrift*@
 <div class="container">
-    <div class="row">
-        <div class="text-center fs-3 fw-bold">
-            <span class="fa-solid fa-plug fa-3xs" aria-hidden="true"> </span>
-            <label>Strom- Kostenübersicht</label>
-        </div>
+    <div class="text-center fs-3 fw-bold">
+        <span class="fa-solid fa-plug fa-3xs" aria-hidden="true"> </span>
+        <label>Strom- Kostenübersicht</label>
     </div>
 </div>
 
+@* Auswahl Anbieter *@
 <div class="card shadow-lg p-2 mb-1">
     <div class="container-fluid bg-color-grey pb-2 border">
         <div class="row justify-content-center">
-
             @* Anbieter *@
             <div class="col-12 col-lg-4">
                 <div class="control-wrapper">
@@ -43,7 +42,7 @@
             <div class="col-12 col-lg-4">
                 <div class="control-wrapper">
                     <label class="control-label fw-bold mb-sm-1 me-1">Start-Datum</label>
-                    <SfDatePicker TValue="DateTime?" Value="@StartDate" Min="@MinDate" Format="dd.MM.yyyy" AllowEdit="false" Readonly="true"></SfDatePicker>
+                    <SfDatePicker TValue="DateTime?" Value="@startDate" Min="@minDate" Format="dd.MM.yyyy" AllowEdit="false" Readonly="true"></SfDatePicker>
                 </div>
             </div>
 
@@ -51,7 +50,7 @@
             <div class="col-12 col-lg-4">
                 <div class="control-wrapper">
                     <label class="control-label fw-bold mb-sm-1 me-1">Ende-Datum</label>
-                    <SfDatePicker TValue="DateTime?" Value="@EndDate" Min="@MinDate" Format="dd.MM.yyyy" AllowEdit="false" Readonly="true"></SfDatePicker>
+                    <SfDatePicker TValue="DateTime?" Value="@endDate" Min="@minDate" Format="dd.MM.yyyy" AllowEdit="false" Readonly="true"></SfDatePicker>
                 </div>
             </div>
         </div>
@@ -64,10 +63,10 @@
             <div class="col-6 col-lg-4">
                 <div class="control-wrapper">
                     <label class="control-label fw-bold mb-sm-1 me-1">&#8721-Abschlag</label>
-                    <SfNumericTextBox TValue="double?" Value="@SumPayments" Enabled="false" Format="####0.00 €"></SfNumericTextBox>
+                    <SfNumericTextBox TValue="double?" Value="@sumPayments" Enabled="false" Format="####0.00 €"></SfNumericTextBox>
                     <div class="mt-1">
                         <label class="control-label fw-bold mb-sm-1 me-1">&#8721-Bonus</label>
-                        <SfNumericTextBox TValue="double?" Value="@SumBonus" Enabled="false" Format="####0.00 €" Readonly="true"></SfNumericTextBox>
+                        <SfNumericTextBox TValue="double?" Value="@sumBonus" Enabled="false" Format="####0.00 €" Readonly="true"></SfNumericTextBox>
                     </div>
                 </div>
             </div>
@@ -76,10 +75,10 @@
             <div class="col-6 col-lg-4">
                 <div class="control-wrapper">
                     <label class="control-label fw-bold mb-sm-1 me-1">&#8721-Kosten</label>
-                    <SfNumericTextBox TValue="double?" Value="@SumCosts" Enabled="false" Format="####0.00 €"></SfNumericTextBox>
+                    <SfNumericTextBox TValue="double?" Value="@sumCosts" Enabled="false" Format="####0.00 €"></SfNumericTextBox>
                     <div class="mt-1">
                         <label class="control-label fw-bold mb-sm-1 me-1">&#8721-Verbrauch</label>
-                        <SfNumericTextBox TValue="double?" Value="@SumConsumptions" Enabled="false" Format="##0.00 kWh" Readonly="true"></SfNumericTextBox>
+                        <SfNumericTextBox TValue="double?" Value="@sumConsumptions" Enabled="false" Format="##0.00 kWh" Readonly="true"></SfNumericTextBox>
                     </div>
                 </div>
             </div>
@@ -88,10 +87,10 @@
             <div class="col-12 col-lg-4">
                 <div class="control-wrapper">
                     <label class="control-label fw-bold mb-sm-1 me-1">Guthaben</label>
-                    <SfNumericTextBox TValue="double?" Value="@SumCredit" Enabled="false" Format="###0.00 €"></SfNumericTextBox>
+                    <SfNumericTextBox TValue="double?" Value="@sumCredit" Enabled="false" Format="###0.00 €"></SfNumericTextBox>
                     <div class="mt-1">
                         <label class="control-label fw-bold mb-sm-1 me-1">&#8721-Endabrechnung</label>
-                        <SfNumericTextBox TValue="double?" Value="@SumFinalSettlement" Enabled="false" Format="####0.00 €" Readonly="true"></SfNumericTextBox>
+                        <SfNumericTextBox TValue="double?" Value="@sumFinalSettlement" Enabled="false" Format="####0.00 €" Readonly="true"></SfNumericTextBox>
                     </div>
                 </div>
             </div>
@@ -100,105 +99,137 @@
 </div>
 
 @* Chart *@
-<div class="control-section" id="target" align="center">
-    <div class="card shadow-lg">
-        <SfChart @ref="chart" Title="Übersicht" Width="@Width" Height="@Height" Palettes="@palettes">
+@if (chartPointList != null && chartPointList.Count > 0)
+{
+    <div class="control-section" id="target" align="center">
+        <div class="card shadow-lg">
+            <SfChart @ref="chart" Title="Übersicht" Width="@width" Height="@height" Palettes="@palettes">
 
-            <ChartEvents OnPointRender="PointRender"
-                         SharedTooltipRender="ToolTipRenderEvent">
-            </ChartEvents>
+                <ChartEvents OnPointRender="PointRender"
+                             SharedTooltipRender="ToolTipRenderEvent">
+                </ChartEvents>
 
-            <ChartTitleStyle Size="24px" Color="black" FontFamily=@fontFamily FontWeight="normal" FontStyle="normal">
-            </ChartTitleStyle>
+                <ChartTitleStyle Size="24px" Color="black" FontFamily=@fontFamily FontWeight="normal" FontStyle="normal">
+                </ChartTitleStyle>
 
-            <ChartArea Background="#8c8b87" Width="auto">
-                <ChartAreaBorder Color="black" Width="1"></ChartAreaBorder>
-            </ChartArea>
+                <ChartArea Background="#8c8b87" Width="auto">
+                    <ChartAreaBorder Color="black" Width="1"></ChartAreaBorder>
+                </ChartArea>
 
-            <ChartMargin Left="10" Right="10" Top="10" Bottom="10"></ChartMargin>
+                <ChartMargin Left="10" Right="10" Top="10" Bottom="10"></ChartMargin>
 
-            <ChartZoomSettings EnableMouseWheelZooming="true" EnablePinchZooming="true" EnableSelectionZooming="true"></ChartZoomSettings>
+                <ChartZoomSettings EnableMouseWheelZooming="true" EnablePinchZooming="true" EnableSelectionZooming="true"></ChartZoomSettings>
 
-            <ChartPrimaryXAxis RangePadding="ChartRangePadding.Additional"
-                               ValueType="Syncfusion.Blazor.Charts.ValueType.DateTimeCategory"
-                               EdgeLabelPlacement="EdgeLabelPlacement.None"
-                               Interval="@IntervalDuration"
-                               Format="@DateTimeFormat"
-                               IntervalType="@IntervalType">
+                <ChartPrimaryXAxis RangePadding="ChartRangePadding.Additional"
+                                   ValueType="Syncfusion.Blazor.Charts.ValueType.DateTimeCategory"
+                                   EdgeLabelPlacement="EdgeLabelPlacement.None"
+                                   Interval="@intervalDuration"
+                                   Format="@dateTimeFormat"
+                                   IntervalType="@intervalType">
 
-                <ChartAxisMajorGridLines Width="0"></ChartAxisMajorGridLines>
-                <ChartAxisLabelStyle FontFamily=@fontFamily></ChartAxisLabelStyle>
-                <ChartAxisTitleStyle FontFamily=@fontFamily></ChartAxisTitleStyle>
-                <ChartAxisCrosshairTooltip Fill="magenta" Enable="true"></ChartAxisCrosshairTooltip>
-            </ChartPrimaryXAxis>
+                    <ChartAxisMajorGridLines Width="0"></ChartAxisMajorGridLines>
+                    <ChartAxisLabelStyle FontFamily=@fontFamily></ChartAxisLabelStyle>
+                    <ChartAxisTitleStyle FontFamily=@fontFamily></ChartAxisTitleStyle>
+                    <ChartAxisCrosshairTooltip Fill="magenta" Enable="true"></ChartAxisCrosshairTooltip>
+                </ChartPrimaryXAxis>
 
-            <ChartPrimaryYAxis Title="Abschlag/Kosten"
-                               LabelFormat="{value} €"
-                               RangePadding="ChartRangePadding.Normal"
-                               Format="C2">
+                <ChartPrimaryYAxis Title="Abschlag/Kosten"
+                                   LabelFormat="{value} €"
+                                   RangePadding="ChartRangePadding.Normal"
+                                   Format="C2">
 
-                <ChartAxisLineStyle Width="0"></ChartAxisLineStyle>
-                <ChartAxisLabelStyle FontFamily=@fontFamily></ChartAxisLabelStyle>
-                <ChartAxisTitleStyle FontFamily=@fontFamily></ChartAxisTitleStyle>
-                <ChartAxisMajorGridLines Width="1"></ChartAxisMajorGridLines>
-                <ChartAxisCrosshairTooltip Fill="magenta" Enable="false"></ChartAxisCrosshairTooltip>
-            </ChartPrimaryYAxis>
+                    <ChartAxisLineStyle Width="0"></ChartAxisLineStyle>
+                    <ChartAxisLabelStyle FontFamily=@fontFamily></ChartAxisLabelStyle>
+                    <ChartAxisTitleStyle FontFamily=@fontFamily></ChartAxisTitleStyle>
+                    <ChartAxisMajorGridLines Width="1"></ChartAxisMajorGridLines>
+                    <ChartAxisCrosshairTooltip Fill="magenta" Enable="false"></ChartAxisCrosshairTooltip>
+                </ChartPrimaryYAxis>
 
-            <ChartSeriesCollection>
-                <ChartSeries DataSource="@ChartPointList"
-                             XName="Date"
-                             YName="Payment"
-                             Name="Abschlag"
-                             ColumnSpacing="0.1"
-                             Type="ChartSeriesType.Column">
-                </ChartSeries>
+                <ChartSeriesCollection>
+                    <ChartSeries DataSource="@chartPointList"
+                                 XName="Date"
+                                 YName="Payment"
+                                 Name="Abschlag"
+                                 ColumnSpacing="0.1"
+                                 Type="ChartSeriesType.Column">
+                    </ChartSeries>
 
-                <ChartSeries DataSource="@ChartPointList"
-                             XName="Date"
-                             YName="Costs"
-                             Name="Kosten"
-                             ColumnSpacing="0.1"
-                             Type="ChartSeriesType.Column">
-                </ChartSeries>
+                    <ChartSeries DataSource="@chartPointList"
+                                 XName="Date"
+                                 YName="Costs"
+                                 Name="Kosten"
+                                 ColumnSpacing="0.1"
+                                 Type="ChartSeriesType.Column">
+                    </ChartSeries>
 
-                <ChartSeries DataSource="@ChartPointList"
-                             XName="Date"
-                             YName="Credit"
-                             Name="Guthaben"
-                             ColumnSpacing="0.1"
-                             Type="ChartSeriesType.Column">
-                </ChartSeries>
-            </ChartSeriesCollection>
+                    <ChartSeries DataSource="@chartPointList"
+                                 XName="Date"
+                                 YName="Credit"
+                                 Name="Guthaben"
+                                 ColumnSpacing="0.1"
+                                 Type="ChartSeriesType.Column">
+                    </ChartSeries>
+                </ChartSeriesCollection>
 
-            <ChartLegendSettings Visible="true" EnableHighlight="true"></ChartLegendSettings>
-            <ChartTooltipSettings Header="<b>${point.tooltip}</b>" Enable="true" Shared="true"></ChartTooltipSettings>
-            <ChartCrosshairSettings Enable="true" LineType="LineType.Both"></ChartCrosshairSettings>
-        </SfChart>
+                <ChartLegendSettings Visible="true" EnableHighlight="true"></ChartLegendSettings>
+                <ChartTooltipSettings Header="<b>${point.tooltip}</b>" Enable="true" Shared="true"></ChartTooltipSettings>
+                <ChartCrosshairSettings Enable="true" LineType="LineType.Both"></ChartCrosshairSettings>
+            </SfChart>
 
-        <SfSpinner @bind-Visible="@spinnerVisibleProperty" Type="SpinnerType.Tailwind" Size="40" CssClass="e-custom-color"></SfSpinner>
-
-        @* Dialog*@
-        <div>
-            <SfDialog Target="#target"
-                      Width="@dialogWidth"
-                      Height=@dialogHeight
-                      AllowDragging="true"
-                      ShowCloseIcon=" true"
-                      @bind-Visible="DialogVisible"
-                      AllowPrerender="true"
-                      IsModal="true">
-
-                <DialogTemplates>
-                    <Header>@Header</Header>
-                </DialogTemplates>
-                <DialogPositionData X="@dialogXValue" Y="@dialogYValue"></DialogPositionData>
-                <DialogAnimationSettings Effect="@animationEffect"></DialogAnimationSettings>
-            </SfDialog>
         </div>
     </div>
+}
+else
+{
+    <SfSpinner @bind-Visible="@spinnerVisibleProperty"
+               Type="SpinnerType.Tailwind"
+               CssClass="e-custom-color"
+               Label="Lade Daten..."
+               Size="40">
+    </SfSpinner>
+}
+
+@* Dialog*@
+<div>
+    <SfDialog Target="body"
+              Width="@dialogWidth"
+              Height=@dialogHeight
+              AllowDragging="true"
+              ShowCloseIcon=" true"
+              @bind-Visible="dialogVisible"
+              AllowPrerender="false"
+              IsModal="true">
+
+              <DialogTemplates>
+                <Header>@header</Header>
+              </DialogTemplates>
+
+              <DialogPositionData X="center" Y="center"></DialogPositionData>
+              <DialogAnimationSettings Effect="@animationEffect"></DialogAnimationSettings>
+    </SfDialog>
 </div>
 
 <style>
+    /* 1. Zwingt das gesamte Spinner-Container-System nach ganz vorne */
+    .e-spinner-pane.e-spin-overlay {
+        z-index: 99999 !important;
+        background-color: rgba(0, 0, 0, 0.4) !important; /* Macht den Hintergrund dunkel-transparent */
+    }
+
+        /* 2. Zwingt das Ladesymbol und den Text, sich abzuheben */
+        .e-spinner-pane.e-spin-overlay .e-spinner-inner {
+            z-index: 100000 !important;
+        }
+
+        /* 3. HIER WIRD DER TEXT ERZWUNGEN UND SCHÖN FORMATIERT */
+        .e-spinner-pane.e-spin-overlay .e-spin-label {
+            color: #FFFFFF !important; /* Reines Weiß, damit es auf dem dunklen Overlay lesbar ist */
+            font-weight: bold !important; /* Fett gedruckt */
+            font-size: 16px !important; /* Etwas größer für bessere Lesbarkeit */
+            margin-top: 10px !important; /* Abstand zum drehenden Rad */
+            display: block !important; /* Sicherstellen, dass es nicht auf hidden steht */
+        }
+
     .e-dlg-overlay {
         background-color: slategray;
         opacity: 0.6;
@@ -252,11 +283,9 @@
 
     #region DialogBox
     DialogEffect animationEffect { get; set; } = DialogEffect.Zoom;
-    bool DialogVisible { get; set; } = false;
+    private bool dialogVisible { get; set; } = false;
     private bool showDialogButtons = false;
-    private string DialogText { get; set; } = string.Empty;
-    private string dialogXValue = "center";
-    private string dialogYValue = "center";
+    private string dialogText { get; set; } = string.Empty;
     private string dialogHeight = "130px";
     private string dialogWidth = "380px";
     #endregion
@@ -278,10 +307,10 @@
     #endregion
 
     #region DateTime
-    private DateTime MinDate { get; set; } = new DateTime(1990, 1, 1);
-    private DateTime MaxDate { get; set; } = DateTime.Now;
-    private DateTime? StartDate { get; set; } = new DateTime(2000, 1, 1);
-    private DateTime? EndDate { get; set; } = new DateTime(2000, 1, 1);
+    private DateTime minDate { get; set; } = new DateTime(1990, 1, 1);
+    private DateTime maxDate { get; set; } = DateTime.Now;
+    private DateTime? startDate { get; set; } = new DateTime(2000, 1, 1);
+    private DateTime? endDate { get; set; } = new DateTime(2000, 1, 1);
     #endregion
 
     #region App-Settings
@@ -293,11 +322,11 @@
     private readonly string urlMeter = "strom/zaehlerstaende/anbieter/";
     private readonly string urlPaymentsSupplier = "strom/zahlungen/anbieter/";
     readonly string urlCostSupplier = "strom/kosten/anbieter/";
-    //readonly string urlCounterChange = "strom/zaehlerwechsel/anbieter/";
+    readonly string urlCounterChange = "strom/zaehlerwechsel/anbieter/";
     #endregion
 
-    string? Header { get; set; }
-    string? Content { get; set; }
+    string? header { get; set; }
+    string? content { get; set; }
 
     #region Http
     GWSProcessor? gwsP;
@@ -323,28 +352,28 @@
     SfChart chart = new();
 
     private string fontFamily { get; set; } = "Arial";
-    private Syncfusion.Blazor.Charts.IntervalType IntervalType { get; set; } = Syncfusion.Blazor.Charts.IntervalType.Months;
-    private int IntervalDuration { get; set; } = 1;
+    private Syncfusion.Blazor.Charts.IntervalType intervalType { get; set; } = Syncfusion.Blazor.Charts.IntervalType.Months;
+    private int intervalDuration { get; set; } = 1;
 
-    private string DateTimeFormat { get; set; } = "dd.MM.yyyy";
+    private string dateTimeFormat { get; set; } = "dd.MM.yyyy";
 
-    private Theme Theme { get; set; }
-    private string Width { get; set; } = "100%";
-    private string Height { get; set; } = "160%";
-    private double Rotation { get; set; } = 0;
-    private LabelIntersectAction Label { get; set; } = LabelIntersectAction.Trim;
+    private Theme theme { get; set; }
+    private string width { get; set; } = "100%";
+    private string height { get; set; } = "160%";
+    private double rotation { get; set; } = 0;
+    private LabelIntersectAction label { get; set; } = LabelIntersectAction.Trim;
     private String[] palettes = new String[] { "blue", "yellow", "green" };  // Farben Serie: Abschlag €, Kosten €, Guthaben €
-    private double Interval_YAxis { get; set; } = 50.0d;
+    private double interval_YAxis { get; set; } = 50.0d;
 
-    private double SumPayments { get; set; } = 0.0d;
-    private double SumBonus { get; set; } = 0.0d;
-    private double SumCosts { get; set; } = 0.0d;
-    private double SumCredit { get; set; } = 0.0d;
-    private double SumFinalSettlement { get; set; } = 0.0d;
-    private double SumConsumptions { get; set; } = 0.0d;
-    private double? Consumption { get; set; } = 0.0d;
+    private double sumPayments { get; set; } = 0.0d;
+    private double sumBonus { get; set; } = 0.0d;
+    private double sumCosts { get; set; } = 0.0d;
+    private double sumCredit { get; set; } = 0.0d;
+    private double sumFinalSettlement { get; set; } = 0.0d;
+    private double sumConsumptions { get; set; } = 0.0d;
+    private double? consumption { get; set; } = 0.0d;
 
-    private List<ColumnChartData> ChartPointList { get; set; } = new();
+    private List<ColumnChartData> chartPointList { get; set; } = new();
 
     private class ColumnChartData
     {
@@ -371,66 +400,81 @@
     /// <exception cref="Exception"></exception>
     protected override async Task OnInitializedAsync()
     {
-        int lastSupplierId;
-
         this.spinnerVisibleProperty = true;
 
-        // MyAppSettings.json auslesen und letzten gespeicherten Anbieter auslesen
-        settings = await GetSetMyAppConfig.GetMyAppSettings.ReadSettingsAsync(myAppSettings);
-
-        gwsP = new GWSProcessor(myHttpClient, settings!.GWSUri);
         try
         {
-            // Anbieterdaten auslesen (nur Anbieter und Id => durch ElectricSupplierDataModel)
-            supplierList = await gwsP.LoadDataAsync<Electric_SupplierModel>(urlSupplier);
+            // 1. Einstellungen asynchron laden & parsen
+            settings = await GetSetMyAppConfig.GetMyAppSettings.ReadSettingsAsync(myAppSettings);
 
-            if (supplierList != null && supplierList.Any()) // prüfen ob es Anbieterdaten gibt
+            // 2. API-Prozessor initialisieren und Stammdaten laden (Null-Safe)
+            gwsP = new GWSProcessor(myHttpClient, settings!.GWSUri!);
+
+            supplierList = await gwsP!.LoadDataAsync<Electric_SupplierModel>(urlSupplier);
+
+            int targetSupplierId = 0;
+
+            if (supplierList != null && supplierList.Count > 0)
             {
-                // gespeicherten letzten Anbieter auslesen
-                lastSupplierId = String.IsNullOrEmpty(settings?.Supplier_Id?.Electric) ? lastSupplierId = supplierList.Max(x => x.Id) : lastSupplierId = Int32.Parse(settings.Supplier_Id.Electric);
+                // ID-Ermittlung: Max() nur einmal berechnen
+                int maxSupplierId = supplierList.Max(x => x.Id);
 
-                supplierData = supplierList
-                                .Where(s => s.Id == lastSupplierId)
-                                .Select(s => s).FirstOrDefault();
+                if (string.IsNullOrEmpty(settings?.Supplier_Id?.Electric) || settings.Supplier_Id.Electric == "0")
+                {
+                    targetSupplierId = maxSupplierId;
+                }
+                else if (int.TryParse(settings.Supplier_Id.Electric, out int parsedId) && supplierList.Any(s => s.Id == parsedId))
+                {
+                    targetSupplierId = parsedId;
+                }
+                else
+                {
+                    targetSupplierId = maxSupplierId;
+                }
+
+                // Anbieter direkt heraussuchen
+                supplierData = supplierList.FirstOrDefault(s => s.Id == targetSupplierId);
 
                 if (supplierData != null)
                 {
-                    // Start-Datum auslesen
-                    StartDate = supplierData.Zeitraum_Start;
-                    EndDate = supplierData.Zeitraum_Ende;
+                    startDate = supplierData.Zeitraum_Start ?? DateTime.Now;
+                    endDate = supplierData.Zeitraum_Ende ?? DateTime.Now;
                 }
             }
             else
             {
-                // es gibt keine gültigen Daten der Anbieter
+                // Null-Safe Absicherung für die ID
+                supplierData ??= new Electric_SupplierModel();
                 supplierData!.Id = 0;
             }
 
-            if (supplierData != null && supplierData.Id > 0)
+            // 3. Zählerdaten, Zahlungen, Kosten und Zählerwechsel parallel laden (Performance-Boost)
+            string supplierIdStr = (supplierData?.Id ?? 0).ToString();
+
+            var counterTask = gwsP.LoadDataAsync<Electric_CounterModel>($"{urlMeter}{supplierIdStr}");
+            var paymentTask = gwsP.LoadDataAsync<GWS_PaymentModel>($"{urlPaymentsSupplier}{supplierIdStr}");
+            var costTask = gwsP.LoadDataAsync<Electric_CostModel>($"{urlCostSupplier}{supplierIdStr}");
+            var counterChangeTask = gwsP.LoadDataAsync<Electric_CounterChangeModel>($"{urlCounterChange}{supplierIdStr}");
+
+            // Alle Requests laufen gleichzeitig über das Netzwerk
+            await Task.WhenAll(counterTask, paymentTask, costTask, counterChangeTask);
+
+            // Ergebnisse sicher auslesen, sortieren und Null-Safe absichern
+            var rawCounters = await counterTask;
+            counterList = rawCounters != null ? rawCounters.OrderBy(c => c.Ablesetag).ToList() : [];
+
+            var rawPayments = await paymentTask;
+            paymentList = rawPayments != null ? rawPayments.OrderBy(p => p.Datum).ToList() : [];
+
+            var rawCosts = await costTask;
+            costsList = rawCosts != null ? rawCosts.OrderBy(cc => cc.Id).ToList() : [];
+
+            var rawCounterChanges = await counterChangeTask;
+            counterChangeList = rawCounterChanges != null ? rawCounterChanges.OrderBy(c => c.Wechsel_Datum).ToList() : [];
+
+            if (paymentList.Count > 0)
             {
-                counterList = await gwsP.LoadDataAsync<Electric_CounterModel>(urlMeter + Convert.ToString(supplierData.Id)); // Daten des neu ausgewählten Anbieter laden
-
-                if (counterList != null && counterList.Any())
-                {
-                    counterList?.Sort((x, y) => x.Ablesetag.CompareTo(y.Ablesetag));
-                    paymentList = await gwsP.LoadDataAsync<GWS_PaymentModel>(urlPaymentsSupplier + Convert.ToString(supplierData.Id));
-                }
-                else
-                {
-                    ClearSumAverage();
-                    OpenDialog("Keine Strom-Verbräuche vorhanden!", "60px", "380px", false);
-                }
-
-                costsList = await gwsP.LoadDataAsync<Electric_CostModel>(urlCostSupplier + Convert.ToString(supplierData.Id));  // Kosten anbieterabhängig auslesen
-                if (costsList != null && costsList.Any())
-                {
-                    costsList?.Sort((x, y) => x.Gueltig_Ab.CompareTo(y.Gueltig_Ab)); // nach "gueltig_ab" sortieren
-                }
-            }
-
-            if (paymentList != null && paymentList.Any())
-            {
-                await Task.Run(() => GetPaymentsCosts(supplierData!, paymentList, costsList));
+                await Task.Run(() => GetPaymentsCosts(supplierData!, counterChangeList, paymentList, costsList!));
             }
             else
             {
@@ -439,81 +483,99 @@
             }
 
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            Logger.LogError(ex, "Fehler beim Initialisieren der Strom-Verbrauchsdaten für Anbieter-ID: {SupplierId}", supplierData?.Id);
+
+            ClearSumAverage();
             OpenDialog("Keine Strom-Verbräuche vorhanden!", "60px", "380px", false);
         }
-
-        // Spinner
-        await Task.Delay(200); // muss sein sonst Runtime fault
-        this.spinnerVisibleProperty = false;
+        finally
+        {
+            this.spinnerVisibleProperty = false;
+            StateHasChanged();
+        }
     }
     #endregion
 
     #region ValueSelectHandler
     /// <summary>
-    /// Read the reading dates of the selected supplier
+    /// Anbieter-Auswahl im Dropdown-Handler. Lädt die entsprechenden Zählerstände, Zahlungen und Kosten für den ausgewählten Anbieter
     /// </summary>
     /// <param name="args"></param>
     private async Task ValueSelectHandler(SelectEventArgs<Electric_SupplierModel> args)
     {
+        if (args?.ItemData == null) return;
+
         this.spinnerVisibleProperty = true;
-        //Anbieterdaten laden abhängig vom Dropdown "Anbieter"
-        supplierData = supplierList!
-                           .Where(s => s.Id == args.ItemData.Id)
-                           .Select(s => s).FirstOrDefault();
 
-        if (supplierData != null && supplierData.Id > 0)
+        try
         {
-            StartDate = supplierData.Zeitraum_Start ?? DateTime.Now;
-            EndDate = supplierData.Zeitraum_Ende ?? DateTime.Now;
+            // 1. Anbieter direkt suchen
+            supplierData = supplierList?.FirstOrDefault(s => s.Id == args.ItemData.Id);
 
-            counterList = await gwsP!.LoadDataAsync<Electric_CounterModel>(urlMeter + Convert.ToString(supplierData.Id)); // Daten des neu ausgewählten Anbieter laden
-
-            costsList = await gwsP!.LoadDataAsync<Electric_CostModel>(urlCostSupplier + Convert.ToString(supplierData.Id)); // Kosten anbieterabhängig auslesen
-            if (costsList != null && costsList.Any())
+            if (supplierData != null && supplierData.Id > 0)
             {
-                costsList.Sort((x, y) => x.Gueltig_Ab.CompareTo(y.Gueltig_Ab)); // nach "gueltig_ab" sortieren
-            }
+                startDate = supplierData.Zeitraum_Start ?? DateTime.Now;
+                endDate = supplierData.Zeitraum_Ende ?? DateTime.Now;
 
-            if (counterList != null && counterList.Any())
-            {
-                counterList.Sort((x, y) => x.Ablesetag.CompareTo(y.Ablesetag));
-                paymentList = await gwsP.LoadDataAsync<GWS_PaymentModel>(urlPaymentsSupplier + Convert.ToString(supplierData.Id));
+                string supplierIdStr = supplierData.Id.ToString();
 
-                if (paymentList != null && paymentList.Any())
+                // 2. Parallelisiertes Laden der Daten (Spart massiv Zeit bei API/DB-Aufrufen)
+                var counterTask = gwsP!.LoadDataAsync<Electric_CounterModel>(urlMeter + supplierIdStr);
+                var costsTask = gwsP!.LoadDataAsync<Electric_CostModel>(urlCostSupplier + supplierIdStr);
+                var paymentTask = gwsP!.LoadDataAsync<GWS_PaymentModel>(urlPaymentsSupplier + supplierIdStr);
+
+                await Task.WhenAll(counterTask, costsTask, paymentTask);
+
+                counterList = await counterTask;
+                costsList = await costsTask;
+                paymentList = await paymentTask;
+
+                // 3. Sortierung optimieren (In-Place Sortierung)
+                costsList?.Sort((x, y) => x.Gueltig_Ab.CompareTo(y.Gueltig_Ab));
+
+                if (counterList != null && counterList.Any())
                 {
-                    await Task.Run(() => GetPaymentsCosts(supplierData, paymentList, costsList));
+                    counterList.Sort((x, y) => x.Ablesetag.CompareTo(y.Ablesetag));
+
+                    if (paymentList != null && paymentList.Any())
+                    {
+                        // Wenn GetPaymentsCosts asynchron geschrieben werden kann, hier direkt await nutzen
+                        await Task.Run(() => GetPaymentsCosts(supplierData, counterChangeList, paymentList, costsList));
+                    }
+                    else
+                    {
+                        ClearSumAverage();
+                        chartPointList?.Clear();
+                        OpenDialog("Keine Strom-Zahlungen vorhanden!", "60px", "380px", false);
+                    }
                 }
                 else
                 {
                     ClearSumAverage();
-                    ChartPointList.Clear();
-                    OpenDialog("Keine Strom-Zahlungen vorhanden!", "60px", "380px", false);
+                    chartPointList?.Clear();
+                    OpenDialog("Keine Strom-Verbräuche vorhanden!", "60px", "380px", false);
+                }
+
+                // 4. Konfiguration asynchron speichern
+                success = await GetSetMyAppConfig.SetMyAppSettings.WriteSettingsAsync(myAppSettings, "Supplier_Id.Electric", supplierIdStr);
+                if (!success)
+                {
+                    OpenDialog("Strom-Anbieter nicht gespeichert!", "60px", "380px", false);
                 }
             }
             else
             {
-                ClearSumAverage();
-                ChartPointList?.Clear();
+                chartPointList?.Clear();
                 OpenDialog("Keine Strom-Verbräuche vorhanden!", "60px", "380px", false);
             }
-
-            success = await GetSetMyAppConfig.SetMyAppSettings.WriteSettingsAsync(myAppSettings, "Supplier_Id.Electric", supplierData.Id.ToString()); // ausgewählten Anbieter in MyAppConfig speichern
-            if (!success)
-            {
-                OpenDialog("Strom-Anbieter nicht gespeichert!", "60px", "380px", false);
-            }
         }
-        else
+        finally
         {
-            ChartPointList.Clear();
-            OpenDialog("Keine Strom-Verbräuche vorhanden!", "60px", "380px", false);
+            // 5. Spinner sicher ausschalten (auch bei Fehlern)
+            this.spinnerVisibleProperty = false;
         }
-
-        // Spinner
-        await Task.Delay(200);
-        this.spinnerVisibleProperty = false;
     }
     #endregion
 
@@ -523,16 +585,16 @@
     /// </summary>
     /// <param name="supplier"></param>
     /// <param name="counters"></param>
-    public void GetPaymentsCosts(Electric_SupplierModel supplier, List<GWS_PaymentModel> payments, List<Electric_CostModel>? costs)
+    public void GetPaymentsCosts(Electric_SupplierModel supplier, List<Electric_CounterChangeModel>? counterChangeList, List<GWS_PaymentModel> payments, List<Electric_CostModel>? costs)
     {
         double monthlyCosts = 0.0d;
         double monthlyPayment = 0.0d;
         double totalCredit = 0.0d;
         bool firstCost = false;
 
-        Consumption = 0.0d;
-        DateTimeFormat = "MMM yy";
-        ChartPointList = new List<ColumnChartData>();
+        consumption = 0.0d;
+        dateTimeFormat = "MMM yy";
+        chartPointList = new List<ColumnChartData>();
 
         List<IPaymentConsumption> payments_consumption = GWS_Calculation.CalcPaymentsConsumptions(supplier, counterChangeList, payments, counterList, EnergyConfig.DAILY_MAX_DROP_ELECTRIC);
 
@@ -576,8 +638,8 @@
             }
           
             totalCredit += (monthlyPayment - monthlyCosts);
-            Consumption += item.Consumption;
-            ChartPointList.Add(new ColumnChartData { Date = item.Date.GetValueOrDefault(), Payment = monthlyPayment, Costs = monthlyCosts, Credit = Math.Round(totalCredit, 2) });
+            consumption += item.Consumption;
+            chartPointList.Add(new ColumnChartData { Date = item.Date.GetValueOrDefault(), Payment = monthlyPayment, Costs = monthlyCosts, Credit = Math.Round(totalCredit, 2) });
            
         }
         CalcSum();
@@ -619,17 +681,17 @@
     public void CalcSum()
     {
         ClearSumAverage();
-        SumPayments = Math.Round(ChartPointList.Sum(x => x.Payment).GetValueOrDefault(), 2);
+        sumPayments = Math.Round(chartPointList.Sum(x => x.Payment).GetValueOrDefault(), 2);
         if (paymentList != null && paymentList.Any())
         {
-            SumBonus = Math.Abs(paymentList.Where(x => x.Zahlungsart == "Bonus").Sum(p => p.Zahlungen.GetValueOrDefault()));
-            SumFinalSettlement = paymentList.Where(x => x.Zahlungsart == "Endabrechnung").Sum(p => p.Zahlungen.GetValueOrDefault());
+            sumBonus = Math.Abs(paymentList.Where(x => x.Zahlungsart == "Bonus").Sum(p => p.Zahlungen.GetValueOrDefault()));
+            sumFinalSettlement = paymentList.Where(x => x.Zahlungsart == "Endabrechnung").Sum(p => p.Zahlungen.GetValueOrDefault());
         }
 
-        SumCosts = Math.Round(ChartPointList.Sum(x => x.Costs).GetValueOrDefault(), 2);
-        SumCredit = Math.Round(SumPayments - SumCosts, 2);
+        sumCosts = Math.Round(chartPointList.Sum(x => x.Costs).GetValueOrDefault(), 2);
+        sumCredit = Math.Round(sumPayments - sumCosts, 2);
 
-        SumConsumptions = Math.Round(Consumption.GetValueOrDefault(), 2);
+        sumConsumptions = Math.Round(consumption.GetValueOrDefault(), 2);
     }
     #endregion
 
@@ -651,14 +713,14 @@
         DateTime dayToday = DateTime.Now;
         DateTime newDate = startPeriod.GetValueOrDefault();
 
-        ChartPointList = new List<ColumnChartData>();
+        chartPointList = new List<ColumnChartData>();
 
         for (int i = 0; i < days; i++)
         {
             payments = randomPayments.Next(100, 100);
             costs = randomCosts.Next(50, 150);
 
-            ChartPointList.Add(new ColumnChartData { Date = newDate, Payment = payments, Costs = costs });
+            chartPointList.Add(new ColumnChartData { Date = newDate, Payment = payments, Costs = costs });
 
             newDate = newDate.AddDays(1);
             if (newDate > dayToday)
@@ -720,13 +782,15 @@
     /// <summary>
     /// Show a dialog box with the specified header, height, width, and button visibility
     /// </summary>
-    private void OpenDialog(string header, string height, string width, bool showButtons)
+    private void OpenDialog(string header, string height="auto", string width="500px", bool showButtons=true)
     {
-        Header = header;
+        this.header = header;
         dialogHeight = height;
         dialogWidth = width;
         showDialogButtons = showButtons;
-        this.DialogVisible = true;
+
+         // Erzwingt das Neu-Rendern der UI (wichtig in Blazor für Dialoge)
+        this.StateHasChanged();
     }
     #endregion
 
@@ -736,12 +800,12 @@
     /// </summary>
     private void ClearSumAverage()
     {
-        SumPayments = 0;
-        SumCosts = 0;
-        SumBonus = 0;
-        SumCredit = 0;
-        SumConsumptions = 0;
-        SumFinalSettlement = 0;
+        sumPayments = 0;
+        sumCosts = 0;
+        sumBonus = 0;
+        sumCredit = 0;
+        sumConsumptions = 0;
+        sumFinalSettlement = 0;
     }
     #endregion
 }

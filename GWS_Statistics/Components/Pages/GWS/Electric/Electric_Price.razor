@@ -54,7 +54,7 @@
 @* Grid *@
 @if (supplierList != null && supplierList.Count > 0)
 {
-    <div class="control-section" id="target" align="center" style="position: relative; min-height: 200px;">
+    <div class="control-section elevated-grid-container" id="target" align="center" style="position: relative; min-height: 200px;">
         <SfGrid ID="Grid" @ref="sfDataGrid" DataSource="@costsList"
                 AllowPaging="true"
                 AllowFiltering="true"
@@ -111,7 +111,11 @@
                 <GridColumn 
                     Field="@nameof(GWS_PaymentModel.ID_Zahlung)"
                     IsPrimaryKey="true"
-                    Visible="false">
+                    Visible="false"
+                    Width="0"
+                    AllowSorting="false"
+                    AllowFiltering="false"
+                    AllowEditing="false">
                 </GridColumn>
 
                 <GridColumn Field=@nameof(Electric_CostModel.Anbieter)
@@ -278,13 +282,13 @@ else
 
 @* Dialog*@
 <div>
-    <SfDialog Target="#target"
-              Width="320px"
+    <SfDialog Target="body"
+              Width=@dialogWidth
               Height=@dialogHeight
               AllowDragging="true"
               ShowCloseIcon=" true"
               @bind-Visible="DialogVisible"
-              AllowPrerender="true"
+              AllowPrerender="false"
               IsModal="true"
               CssClass="MyCss">
 
@@ -292,7 +296,7 @@ else
                 <Header>@header</Header>
             </DialogTemplates>
 
-            <DialogPositionData X="@dialogXValue" Y="@dialogYValue"></DialogPositionData>
+            <DialogPositionData X="center" Y="center"></DialogPositionData>
 
             <DialogAnimationSettings Effect="@animationEffect"></DialogAnimationSettings>
 
@@ -391,10 +395,9 @@ else
     public bool DialogVisible { get; set; } = false;
     private bool showDialogButtons = false;
     private string dialogText { get; set; } = string.Empty;
-    private string dialogXValue = "center";
-    private string dialogYValue = "center";
+   
     private string dialogHeight = "130px";
-    private string dialogWidth = "450px";
+    private string dialogWidth = "380px";
 
     public int? DropDownValueSupplier { get; set; } = 0;
 
@@ -410,7 +413,7 @@ else
 
     private SfGrid<Electric_CostModel> sfDataGrid = new();
 
-    private enum GridOperation { None, Add, Edit }
+    private enum GridOperation { None, Add, Edit, Delete }
     private GridOperation currentOperation = GridOperation.None;
 
     private List<Electric_SupplierDataModel>? supplierList = new();
@@ -580,7 +583,8 @@ else
 
     #region ToolbarBtnClickHandler
     /// <summary>
-    /// Toolbar Button Click Handler für das Grid. Behandelt das Exportieren von Daten in Excel oder PDF.
+    /// Toolbar-Button-Klick-Handler für das Grid.
+    /// Behandelt Excel- und PDF-Exporte, zeigt einen Spinner während des Exports an und blendet bestimmte Spalten temporär aus.
     /// </summary>
     /// <param name="args"></param>
     

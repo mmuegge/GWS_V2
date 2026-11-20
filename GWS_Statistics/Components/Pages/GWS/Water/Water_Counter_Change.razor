@@ -11,6 +11,7 @@
 
 <PageTitle>Wasser- Zählerwechsel</PageTitle>
 
+@* Seiten-Überschrift *@
 <div class="container">
     <div class="row">
         <div class="text-center fs-3 fw-bold">
@@ -52,8 +53,9 @@
 </div>
 
 @* Grid *@
-<div class="control-section" id="target" align="left">
-    <SfGrid ID="Grid" @ref="SfDataGrid" DataSource="@counterChangeList"
+<div class="control-section elevated-grid-container" id="target" align="left">
+    <SfGrid ID="Grid" @ref="sfDataGrid" 
+        DataSource="@counterChangeList"
         AllowPaging="true"
         AllowFiltering="true"
         AllowReordering="true"
@@ -71,9 +73,9 @@
         <GridEditSettings AllowAdding="true"
         AllowEditing="true"
         AllowDeleting="true"
-        ShowDeleteConfirmDialog="true"
-        Mode="Syncfusion.Blazor.Grids.EditMode.Dialog"
-        Dialog="DialogParams">
+        ShowDeleteConfirmDialog="false"
+        Mode="EditMode.Dialog"
+        Dialog="dialogParams">
 
             <HeaderTemplate>
                 @{
@@ -108,7 +110,11 @@
             <GridColumn 
                 IsPrimaryKey="true" 
                 Field="@nameof(Water_CounterChangeModel.Id)" 
-                Visible="false">
+                Visible="false"
+                Width="0"
+                AllowSorting="false"
+                AllowFiltering="false"
+                AllowEditing="false">
             </GridColumn>
 
             <GridColumn Field=@nameof(Water_CounterChangeModel.Anbieter)
@@ -280,13 +286,13 @@
 
 @* Dialog*@
 <div>
-    <SfDialog Target="#target"
+    <SfDialog Target="body"
               Width="@dialogWidth"
               Height="@dialogHeight"
               AllowDragging="true"
               ShowCloseIcon="true"
               @bind-Visible="@DialogVisible"
-              AllowPrerender="true"
+              AllowPrerender="false"
               IsModal="true" 
               CssClass="MyCss">
 
@@ -294,7 +300,7 @@
             <Header>@Header</Header>
         </DialogTemplates>
 
-        <DialogPositionData X="@dialogXValue" Y="@dialogYValue"></DialogPositionData>
+        <DialogPositionData X="center" Y="center"></DialogPositionData>
         <DialogAnimationSettings Effect="@animationEffect"></DialogAnimationSettings>
 
         @if (showDialogButtons)
@@ -365,13 +371,11 @@
     #region Variablendeklaration
     bool spinnerVisibleProperty { get; set; } = false;
 
-    private DialogSettings DialogParams = new DialogSettings { MinHeight = "400px", Width = "450px" };
+    private DialogSettings dialogParams = new DialogSettings { MinHeight = "400px", Width = "450px" };
     public DialogEffect animationEffect = DialogEffect.Zoom;
     public bool DialogVisible { get; set; } = false;
     private bool showDialogButtons = false;
-    private string DialogText { get; set; } = string.Empty;
-    private string dialogXValue = "center";
-    private string dialogYValue = "center";
+    private string dialogText { get; set; } = string.Empty;
     private string dialogHeight = "130px";
     private string dialogWidth = "380px";
 
@@ -391,7 +395,7 @@
     GWSProcessor? gwsP;
     ApiResponse? apiResponse;
 
-    private SfGrid<Water_CounterChangeModel> SfDataGrid = new();
+    private SfGrid<Water_CounterChangeModel> sfDataGrid = new();
     private List<Water_SupplierDataModel>? supplierDataList = new();
 
     private Water_SupplierDataModel? supplierData = new();
@@ -518,7 +522,7 @@
             {
                 OpenDialog("Keine Wasser-Zählerwechsel vorhanden!", "60px", "380px", false);
             }
-            SfDataGrid?.Refresh();
+            sfDataGrid?.Refresh();
 
             // Spinner
             await Task.Delay(200);
@@ -560,7 +564,7 @@
 
             excelExportProperties.Theme = Theme;
 
-            await SfDataGrid.ExportToExcelAsync(excelExportProperties);
+            await sfDataGrid.ExportToExcelAsync(excelExportProperties);
         }
         else if (args.Item.Id.Contains("_pdfexport"))
         {
@@ -599,7 +603,7 @@
             pdfExportProperties.Header = pdfHeader;
             pdfExportProperties.Footer = pdfFooter;
 
-            await SfDataGrid.ExportToPdfAsync(pdfExportProperties);
+            await sfDataGrid.ExportToPdfAsync(pdfExportProperties);
         }
         else if (args.Item.Id.Contains("XmlExport"))
         {
@@ -652,9 +656,9 @@
             }
 
             // Sicherer Aufruf über den Null-Conditional-Operator
-            if (SfDataGrid != null)
+            if (sfDataGrid != null)
             {
-                await SfDataGrid.Refresh();
+                await sfDataGrid.Refresh();
             }
         }
     }
@@ -670,7 +674,7 @@
         DialogVisible = false;
         // Zählerwechsel anbieterabhängig auslesen
         counterChangeList = await gwsP!.LoadDataAsync<Water_CounterChangeModel>(urlCounterChangeSupplier + Convert.ToString(supplierData!.Id));
-        SfDataGrid?.Refresh();
+        sfDataGrid?.Refresh();
     }
     #endregion
 
@@ -715,7 +719,7 @@
                 counterChangeList = await gwsP!.LoadDataAsync<Water_CounterChangeModel>(urlCounterChangeSupplier + Convert.ToString(supplierData!.Id));
             }
         }
-        SfDataGrid?.Refresh();
+        sfDataGrid?.Refresh();
     }
     #endregion
 

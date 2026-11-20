@@ -21,44 +21,80 @@
     </div>
 </div>
 
-@if (efficiencyList != null)
+@if (efficiencyList != null && efficiencyList.Count > 0)
 {
-    <div class="control-section" id="target" align="center">
-        <SfGrid ID="Grid" @ref="sfDataGrid" DataSource="@efficiencyList"
-        AllowPaging="true"
-        AllowFiltering="true"
-        AllowReordering="true"
-        AllowResizing="true"
-        AllowExcelExport="true"
-        AllowPdfExport="true"
-        EnableHover="true"
-        AllowTextWrap="true"
-        AllowSelection="true"
-        AllowSorting="true"
-        Height="100%" Width="100%"
-        Toolbar=@toolbar
-        EnableStickyHeader="true">
+    @* Grid-Container mit erhöhtem Hover-Effekt: elevated-grid-container *@
+    <div class="control-section elevated-grid-container" id="target" align="center">
+        <SfGrid ID="Grid" CssClass="elevated-grid" @ref="sfDataGrid" DataSource="@efficiencyList"
+                AllowPaging="true"
+                AllowFiltering="true"
+                AllowReordering="true"
+                AllowResizing="true"
+                AllowExcelExport="true"
+                AllowPdfExport="true"
+                AllowTextWrap="true"
+                AllowSelection="true"
+                AllowSorting="true"
+                Height="100%" 
+                Width="100%"
+                Toolbar=@toolbar
+                AutoFit="true"
+                EnableStickyHeader="true">
 
-            <GridEditSettings AllowAdding="true"
-            AllowEditing="true"
-            AllowDeleting="true"
-            ShowDeleteConfirmDialog="true"
-            Mode="EditMode.Dialog"
-            Dialog="dialogParams">
+            <GridEditSettings 
+                AllowAdding="true" 
+                AllowEditing="true" 
+                AllowDeleting="true" 
+                ShowDeleteConfirmDialog="false" 
+                Mode="EditMode.Dialog" 
+                Dialog="dialogParams">
 
                 <HeaderTemplate>
-                @{
-                        var DialogHeader = GetDialogHeader((context as EfficiencyModel));
-                        <span>@DialogHeader</span>
+                    @{
+                        var dialogHeader = GetDialogHeader((context as EfficiencyModel)!);
+                        <span>@dialogHeader</span>
                     }
                 </HeaderTemplate>
+
+                <Template>
+                    @{
+                        var efficiencyData = (context as EfficiencyModel)!;
+                    }
+        
+                    <div style="padding: 10px;">
+                        <div class="form-row" style="margin-bottom: 15px;">
+                            <div class="form-group col-md-12">
+                                <SfTextBox @bind-Value="efficiencyData.Energieklasse" FloatLabelType="FloatLabelType.Always" Placeholder="Energieklasse"></SfTextBox>
+                            </div>
+                        </div>
+            
+                        <div class="form-row" style="margin-bottom: 15px;">
+                            <div class="form-group col-md-12">
+                                <SfNumericTextBox TValue="int?" @bind-Value="efficiencyData.Energiebedarf" FloatLabelType="FloatLabelType.Always" Placeholder="Energiebedarf" Format="##0"></SfNumericTextBox>
+                            </div>
+                        </div>
+
+                        <div class="form-row" style="margin-bottom: 15px;">
+                            <div class="form-group col-md-12">
+                                <SfTextBox @bind-Value="efficiencyData.Farbcode" FloatLabelType="FloatLabelType.Always" Placeholder="Farbcode"></SfTextBox>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group col-md-12">
+                                <SfTextBox @bind-Value="efficiencyData.Bemerkung" FloatLabelType="FloatLabelType.Always" Placeholder="Bemerkung"></SfTextBox>
+                            </div>
+                        </div>
+                    </div>
+                </Template>
             </GridEditSettings>
 
-            <GridEvents OnToolbarClick="ToolbarBtnClickHandler"
-            QueryCellInfo="CustomizeCell"
-            RowCreating="RowCreatingHandler"
-            OnActionComplete="ActionCompleteHandler"
-            TValue="EfficiencyModel">
+            <GridEvents 
+                OnToolbarClick="ToolbarBtnClickHandler"
+                QueryCellInfo="CustomizeCell"
+                RowCreating="RowCreatingHandler"
+                OnActionBegin="ActionBeginHandler"
+                TValue="EfficiencyModel">
             </GridEvents>
 
             <GridPageSettings PageSize="20" PageSizes="true"></GridPageSettings>
@@ -68,62 +104,62 @@
             <GridColumns>
                 @* der Primärschlüssel muss unbedingt angegeben werden auch wenn er nicht sichtbar ist *@
                 <GridColumn 
-                Field="@nameof(EfficiencyModel.Id)" 
-                IsPrimaryKey="true" 
-                Visible="false">
+                    Field="@nameof(EfficiencyModel.Id)" 
+                    IsPrimaryKey="true" 
+                    Visible="false">
                 </GridColumn>
 
                 <GridColumn Field=@nameof(EfficiencyModel.Energieklasse)
-                Width="150"
-                HeaderText="Energieklasse">
+                    Width="150"
+                    HeaderText="Energieklasse">
 
-                    <HeaderTemplate>
-                        <SfTooltip Content="@GetTooltipContent("EK")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
-                            <span><b>Energieklasse</b></span>
-                        </SfTooltip>
-                    </HeaderTemplate>
+                        <HeaderTemplate>
+                            <SfTooltip Content="@GetTooltipContent("EK")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                                <span><b>Energieklasse</b></span>
+                            </SfTooltip>
+                        </HeaderTemplate>
                 </GridColumn>
 
                 <GridColumn Field=@nameof(EfficiencyModel.Energiebedarf)
-                Width="150"
-                HeaderText="Energiebedarf">
+                    Width="150"
+                    HeaderText="Energiebedarf">
 
-                    <EditTemplate>
-                        <SfNumericTextBox Placeholder="Energiebedarf"
-                        FloatLabelType="FloatLabelType.Always"
-                        TValue="int?"
-                        @bind-Value="@((context as EfficiencyModel)!.Energiebedarf)"
-                        Format="# kWh/m2*a">
-                        </SfNumericTextBox>
-                    </EditTemplate>
+                        <EditTemplate>
+                            <SfNumericTextBox Placeholder="Energiebedarf"
+                            FloatLabelType="FloatLabelType.Always"
+                            TValue="int?"
+                            @bind-Value="@((context as EfficiencyModel)!.Energiebedarf)"
+                            Format="# kWh/m2*a">
+                            </SfNumericTextBox>
+                        </EditTemplate>
 
-                    <HeaderTemplate>
-                        <SfTooltip Content="@GetTooltipContent("EB")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
-                            <span><b>Energiebedarf</b></span>
-                        </SfTooltip>
-                    </HeaderTemplate>
+                        <HeaderTemplate>
+                            <SfTooltip Content="@GetTooltipContent("EB")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                                <span><b>Energiebedarf</b></span>
+                            </SfTooltip>
+                        </HeaderTemplate>
                 </GridColumn>
 
                 <GridColumn Field=@nameof(EfficiencyModel.Farbcode)
-                Width="150"
-                HeaderText="Farbcode">
+                    Width="150"
+                    HeaderText="Farbcode">
 
-                    <HeaderTemplate>
-                        <SfTooltip Content="@GetTooltipContent("FC")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
-                            <span><b>Farbcode</b></span>
-                        </SfTooltip>
-                    </HeaderTemplate>
+                        <HeaderTemplate>
+                            <SfTooltip Content="@GetTooltipContent("FC")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                                <span><b>Farbcode</b></span>
+                            </SfTooltip>
+                        </HeaderTemplate>
                 </GridColumn>
 
                 <GridColumn Field=@nameof(EfficiencyModel.Bemerkung)
-                Width="300"
-                HeaderText="Bemerkung">
+                    Width="300"
+                    HeaderText="Bemerkung">
 
-                    <HeaderTemplate>
-                        <SfTooltip Content="@GetTooltipContent("BM")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
-                            <span><b>Bemerkung</b></span>
-                        </SfTooltip>
-                    </HeaderTemplate>
+                        <HeaderTemplate>
+                            <SfTooltip Content="@GetTooltipContent("BM")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
+                                <span><b>Bemerkung</b></span>
+                            </SfTooltip>
+                        </HeaderTemplate>
                 </GridColumn>
 
                 <GridColumn HeaderText="Funktion" Width="20%" MinWidth="110">
@@ -178,21 +214,22 @@ else
 
 @* Dialog*@
 <div>
-    <SfDialog Target="#target"
-    Width=@dialogWidth
-    Height=@dialogHeight
-    AllowDragging="true"
-    ShowCloseIcon=" true"
-    @bind-Visible="DialogVisible"
-    AllowPrerender="true"
-    IsModal="true"
-    CssClass="MyCss">
+    <SfDialog 
+            Target="body"
+            Width=@dialogWidth
+            Height=@dialogHeight
+            AllowDragging="true"
+            ShowCloseIcon=" true"
+            @bind-Visible="DialogVisible"
+            AllowPrerender="false"
+            IsModal="true"
+            CssClass="MyCss">
 
         <DialogTemplates>
             <Header>@header</Header>
         </DialogTemplates>
 
-        <DialogPositionData X="@dialogXValue" Y="@dialogYValue"></DialogPositionData>
+        <DialogPositionData X="center" Y="center"></DialogPositionData>
         <DialogAnimationSettings Effect="@animationEffect"></DialogAnimationSettings>
 
         @if (showDialogButtons)
@@ -226,45 +263,69 @@ else
             display: block !important; /* Sicherstellen, dass es nicht auf hidden steht */
         }
 
-    .color-cl-a-plus {
-    background-color: @(classColors[0]);
+    /* Sorgt für eine flüssige Animation, wenn die Auswahl aufgehoben wird */ 
+    .e-grid .e-row .e-rowcell {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
 
-    .color-cl-a {
-    background-color: @(classColors[1]);
+    /* 1. Basis-Farben für die Syncfusion Grid-Zellen */
+    .e-grid .e-rowcell.color-cl-a-plus {
+        background-color: #006400 !important;
+        color: white !important;
     }
 
-    .color-cl-b {
-    background-color: @(classColors[2]);
+    .e-grid .e-rowcell.color-cl-a {
+        background-color: #00e600 !important;
+        color: black !important;
     }
 
-    .color-cl-c {
-    background-color: @(classColors[3]);
+    .e-grid .e-rowcell.color-cl-b {
+        background-color: #ace600 !important;
+        color: black !important;
     }
 
-    .color-cl-d {
-    background-color: @(classColors[4]);
+    .e-grid .e-rowcell.color-cl-c {
+        background-color: #e6e600 !important;
+        color: black !important;
     }
 
-    .color-cl-e {
-    background-color: @(classColors[5]);
+    .e-grid .e-rowcell.color-cl-d {
+        background-color: #e6ac00 !important;
+        color: black !important;
     }
 
-    .color-cl-f {
-    background-color: @(classColors[6]);
+    .e-grid .e-rowcell.color-cl-e {
+        background-color: #e67300 !important;
+        color: white !important;
     }
 
-    .color-cl-g {
-    background-color: @(classColors[7]);
+    .e-grid .e-rowcell.color-cl-f {
+        background-color: #e63900 !important;
+        color: white !important;
     }
 
-    .color-cl-h {
-    background-color: @(classColors[8]);
+    .e-grid .e-rowcell.color-cl-g {
+        background-color: #e60000 !important;
+        color: white !important;
     }
 
-    .e-dlg-overlay {
-    background-color: slategray;
-    opacity: 0.6;
+    .e-grid .e-rowcell.color-cl-h {
+        background-color: #ff0000 !important;
+        color: white !important;
+    }
+
+    /* 2. Hover-Effekt: Verhindert das Standard-Grau und dunkelt die Zelle stattdessen leicht ab */
+    .e-grid .e-row:hover .e-rowcell.color-cl-a-plus,
+    .e-grid .e-row:hover .e-rowcell.color-cl-a,
+    .e-grid .e-row:hover .e-rowcell.color-cl-b,
+    .e-grid .e-row:hover .e-rowcell.color-cl-c,
+    .e-grid .e-row:hover .e-rowcell.color-cl-d,
+    .e-grid .e-row:hover .e-rowcell.color-cl-e,
+    .e-grid .e-row:hover .e-rowcell.color-cl-f,
+    .e-grid .e-row:hover .e-rowcell.color-cl-g,
+    .e-grid .e-row:hover .e-rowcell.color-cl-h {
+        filter: brightness(85%) !important; /* Macht die Farbe beim Hovern um 15% dunkler */
+        transition: filter 0.15s ease; /* Macht das Abdunkeln geschmeidig */
     }
 
     /* Dialog Editing*/
@@ -324,27 +385,26 @@ else
     .e-grid .e-dlg-header {
     background-color: red;
     }
+     
 </style>
 
 @code
 {
     #region Variablendeklaration
-    private string[] classColors = new string[9];
-
+    //private string[] classColors = new string[9];
+    private List<string> classColors = new List<string>();
     private bool save = false;
     private bool update = false;
 
     private bool spinnerVisibleProperty { get; set; } = false;
 
-    private DialogSettings dialogParams = new DialogSettings { MinHeight = "400px", Width = "600px" };
+    private DialogSettings dialogParams = new DialogSettings { MinHeight = "400px", Width = "400px" };
     public DialogEffect animationEffect = DialogEffect.Zoom;
     public bool DialogVisible { get; set; } = false;
     private bool showDialogButtons = false;
     private string dialogText { get; set; } = string.Empty;
-    private string dialogXValue = "center";
-    private string dialogYValue = "center";
     private string dialogHeight = "130px";
-    private string dialogWidth = "380px";
+    private string dialogWidth = "220px";
 
     public int? DropDownValueSupplier { get; set; } = 0;
 
@@ -357,6 +417,9 @@ else
     ApiResponse? apiResponse;
 
     private SfGrid<EfficiencyModel> sfDataGrid = new();
+
+    private enum GridOperation { None, Add, Edit, Delete }
+    private GridOperation currentOperation = GridOperation.None;
 
     private EfficiencyModel? efficiencyData = new();
     private List<EfficiencyModel>? efficiencyList = null;
@@ -373,6 +436,23 @@ else
         { "FC", "Farbcode (Farb-Hex-Code)" },
         { "BM", "Bemerkung" }
     };
+
+    // Einmalig als statisches/Readonly-Feld in der Klasse definieren
+    private static readonly Dictionary<string, string[]> EnergieKlassenMapping = new(StringComparer.OrdinalIgnoreCase)
+{
+    { "A+", new[] { "color-cl-a-plus" } },
+    { "A",  new[] { "color-cl-a" } },
+    { "B",  new[] { "color-cl-b" } },
+    { "C",  new[] { "color-cl-c" } },
+    { "D",  new[] { "color-cl-d" } },
+    { "E",  new[] { "color-cl-e" } },
+    { "F",  new[] { "color-cl-f" } },
+    { "G",  new[] { "color-cl-g" } },
+    { "H",  new[] { "color-cl-h" } }
+};
+
+    // Fallback-Array, um auch hier "new[]" in der Schleife zu verhindern
+    private static readonly string[] FallbackEnergieKlasse = new[] { "color-cl-h" };
 
     // PDF-Export Properties
     public List<PdfHeaderFooterContent> HeaderContent = new List<PdfHeaderFooterContent>
@@ -393,43 +473,43 @@ else
 
     #region OnInitializedAsync
     /// <summary>
-    /// OnInitializedAsync
+    /// Initialisiert die Komponente, lädt die Einstellungen und die Effizienzdaten von der API. 
+    ///  Zeigt einen Spinner während des Ladevorgangs an und behandelt Fehlerfälle.
     /// </summary>
     /// <returns></returns>
     protected override async Task OnInitializedAsync()
     {
-        // Spinner
         this.spinnerVisibleProperty = true;
 
         try
         {
-            // MyAppSettings.json auslesen und letzten gespeicherten Anbieter auslesen
+            // 1. Einstellungen auslesen
             settings = await GetSetMyAppConfig.GetMyAppSettings.ReadSettingsAsync(myAppSettings);
             if (settings == null) return;
 
             gwsP = new GWSProcessor(myHttpClient, settings!.GWSUri);
-            // Effizienzdaten auslesen
+
+            // 2. Effizienzdaten auslesen
             efficiencyList = await gwsP.LoadDataAsync<EfficiencyModel>(urlEfficiency);
 
+            // 3. Daten verarbeiten (Prüfung und Zuweisung in einem Schritt via LINQ)
             if (efficiencyList != null && efficiencyList.Any())
             {
-                for (int i = 0; i < efficiencyList?.Count; i++)
-                {
-                    classColors[i] = efficiencyList[i].Farbcode!;
-                }
+                // Erstellt direkt eine dynamische Liste der Farbcodes
+                classColors = efficiencyList.Select(e => e.Farbcode!).ToList();
             }
             else
             {
-                OpenDialog("Keine Effizienzklassen vorhanden!", "50px", false);
+                OpenDialog("Keine Effizienzklassen vorhanden!", "5");
             }
         }
         catch (Exception ex)
         {
-            throw new Exception("Es konnten keine Effizienzklassen geladen werden", ex);
+            // Tipp: Loggen Sie 'ex' hier, anstatt die originale Fehlermeldung zu verschlucken!
+            throw new Exception("Es konnten keine Effizienzklassen...", ex);
         }
         finally
         {
-            // Spinner GARANTIERT ausschalten (künstliches Delay entfernt)
             spinnerVisibleProperty = false;
         }
     }
@@ -437,11 +517,12 @@ else
 
     #region ToolbarBtnClickHandler
     /// <summary>
-    /// ToolbarBtnClickHandler
+    /// Toolbar-Button-Klick-Handler für das Grid. 
+    /// Behandelt Excel- und PDF-Exporte, zeigt einen Spinner während des Exports an und blendet bestimmte Spalten temporär aus.
     ///
     /// </summary>
     /// <param name="args"></param>
-   
+
     private bool IsExporting { get; set; }
 
     public async Task ToolbarBtnClickHandler(Syncfusion.Blazor.Navigations.ClickEventArgs args)
@@ -532,242 +613,203 @@ else
     }
     #endregion
 
-    #region ActionCompleteHandler
-    /// <summary>
-    /// ActionCompleteHandler
-    /// </summary>
-    /// <param name="args"></param>
-    public async Task ActionCompleteHandler(ActionEventArgs<EfficiencyModel> args)
-    {
-        if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Save))
-        {
-            if (args.Action == "Add")
-            {
-                save = true;
-                efficiencyData = args.Data;
-
-                OpenDialog("Datensatz speichern ?", "130px", true);
-            }
-            else if (args.Action == "Edit")
-            {
-                update = true;
-                efficiencyData = args.Data;
-
-                OpenDialog("Datensatz ändern ?", "130px", true);
-            }
-        }
-        else if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Delete))
-        {
-            if (args.Data!.Id == 0)
-            {
-                efficiencyList = await gwsP!.LoadDataAsync<EfficiencyModel>(urlEfficiency);
-            }
-            else
-            {
-                efficiencyData = await gwsP!.DeleteDataAsync<EfficiencyModel>(urlEfficiency, Convert.ToString(args.Data.Id));
-                ShowToastMessage(true, "Datensatz gelöscht!");
-            }
-            sfDataGrid?.Refresh();
-        }
-    }
-    #endregion
-
     #region CancelClick
     /// <summary>
-    /// CancelClick
+    /// Cancel-Button im Dialog wurde geklickt. Der Dialog wird geschlossen und der aktuelle Operationstyp zurückgesetzt.
     /// </summary>
     private async void CancelClick()
     {
+        // Schließt den Dialog sofort visuell
         DialogVisible = false;
-        efficiencyList = await gwsP!.LoadDataAsync<EfficiencyModel>(urlEfficiency);  // Daten neu laden
-        sfDataGrid?.Refresh();
+
+        // Setzt den aktuellen Operationstyp zurück, um sicherzustellen, dass keine Aktion mehr aussteht
+        currentOperation = GridOperation.None;
+
+        // DIE RETTUNG: Daten frisch von der API laden, um die UI-Änderungen zu verwerfen
+        if (gwsP is not null && efficiencyData is not null)
+        {
+            // Nutzen Sie hier die URL-Variable, die Sie auch beim initialen Laden verwenden (z.B. urlCounter)
+            // Lädt gezielt die Effizienzdaten
+            efficiencyList = await gwsP.LoadDataAsync<EfficiencyModel>(urlEfficiency);
+        }
+
+        // Grid zwingen, die frischen Daten anzuzeigen
+        if (sfDataGrid is not null)
+        {
+            await sfDataGrid.Refresh();
+        }
     }
     #endregion
 
     #region YesClick
     /// <summary>
-    /// YesClick
+    /// Ja-Button im Dialog wurde geklickt. Je nach aktuellem Operationstyp (Add, Edit, Delete) wird die entsprechende API-Methode aufgerufen.
     /// </summary>
     private async void YesClick()
     {
         DialogVisible = false;
 
-        if (save) // Datensatz speichern
+        if (gwsP is null || efficiencyData is null || currentOperation == GridOperation.None) return;
+
+        try
         {
-            if (efficiencyData != null)
+            bool isSuccess = false;
+            string successMessage = string.Empty;
+            string defaultErrorMessage = "Aktion konnte nicht ausgeführt werden.";
+
+            switch (currentOperation)
             {
-                save = false;
+                case GridOperation.Add:
+                    apiResponse = await gwsP.PostDataAsync<EfficiencyModel>(urlEfficiency, efficiencyData);
+                    isSuccess = apiResponse?.MyHttpStatusCode == HttpStatusCode.Created;
+                    successMessage = "Datensatz erfolgreich gespeichert!";
+                    defaultErrorMessage = "Datensatz konnte nicht gespeichert werden.";
+                    break;
 
-                apiResponse = await gwsP!.PostDataAsync<EfficiencyModel>(urlEfficiency, efficiencyData);  // POST
+                case GridOperation.Edit:
+                    string url = $"{urlEfficiency.TrimEnd('/')}/{efficiencyData.Id}";
+                    apiResponse = await gwsP.UpdateDataAsync<EfficiencyModel>(url, efficiencyData);
+                    isSuccess = apiResponse?.MyHttpStatusCode == HttpStatusCode.NoContent;
+                    successMessage = "Datensatz erfolgreich aktualisiert!";
+                    defaultErrorMessage = "Datensatz konnte nicht aktualisiert werden.";
+                    break;
 
-                if (apiResponse.MyHttpStatusCode == HttpStatusCode.Created)
+                case GridOperation.Delete:
+                    string idToDelete = efficiencyData.Id.ToString();
+                    var deletedData = await gwsP.DeleteDataAsync<EfficiencyModel>(urlEfficiency, idToDelete);
+
+                    // Falls DeleteDataAsync intern doch die apiResponse befüllt,
+                    // wäre es ideal, diese hier zuzuweisen. Wenn nicht, reicht das:
+                    isSuccess = deletedData is not null;
+                    successMessage = "Datensatz erfolgreich gelöscht!";
+                    defaultErrorMessage = "Datensatz konnte nicht gelöscht werden.";
+                    break;
+            }
+
+            if (isSuccess)
+            {
+                ShowToast(true, successMessage);
+                efficiencyList = await gwsP.LoadDataAsync<EfficiencyModel>(urlEfficiency);
+            }
+            else
+            {
+                // Dynamische Fehlerursache aus MyResponseString ermitteln
+                string errorMessage = defaultErrorMessage;
+
+                if (apiResponse is not null && !string.IsNullOrWhiteSpace(apiResponse.MyResponseString))
                 {
-                    ShowToastMessage(true, "Datensatz gespeichert (created)!");
-                    efficiencyList = await gwsP!.LoadDataAsync<EfficiencyModel>(urlEfficiency);  // Daten neu laden
+                    // Wenn die API direkt Text zurückgibt, nutzen wir ihn.
+                    // Falls es JSON ist (z.B. bei Validierungsfehlern), könnte man es hier parsen.
+                    errorMessage = $"Fehler ({apiResponse.MyHttpStatusCode}): {apiResponse.MyResponseString}";
                 }
-                else
-                {
-                    ShowToastMessage(false, "Datensatz nicht gespeichert!");
-                }
+
+                ShowToast(false, errorMessage);
+            }
+
+            if (sfDataGrid is not null)
+            {
+                await sfDataGrid.Refresh();
             }
         }
-        else if (update) // Datensatz updaten
+        catch (Exception ex)
         {
-            update = false;
-
-            if (efficiencyData != null)
-            {
-                string url = urlEfficiency + Convert.ToString(efficiencyData.Id);
-
-                apiResponse = await gwsP!.UpdateDataAsync<EfficiencyModel>(url, efficiencyData);  // Put
-                ShowToastMessage(true, "Datensatz aktualisiert!");
-            }
+            ShowToast(false, $"Netzwerkfehler: {ex.Message}");
         }
-        sfDataGrid?.Refresh();
+        finally
+        {
+            currentOperation = GridOperation.None;
+        }
     }
     #endregion
 
     #region CustomizeCell
     /// <summary>
-    /// CustomizeCell: set cell color
+    /// Dynamische Anpassung der Zellen basierend auf der Energieklasse. 
+    /// Jede Energieklasse erhält eine spezifische CSS-Klasse, die die Hintergrundfarbe der Zelle bestimmt
     /// </summary>
     /// <param name="args"></param>
     private void CustomizeCell(QueryCellInfoEventArgs<EfficiencyModel> args)
     {
-        if (args.Column.Field == "Energieklasse")
-        {
-            switch (args.Data.Energieklasse)
-            {
-                case "A+":
-                    args.Cell.AddClass(new string[] { "color-cl-a-plus" });
-                    break;
+        // 1. Günstigste Prüfung zuerst: Stimmt das Feld überhaupt?
+        if (args?.Column?.Field != "Energieklasse") return;
 
-                case "A":
-                    args.Cell.AddClass(new string[] { "color-cl-a" });
-                    break;
+        // 2. Daten- und Zellprüfung (Kombinierte Null-Checks verhindern redundante Pfade)
+        if (args.Cell == null || args.Data?.Energieklasse == null) return;
 
-                case "B":
-                    args.Cell.AddClass(new string[] { "color-cl-b" });
-                    break;
+        // 3. Pattern Matching & Dictionary-Lookup direkt auswerten
+        var cssClass = EnergieKlassenMapping.TryGetValue(args.Data.Energieklasse, out var matchedClass)
+            ? matchedClass
+            : FallbackEnergieKlasse;
 
-                case "C":
-                    args.Cell.AddClass(new string[] { "color-cl-c" });
-                    break;
-
-                case "D":
-                    args.Cell.AddClass(new string[] { "color-cl-d" });
-                    break;
-
-                case "E":
-                    args.Cell.AddClass(new string[] { "color-cl-e" });
-                    break;
-
-                case "F":
-                    args.Cell.AddClass(new string[] { "color-cl-f" });
-                    break;
-
-                case "G":
-                    args.Cell.AddClass(new string[] { "color-cl-g" });
-                    break;
-
-                case "H":
-                    args.Cell.AddClass(new string[] { "color-cl-h" });
-                    break;
-
-                default:
-                    args.Cell.AddClass(new string[] { "color-cl-h" });
-                    break;
-            }
-        }
-    }
-    #endregion
-
-    #region ShowToastMessage
-    /// <summary>
-    /// ShowToastMessage
-    /// </summary>
-    /// <param name="success"></param>
-    /// <param name="message"></param>
-    /// <returns></returns>
-    private void ShowToastMessage(bool success, string message)
-    {
-        if (success)
-        {
-            ShowToast("Erfolg", message, "e-toast-success", "e-circle-check");
-        }
-        else
-        {
-            ShowToast("Fehler", message, "e-toast-danger", "e-circle-close");
-        }
+        args.Cell.AddClass(cssClass);
     }
     #endregion
 
     #region ShowToast
     /// <summary>
-    /// ShowToast
+    /// Anzeige einer Toast-Nachricht basierend auf dem Erfolg oder Misserfolg einer Aktion.
     /// </summary>
-    /// <param name="title"></param>
-    /// <param name="content"></param>
-    /// <param name="cssClass"></param>
-    /// <param name="icon"></param>
-    private void ShowToast(string title, string content, string cssClass, string icon)
+    /// <param name="success"></param>
+    /// <param name="message"></param>
+    /// <returns></returns>
+    private void ShowToast(bool success, string message)
     {
-        this.ToastService.Open(new ToastOption()
-            {
-                Title = title,
-                Content = content,
-                CssClass = cssClass,
-                Icon = icon,
-            });
+        var (title, cssClass, icon) = success switch
+        {
+            true => ("Erfolg", "e-toast-success", "e-circle-check"),
+            false => ("Fehler", "e-toast-danger", "e-circle-close")
+        };
+
+        this.ToastService.Open(new()
+        {
+            Title = title,
+            Content = message ?? string.Empty,
+            CssClass = cssClass,
+            Icon = icon,
+        });
     }
     #endregion
 
     #region GetTooltipContent
     /// <summary>
-    /// GetTooltipContent(string headerText)
+    /// Hole Tooltip-Inhalt basierend auf dem HeaderText
     /// </summary>
     /// <param name="headerText"></param>
     /// <returns></returns>
     // Method to get tooltip content dynamically based on HeaderText
     public string GetTooltipContent(string headerText)
     {
-        return ColumnDescriptions.ContainsKey(headerText) ? ColumnDescriptions[headerText] : "No description available.";
+        return ColumnDescriptions.ContainsKey(headerText) ? ColumnDescriptions[headerText] : "Keine Beschreibung verfügbar";
     }
     #endregion
 
     #region OpenDialog
     /// <summary>
-    /// CloseDialog
+    /// Dialog öffnen mit dynamischen Parametern
     /// </summary>
-    private void OpenDialog(string header, string height, bool showButtons)
+    private void OpenDialog(string header, string height = "auto", string width = "500px", bool showButtons = true)
     {
         this.header = header;
         dialogHeight = height;
+        dialogWidth = width;
         showDialogButtons = showButtons;
         this.DialogVisible = true;
+
+        // Erzwingt das Neu-Rendern der UI (wichtig in Blazor für Dialoge)
+        this.StateHasChanged();
     }
     #endregion
 
     #region GetDialogHeader
     /// <summary>
-    /// GetDialogHeader
+    /// Dialog-Header dynamisch setzen, je nachdem ob es sich um einen neuen Datensatz handelt oder einen bestehenden Datensatz
     /// </summary>
     /// <param name="GetDialogHeader"></param>
     /// <returns></returns>
-    public string GetDialogHeader(EfficiencyModel? eff)
-    {
-        if (eff != null)
-        {
-            return eff.Id == 0
-                ? "Energieeffizienz: neue Gruppe"
-                : "Effizienz: " + eff.Energieklasse;
-
-        }
-        else
-        {
-            return "keine Energieeffizienz vorhanden!";
-        }
-    }
+    public string GetDialogHeader(EfficiencyModel? eff) =>
+      eff is not { Id: > 0 }
+          ? "Energieeffizienz: neue Gruppe"
+          : $"Energieeffizienz: {eff.Energieklasse}";
     #endregion
 
     #region RowCreatingHandler
@@ -777,18 +819,72 @@ else
     /// <param name="args"></param>
     public void RowCreatingHandler(RowCreatingEventArgs<EfficiencyModel> args)
     {
-            // letzte Einträge holen und Variablen vorbesetzen
-            if (efficiencyList != null && efficiencyList.Any())
+        if (args?.Data == null) return;
+
+        // 3. Effizientes Holen des letzten Eintrags (Vermeidung von Any() + LastOrDefault())
+        if (efficiencyList != null)
+        {
+            var lastEfficiency = efficiencyList?.LastOrDefault();
+           
+            if (lastEfficiency != null)
             {
-                var lastEfficiency = efficiencyList?.LastOrDefault();
-                if (lastEfficiency != null)
-                {
-                    args.Data.Energieklasse = lastEfficiency.Energieklasse;
-                    args.Data.Energiebedarf = lastEfficiency.Energiebedarf;
-                    args.Data.Farbcode = lastEfficiency.Farbcode;
-                    args.Data.Bemerkung = lastEfficiency.Bemerkung;
-                }
+                args.Data.Energieklasse = lastEfficiency.Energieklasse;
+                args.Data.Energiebedarf = lastEfficiency.Energiebedarf;
+                args.Data.Farbcode = lastEfficiency.Farbcode;
+                args.Data.Bemerkung = lastEfficiency.Bemerkung;
             }
+        }
     }
     #endregion
+
+    #region ActionBeginHandler
+    /// <summary>
+    ///
+    /// </summary>
+    /// <param name="args"></param>
+    /// <returns></returns>
+    public async Task ActionBeginHandler(ActionEventArgs<EfficiencyModel> args)
+    {
+        if (args?.Data is null) return;
+
+        switch (args.RequestType)
+        {
+            case Syncfusion.Blazor.Grids.Action.Save:
+                args.Cancel = true;
+                efficiencyData = args.Data;
+
+                if (args.Action == "Add")
+                {
+                    currentOperation = GridOperation.Add;
+                    OpenDialog("Datensatz speichern ?", "130px", "220px", true);
+                }
+                else if (args.Action == "Edit")
+                {
+                    currentOperation = GridOperation.Edit;
+                    OpenDialog("Datensatz ändern ?", "130px", "220px", true);
+                }
+                break;
+
+            case Syncfusion.Blazor.Grids.Action.Delete:
+                // 1. Automatische Grid-Löschung stoppen, damit wir die Kontrolle behalten
+                args.Cancel = true;
+
+                // Sicherheitshalber prüfen, ob eine gültige ID vorliegt
+                if (args.Data.Id <= 0)
+                {
+                    ShowToast(false, "Ungültiger Datensatz. Löschen nicht möglich!");
+                    return;
+                }
+
+                // 2. Daten für die 'YesClick'-Methode zwischenspeichern
+                efficiencyData = args.Data;
+                currentOperation = GridOperation.Delete;
+
+                // 3. Bestätigungsdialog für das Löschen öffnen
+                OpenDialog("Datensatz wirklich löschen ?", "130px", "300px", true);
+                break;
+        }
+    }
+    #endregion
+
 }

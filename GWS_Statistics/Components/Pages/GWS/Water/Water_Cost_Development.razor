@@ -198,19 +198,19 @@
 
         @* Dialog*@
         <div>
-            <SfDialog Target="#target"
+            <SfDialog Target="body"
                       Width="@dialogWidth"
                       Height=@dialogHeight
                       AllowDragging="true"
                       ShowCloseIcon=" true"
                       @bind-Visible="DialogVisible"
-                      AllowPrerender="true"
+                      AllowPrerender="false"
                       IsModal="true">
 
                 <DialogTemplates>
                     <Header>@Header</Header>
                 </DialogTemplates>
-                <DialogPositionData X="@dialogXValue" Y="@dialogYValue"></DialogPositionData>
+                <DialogPositionData X="center" Y="center"></DialogPositionData>
                 <DialogAnimationSettings Effect="@animationEffect"></DialogAnimationSettings>
             </SfDialog>
         </div>
@@ -273,8 +273,6 @@
     bool DialogVisible { get; set; } = false;
     private bool showDialogButtons = false;
     private string DialogText { get; set; } = string.Empty;
-    private string dialogXValue = "center";
-    private string dialogYValue = "center";
     private string dialogHeight = "130px";
     private string dialogWidth = "380px";
     #endregion

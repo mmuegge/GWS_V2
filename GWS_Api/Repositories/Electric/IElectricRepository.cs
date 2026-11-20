@@ -6,48 +6,48 @@ namespace GWS_Api.Repositories.Electric
     public interface IElectricRepository
     {
         #region GET
-        Task<IEnumerable<ElectricTarif?>> GetSuppliersAsync();
-        Task<IEnumerable<ElectricCounter?>> GetCountersAsync();
-        Task<ElectricTarif?> GetSupplierByIdAsync(int supplierId);
-        Task<IEnumerable<ElectricCounter?>> GetCountersBySupplierAsync(int supplierId);
-        Task<ElectricCounter?> GetCounterByDateAsync(DateTime date);
-        Task<ElectricCounter?> GetCounterByIdAsync(int counterId);
-        Task<IEnumerable<ElectricPayment?>> GetPaymentsAsync();
-        Task<IEnumerable<ElectricPayment?>> GetPaymentsBySupplierAsync(int supplierId);
-        Task<ElectricPayment?> GetPaymentByIdAsync(int paymentId);
-        Task<IEnumerable<ElectricCost?>> GetCostsAsync();
-        Task<IEnumerable<ElectricCost?>> GetCostsBySupplierIdAsync(int supplierId);
-        Task<ElectricCost?> GetCostByIdAsync(int costId);
-        Task<IEnumerable<PaymentMethod?>> GetPaymentMethodsAsync();
-        Task<IEnumerable<ElectricCounterChange?>> GetCounterChangesAsync();
-        Task<ElectricCounterChange?> GetCounterChangeByIdAsync(int counterChangeId);
-        Task<IEnumerable<ElectricCounterChange?>> GetCounterChangesBySupplierAsync(int supplierId);
+        Task<IEnumerable<ElectricTarif>> GetSuppliersAsync(CancellationToken cancellationToken = default);
+        Task<IEnumerable<ElectricCounter>> GetCountersAsync(CancellationToken cancellationToken = default);
+        Task<ElectricTarif?> GetSupplierByIdAsync(int supplierId, CancellationToken cancellationToken = default);
+        Task<IEnumerable<ElectricCounter>> GetCountersBySupplierAsync(int supplierId, CancellationToken cancellationToken = default);
+        Task<ElectricCounter?> GetCounterByDateAsync(DateTime date, CancellationToken cancellationToken = default);
+        Task<ElectricCounter?> GetCounterByIdAsync(int counterId, CancellationToken cancellationToken = default);
+        Task<IEnumerable<ElectricPayment>> GetPaymentsAsync(CancellationToken cancellationToken = default);
+        Task<IEnumerable<ElectricPayment>> GetPaymentsBySupplierAsync(int supplierId, CancellationToken cancellationToken = default);
+        Task<ElectricPayment?> GetPaymentByIdAsync(int paymentId, CancellationToken cancellationToken = default);
+        Task<IEnumerable<ElectricCost>> GetCostsAsync(CancellationToken cancellationToken = default);
+        Task<IEnumerable<ElectricCost>> GetCostsBySupplierIdAsync(int supplierId, CancellationToken cancellationToken = default);
+        Task<ElectricCost?> GetCostByIdAsync(int costId, CancellationToken cancellationToken = default);
+        Task<IEnumerable<PaymentMethod>> GetPaymentMethodsAsync(CancellationToken cancellationToken = default);
+        Task<IEnumerable<ElectricCounterChange>> GetCounterChangesAsync(CancellationToken cancellationToken = default);
+        Task<ElectricCounterChange?> GetCounterChangeByIdAsync(int counterChangeId, CancellationToken cancellationToken = default);
+        Task<IEnumerable<ElectricCounterChange>> GetCounterChangesBySupplierAsync(int supplierId, CancellationToken cancellationToken = default);
         #endregion
 
         #region ADD
-        Task<ElectricTarif?> AddSupplierAsync(ElectricTarif supplier);
-        Task<ElectricCounter?> AddCounterAsync(ElectricCounter zaehlerstand);
-        Task<ElectricPayment?> AddPaymentAsync(ElectricPayment payment);
-        Task<ElectricCost?> AddCostAsync(ElectricCost costs);
-        Task<ElectricCounterChange?> AddCounterChangeAsync(ElectricCounterChange counterChange);
+        Task<ElectricTarif> AddSupplierAsync(ElectricTarif supplier, CancellationToken cancellationToken = default);
+        Task<ElectricCounter?> AddCounterAsync(ElectricCounter zaehlerstand, CancellationToken cancellationToken = default);
+        Task<ElectricPayment> AddPaymentAsync(ElectricPayment payment, CancellationToken cancellationToken = default);
+        Task<ElectricCost> AddCostAsync(ElectricCost cost, CancellationToken cancellationToken = default);
+        Task<ElectricCounterChange> AddCounterChangeAsync(ElectricCounterChange counterChange, CancellationToken cancellationToken = default);
         #endregion
 
         #region DELETE
-        Task DeleteSupplierAsync(ElectricTarif supplier);
-        Task DeleteCounterAsync(ElectricCounter zaehlerstand);
-        Task DeletePaymentAsync(ElectricPayment payment);
-        Task DeleteCostAsync(ElectricCost cost);
-        Task DeleteCounterChangeAsync(ElectricCounterChange counterChange);
+        Task DeleteSupplierAsync(ElectricTarif supplier, CancellationToken cancellationToken = default);
+        Task DeleteCounterAsync(ElectricCounter zaehlerstand, CancellationToken cancellationToken = default);
+        Task DeletePaymentAsync(ElectricPayment payment, CancellationToken cancellationToken = default);
+        Task DeleteCostAsync(ElectricCost cost, CancellationToken cancellationToken = default);
+        Task DeleteCounterChangeAsync(ElectricCounterChange counterChange, CancellationToken cancellationToken = default);
         #endregion
 
         #region UPDATE
-        Task<ElectricTarif?> UpdateSupplierAsync(ElectricTarif supplier);
-        Task<ElectricCounter?> UpdateCounterAsync(ElectricCounter zaehlerstand);
-        Task<ElectricCost?> UpdateCostAsync(ElectricCost costs);
-        Task<ElectricPayment?> UpdatePaymentAsync(ElectricPayment payment);
-        Task<ElectricCounterChange?> UpdateCounterChangeAsync(ElectricCounterChange counterChange);
+        Task<ElectricTarif?> UpdateSupplierAsync(ElectricTarif supplier, CancellationToken cancellationToken = default);
+        Task<ElectricCounter?> UpdateCounterAsync(ElectricCounter zaehlerstand, CancellationToken cancellationToken = default);
+        Task<ElectricCost?> UpdateCostAsync(ElectricCost costs, CancellationToken cancellationToken = default);
+        Task<ElectricPayment?> UpdatePaymentAsync(ElectricPayment payment, CancellationToken cancellationToken = default);
+        Task<ElectricCounterChange?> UpdateCounterChangeAsync(ElectricCounterChange counterChange, CancellationToken cancellationToken = default);
         #endregion
 
-        Task<bool> SaveChangesAsync();
+        Task<bool> SaveChangesAsync(CancellationToken cancellationToken = default);
     }
 }

@@ -195,16 +195,43 @@ else
 
 @* Dialog*@
 <div>
-    <SfDialog Target="#target" Width="320px" Height=@dialogHeight AllowDragging="true" ShowCloseIcon=" true" @bind-Visible="DialogVisible" AllowPrerender="true" IsModal="true">
+    <SfDialog Target="body" 
+              Width="320px" 
+              Height=@dialogHeight 
+              AllowDragging="true" 
+              ShowCloseIcon=" true" 
+              @bind-Visible="DialogVisible" 
+              AllowPrerender="false" 
+              IsModal="true">
         <DialogTemplates>
             <Header>@Header</Header>
         </DialogTemplates>
-        <DialogPositionData X="@dialogXValue" Y="@dialogYValue"></DialogPositionData>
+        <DialogPositionData X="center" Y="center"></DialogPositionData>
         <DialogAnimationSettings Effect="@animationEffect"></DialogAnimationSettings>
     </SfDialog>
 </div>
 
 <style>
+    /* 1. Zwingt das gesamte Spinner-Container-System nach ganz vorne */
+    .e-spinner-pane.e-spin-overlay {
+        z-index: 99999 !important;
+        background-color: rgba(0, 0, 0, 0.4) !important; /* Macht den Hintergrund dunkel-transparent */
+    }
+
+        /* 2. Zwingt das Ladesymbol und den Text, sich abzuheben */
+        .e-spinner-pane.e-spin-overlay .e-spinner-inner {
+            z-index: 100000 !important;
+        }
+
+        /* 3. HIER WIRD DER TEXT ERZWUNGEN UND SCHÖN FORMATIERT */
+        .e-spinner-pane.e-spin-overlay .e-spin-label {
+            color: #FFFFFF !important; /* Reines Weiß, damit es auf dem dunklen Overlay lesbar ist */
+            font-weight: bold !important; /* Fett gedruckt */
+            font-size: 16px !important; /* Etwas größer für bessere Lesbarkeit */
+            margin-top: 10px !important; /* Abstand zum drehenden Rad */
+            display: block !important; /* Sicherstellen, dass es nicht auf hidden steht */
+        }
+
     .e-dlg-overlay {
         background-color: slategray;
         opacity: 0.6;
@@ -279,8 +306,6 @@ else
     bool DialogVisible { get; set; } = false;
     private bool showDialogButtons = false;
     private string DialogText { get; set; } = string.Empty;
-    private string dialogXValue = "center";
-    private string dialogYValue = "center";
     private string dialogHeight = "130px";
     private string dialogWidth = "380px";
     #endregion
@@ -381,8 +406,11 @@ else
             // Warten, bis beide Anfragen fertig sind
             await Task.WhenAll(supplierTask, paymentTask);
 
-            supplierList = supplierTask.Result;
-            paymentList = paymentTask.Result;
+            var rawSuppliers = await supplierTask;
+            supplierList = rawSuppliers?.OrderBy(s => s.Id).ToList() ?? [];
+
+            var rawPayments = await paymentTask;
+            paymentList = rawPayments?.OrderBy(p => p.ID_Anbieter).ToList() ?? [];
 
             // 3. Early Exits statt tief verschachtelter If-Statements
             if (supplierList == null || supplierList.Count == 0)

@@ -289,16 +289,43 @@ else
 
 @* Dialog*@
 <div>
-    <SfDialog Target="#target" Width="@dialogWidth" Height="@dialogHeight" AllowDragging="true" ShowCloseIcon="true" @bind-Visible="@DialogVisible" AllowPrerender="true" IsModal="true">
+    <SfDialog Target="body" 
+              Width="@dialogWidth" 
+              Height="@dialogHeight" 
+              AllowDragging="true" 
+              ShowCloseIcon="true" 
+              @bind-Visible="@DialogVisible" 
+              AllowPrerender="false" 
+              IsModal="true">
         <DialogTemplates>
             <Header>@Header</Header>
         </DialogTemplates>
-        <DialogPositionData X="@dialogXValue" Y="@dialogYValue"></DialogPositionData>
+        <DialogPositionData X="center" Y="center"></DialogPositionData>
         <DialogAnimationSettings Effect="@animationEffect"></DialogAnimationSettings>
     </SfDialog>
 </div>
 
 <style>
+    /* 1. Zwingt das gesamte Spinner-Container-System nach ganz vorne */
+    .e-spinner-pane.e-spin-overlay {
+        z-index: 99999 !important;
+        background-color: rgba(0, 0, 0, 0.4) !important; /* Macht den Hintergrund dunkel-transparent */
+    }
+
+        /* 2. Zwingt das Ladesymbol und den Text, sich abzuheben */
+        .e-spinner-pane.e-spin-overlay .e-spinner-inner {
+            z-index: 100000 !important;
+        }
+
+        /* 3. HIER WIRD DER TEXT ERZWUNGEN UND SCHÖN FORMATIERT */
+        .e-spinner-pane.e-spin-overlay .e-spin-label {
+            color: #FFFFFF !important; /* Reines Weiß, damit es auf dem dunklen Overlay lesbar ist */
+            font-weight: bold !important; /* Fett gedruckt */
+            font-size: 16px !important; /* Etwas größer für bessere Lesbarkeit */
+            margin-top: 10px !important; /* Abstand zum drehenden Rad */
+            display: block !important; /* Sicherstellen, dass es nicht auf hidden steht */
+        }
+
     .e-dlg-overlay {
         background-color: slategray;
         opacity: 0.6;
@@ -356,8 +383,6 @@ else
     bool DialogVisible { get; set; } = false;
     private bool showDialogButtons = false;
     private string DialogText { get; set; } = string.Empty;
-    private string dialogXValue = "center";
-    private string dialogYValue = "center";
     private string dialogHeight = "130px";
     private string dialogWidth = "380px";
     #endregion
@@ -562,21 +587,15 @@ else
             await Task.WhenAll(counterTask, changeAllTask, changeTask);
 
             // Ergebnisse sicher auslesen, sortieren und Null-Safe absichern
-            var rawCounters = counterTask.Result;
-            counterList = rawCounters != null
-                ? rawCounters.OrderBy(c => c.Ablesetag).ToList()
-                : [];
+            var rawCounters = await counterTask;
+            counterList = rawCounters?.OrderBy(c => c.Ablesetag).ToList() ?? [];
 
-            var rawChanges = changeTask.Result;
-            counterChangeList = rawChanges != null
-                ? rawChanges.OrderBy(cc => cc.Wechsel_Datum).ToList()
-                : [];
+            var rawChanges = await changeTask;
+            counterChangeList = rawChanges?.OrderBy(cc => cc.Wechsel_Datum).ToList() ?? [];
 
             // Einmaliges Laden und Sortieren der globalen Gesamtliste für die Jahresansicht
-            var rawAllChanges = changeAllTask.Result;
-            counterChangeListAllSuppliers = rawAllChanges != null
-                ? rawAllChanges.OrderBy(cc => cc.Wechsel_Datum).ToList()
-                : [];
+            var rawAllChanges = await changeAllTask;
+            counterChangeListAllSuppliers = rawAllChanges?.OrderBy(cc => cc.Wechsel_Datum).ToList() ?? [];
 
             // 4. Verbräuche verarbeiten
             if (counterList.Count > 0)
@@ -1057,22 +1076,23 @@ else
     /// <param name="endPeriod"></param>
     public async Task GetMockChartData(DateTime? startPeriod, DateTime? endPeriod)
     {
-        const int days = 364;
-        DateTime dayToday = DateTime.Today; // .Today statt .Now, da Uhrzeit für den Tagesvergleich meist irrelevant ist
-        DateTime startDate = startPeriod ?? new DateTime(1970, 1, 1);
+        DateTime dayToday = DateTime.Today;
 
-        // Kapazität direkt zuweisen verhindert Speicher-Reallozierungen
-        var temporaryList = new List<ColumnChartData>(days);
+        // Sinnvollerer Fallback: Wenn kein Startdatum da ist, nehmen wir 364 Tage vor dem Enddatum
+        DateTime endDate = endPeriod ?? dayToday;
+        DateTime startDate = startPeriod ?? endDate.AddDays(-363);
 
-        for (int i = 0; i < days; i++)
+        // Kapazität exakt zuweisen
+        var temporaryList = new List<ColumnChartData>(364);
+
+        for (int i = 0; i < 364; i++)
         {
             DateTime currentDate = startDate.AddDays(i);
-            if (currentDate > dayToday)
+            if (currentDate > dayToday || currentDate > endDate)
             {
                 break;
             }
 
-            // Random.Shared ist thread-safe und performanter (ab .NET 6)
             double consumption = Random.Shared.Next(0, 10);
             double temperature = Random.Shared.Next(-10, 30);
             double consumption_kWh = consumption * Factor_kWh;
@@ -1086,12 +1106,7 @@ else
             });
         }
 
-        // Thread-Sicherheit erhöhen: Erst am Ende der UI/Klasse zuweisen
         ChartPointList = temporaryList;
-
-        // Künstliche Verzögerung (falls für UI-Effekte gewollt), sonst Zeile komplett löschen
-        //await Task.Delay(200);
-
         GetChartMinMaxRange(ChartPointList);
     }
     #endregion
@@ -1175,13 +1190,13 @@ else
     /// </summary>
     private void ClearSumAverage()
     {
-        ConsAverage_kWh = 0.0d;
-        ConsAverage_m3 = 0.0d;
-        ConsSum_kWh = 0.0d;
-        ConsSum_m3 = 0.0d;
-        ConsMin_kWh = 0.0d;
-        ConsMax_kWh = 0.0d;
-        TempAverage = 0.0d;
+        ConsAverage_kWh = 0;
+        ConsAverage_m3 = 0;
+        ConsSum_kWh = 0;
+        ConsSum_m3 = 0;
+        ConsMin_kWh = 0;
+        ConsMax_kWh = 0;
+        TempAverage = 0;
     }
     #endregion
 

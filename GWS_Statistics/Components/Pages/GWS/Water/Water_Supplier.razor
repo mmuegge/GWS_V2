@@ -23,10 +23,10 @@
 </div>
 
 @* Grid *@
-@if (supplierList != null && supplierList.Count > 0)
+@if (supplierList != null)
 {
-    <div class="control-section" id="target" align="center" style="position: relative; min-height: 200px;">
-        <SfGrid ID="Grid" @ref="SfDataGrid" DataSource="@supplierList"
+    <div class="control-section elevated-grid-container" id="target" align="center" style="position: relative; min-height: 200px;">
+        <SfGrid ID="Grid" @ref="sfDataGrid" DataSource="@supplierList"
                 AllowPaging="true"
                 AllowFiltering="true"
                 AllowReordering="true"
@@ -45,9 +45,9 @@
             <GridEditSettings AllowAdding="true"
                               AllowEditing="true"
                               AllowDeleting="true"
-                              ShowDeleteConfirmDialog="true"
+                              ShowDeleteConfirmDialog="false"
                               Mode="EditMode.Dialog"
-                              Dialog="DialogParams">
+                              Dialog="dialogParams">
 
                             <HeaderTemplate>
                             @{
@@ -58,7 +58,8 @@
             </GridEditSettings>
 
             <GridEvents OnToolbarClick="ToolbarBtnClickHandler" 
-                        OnActionComplete="ActionCompleteHandler" 
+                        RowCreating="RowCreatingHandler"
+                        OnActionBegin="ActionBeginHandler"
                         TValue="Water_SupplierModel">
             </GridEvents>
 
@@ -426,21 +427,21 @@ else
 
 @* Dialog*@
 <div>
-    <SfDialog Target="#target"
+    <SfDialog Target="body"
                 Width="@dialogWidth"
                 Height="@dialogHeight"
                 AllowDragging="true"
                 ShowCloseIcon="true"
                 @bind-Visible="@DialogVisible"
-                AllowPrerender="true"
+                AllowPrerender="false"
                 IsModal="true"
                 CssClass="MyCss">
 
         <DialogTemplates>
-            <Header>@Header</Header>
+            <Header>@header</Header>
         </DialogTemplates>
 
-        <DialogPositionData X="@dialogXValue" Y="@dialogYValue"></DialogPositionData>
+        <DialogPositionData X="center" Y="center"></DialogPositionData>
 
         <DialogAnimationSettings Effect="@animationEffect"></DialogAnimationSettings>
 
@@ -523,29 +524,24 @@ else
 
     bool spinnerVisibleProperty { get; set; } = false;
 
-    private DialogSettings DialogParams = new DialogSettings { MinHeight = "400px", Width = "600px" };
+    private DialogSettings dialogParams = new DialogSettings { MinHeight = "400px", Width = "600px" };
     public DialogEffect animationEffect = DialogEffect.Zoom;
     public bool DialogVisible { get; set; } = false;
     private bool showDialogButtons = false;
-    private string DialogText { get; set; } = string.Empty;
-    private string dialogXValue = "center";
-    private string dialogYValue = "center";
+    private string dialogText { get; set; } = string.Empty;
     private string dialogHeight = "130px";
     private string dialogWidth = "380px";
 
-    private bool save = false;
-    private bool update = false;
-
     string urlSupplier = "wasser/anbieter/";
-    string? Header { get; set; }
-    string? Content { get; set; }
+    string? header { get; set; }
+    string? content { get; set; }
 
     GWSProcessor? gwsP;
     ApiResponse? apiResponse;
 
-    private SfGrid<Water_SupplierModel> SfDataGrid = new();
+    private SfGrid<Water_SupplierModel> sfDataGrid = new();
 
-    private enum GridOperation { None, Add, Edit }
+    private enum GridOperation { None, Add, Edit, Delete }
     private GridOperation currentOperation = GridOperation.None;
 
     private List<Water_SupplierModel>? supplierList = null;
@@ -688,7 +684,7 @@ else
                 // 2. Optionale Optimierung: Bestimmte Spalten vor Export verstecken
                 await ToggleActionColumnsAsync(hide: true);
 
-                await SfDataGrid.ExportToExcelAsync(excelExportProperties);
+                await sfDataGrid.ExportToExcelAsync(excelExportProperties);
             }
             else if (itemId.Contains("_pdfexport", StringComparison.OrdinalIgnoreCase))
             {
@@ -707,7 +703,7 @@ else
 
                 await ToggleActionColumnsAsync(hide: true);
 
-                await SfDataGrid.ExportToPdfAsync(pdfExportProperties);
+                await sfDataGrid.ExportToPdfAsync(pdfExportProperties);
             }
         }
         catch (Exception ex)
@@ -733,65 +729,12 @@ else
         {
             if (hide)
             {
-                await SfDataGrid.HideColumnAsync(field);
+                await sfDataGrid.HideColumnAsync(field);
             }
             else
             {
-                await SfDataGrid.ShowColumnAsync(field);
+                await sfDataGrid.ShowColumnAsync(field);
             }
-        }
-    }
-    #endregion
-
-    #region ActionCompleteHandler
-    /// <summary>
-    /// ActionCompleteHandler
-    /// </summary>
-    /// <param name="args"></param>
-    public async Task ActionCompleteHandler(ActionEventArgs<Water_SupplierModel> args)
-    {
-        if (args?.Data is null) return;
-
-        switch (args.RequestType)
-        {
-            case Syncfusion.Blazor.Grids.Action.Save:
-                supplierData = args.Data;
-
-                if (args.Action == "Add")
-                {
-                    currentOperation = GridOperation.Add;
-                    OpenDialog("Datensatz speichern ?", "130px", "220px", true);
-                }
-                else if (args.Action == "Edit")
-                {
-                    currentOperation = GridOperation.Edit;
-                    OpenDialog("Datensatz ändern ?", "130px", "220px", true);
-                }
-                break;
-
-            case Syncfusion.Blazor.Grids.Action.Delete:
-                if (args.Data.Id <= 0)
-                {
-                    if (gwsP is not null)
-                    {
-                        supplierList = await gwsP.LoadDataAsync<Water_SupplierModel>(urlSupplier);
-                    }
-                    ShowToast(false, "Datensatz nicht gelöscht!");
-                }
-                else
-                {
-                    if (gwsP is not null)
-                    {
-                        supplierData = await gwsP.DeleteDataAsync<Water_SupplierModel>(urlSupplier, args.Data.Id.ToString());
-                        ShowToast(true, "Datensatz gelöscht!");
-                    }
-                }
-
-                if (SfDataGrid is not null)
-                {
-                    await SfDataGrid.Refresh();
-                }
-                break;
         }
     }
     #endregion
@@ -800,7 +743,7 @@ else
     /// <summary>
     /// Abbrechen-Button im Dialog wurde geklickt, schließt den Dialog und setzt den aktuellen Operationstyp zurück.
     /// </summary>
-    private void CancelClick()
+    private async Task CancelClick()
     {
         // Schließt den Dialog sofort visuell
         DialogVisible = false;
@@ -808,8 +751,22 @@ else
         // Setzt den aktuellen Operationstyp zurück, um sicherzustellen, dass keine Aktion mehr aussteht
         currentOperation = GridOperation.None;
 
-        // Setzt die temporären Datenstrukturen zurück, falls diese im Grid gebunden waren
+        // 3. Setzt die temporäre Datenstruktur zurück
         supplierData = null;
+
+        // 4. DIE RETTUNG: Daten frisch von der API laden, um die UI-Änderungen zu verwerfen
+        if (gwsP is not null && supplierData is not null)
+        {
+            // Nutzen Sie hier die URL-Variable, die Sie auch beim initialen Laden verwenden (z.B. urlCounter)
+            // Lädt gezielt die Zählerstände für den aktuell ausgewählten Anbieter neu
+            supplierList = await gwsP.LoadDataAsync<Water_SupplierModel>(urlSupplier);
+        }
+
+        // 5. Grid zwingen, die frischen Daten anzuzeigen
+        if (sfDataGrid is not null)
+        {
+            await sfDataGrid.Refresh();
+        }
     }
     #endregion
 
@@ -821,7 +778,6 @@ else
     private async Task YesClick()
     {
         DialogVisible = false;
-
         if (gwsP is null || supplierData is null || currentOperation == GridOperation.None) return;
 
         try
@@ -829,6 +785,9 @@ else
             bool isSuccess = false;
             string successMessage = string.Empty;
             string defaultErrorMessage = "Aktion konnte nicht ausgeführt werden.";
+
+            // Vor jedem Aufruf die alte API-Response zurücksetzen!
+            apiResponse = null;
 
             switch (currentOperation)
             {
@@ -840,37 +799,58 @@ else
                     break;
 
                 case GridOperation.Edit:
-                    string url = $"{urlSupplier.TrimEnd('/')}/{supplierData.Id}";
-                    apiResponse = await gwsP.UpdateDataAsync<Water_SupplierModel>(url, supplierData);
+                    string urlEdit = $"{urlSupplier.TrimEnd('/')}/{supplierData.Id}";
+                    apiResponse = await gwsP.UpdateDataAsync<Water_SupplierModel>(urlEdit, supplierData);
                     isSuccess = apiResponse?.MyHttpStatusCode == HttpStatusCode.NoContent;
                     successMessage = "Datensatz erfolgreich aktualisiert!";
                     defaultErrorMessage = "Datensatz konnte nicht aktualisiert werden.";
+                    break;
+
+                case GridOperation.Delete:
+                    string deleteUrl = urlSupplier.EndsWith("/") ? urlSupplier : urlSupplier + "/";
+                    string idToDelete = supplierData.Id.ToString();
+
+                    var deletedData = await gwsP.DeleteDataAsync<Water_SupplierDataModel>(deleteUrl, idToDelete);
+
+                    // Falls DeleteDataAsync intern doch die apiResponse befüllt,
+                    // wäre es ideal, diese hier zuzuweisen. Wenn nicht, reicht das:
+                    isSuccess = deletedData is not null;
+                    successMessage = "Datensatz erfolgreich gelöscht!";
+                    defaultErrorMessage = "Datensatz konnte nicht gelöscht werden.";
                     break;
             }
 
             if (isSuccess)
             {
                 ShowToast(true, successMessage);
+
+                // Zwinge das Grid zum sofortigen UI-Update, indem du das Element lokal entfernst
+                if (supplierList is not null)
+                {
+                    var itemToRemove = supplierList.FirstOrDefault(x => x.Id == supplierData.Id);
+                    if (itemToRemove is not null)
+                    {
+                        supplierList.Remove(itemToRemove);
+                    }
+                }
+
+                // Erst danach im Hintergrund die Liste frisch vom Server holen
                 supplierList = await gwsP.LoadDataAsync<Water_SupplierModel>(urlSupplier);
             }
             else
             {
-                // Dynamische Fehlerursache aus MyResponseString ermitteln
                 string errorMessage = defaultErrorMessage;
-
+                // Die Prüfung stellt sicher, dass wir nicht aus Versehen alte Response-Daten anzeigen
                 if (apiResponse is not null && !string.IsNullOrWhiteSpace(apiResponse.MyResponseString))
                 {
-                    // Wenn die API direkt Text zurückgibt, nutzen wir ihn.
-                    // Falls es JSON ist (z.B. bei Validierungsfehlern), könnte man es hier parsen.
                     errorMessage = $"Fehler ({apiResponse.MyHttpStatusCode}): {apiResponse.MyResponseString}";
                 }
-
                 ShowToast(false, errorMessage);
             }
 
-            if (SfDataGrid is not null)
+            if (sfDataGrid is not null)
             {
-                await SfDataGrid.Refresh();
+                await sfDataGrid.Refresh();
             }
         }
         catch (Exception ex)
@@ -928,7 +908,7 @@ else
     /// </summary>
     private void OpenDialog(string header, string height = "auto", string width = "500px", bool showButtons = true)
     {
-        Header = header;
+        this.header = header;
         dialogHeight = height;
         dialogWidth = width;
         showDialogButtons = showButtons;
@@ -950,4 +930,89 @@ else
             ? "Anbieter: neuer Anbieter"
             : $"Anbieter: {supplier.Anbieter}";
     #endregion
+
+    #region RowCreatingHandler
+    /// <summary>
+    /// ein neuer Datensatz wird angelegt
+    /// </summary>
+    /// <param name="args"></param>
+    public void RowCreatingHandler(RowCreatingEventArgs<Water_SupplierModel> args)
+    {
+        if (args?.Data == null) return;
+
+        // 1. Anbieter-Daten direkt zuweisen (Vermeidung von LINQ-Suche auf Listen)
+        if (supplierData != null)
+        {
+            args.Data.Id = supplierData.Id;
+
+            var selectedSupplier = supplierList?.FirstOrDefault(x => x.Id == supplierData.Id);
+            if (selectedSupplier != null)
+            {
+                args.Data.Anbieter = selectedSupplier.Anbieter;
+            }
+        }
+
+        // 3. Effizientes Holen des letzten Eintrags (Vermeidung von Any() + LastOrDefault())
+        var lastCost = supplierList?.LastOrDefault();
+        if (lastCost != null)
+        {
+            args.Data.Zaehlernummer = lastCost.Zaehlernummer;
+            args.Data.Kuendigungsfrist = lastCost.Kuendigungsfrist;
+            args.Data.Grundpreis = lastCost.Grundpreis;
+            args.Data.Zaehlermiete = lastCost.Zaehlermiete;
+            args.Data.Bemerkung = lastCost.Bemerkung;
+        }
+    }
+    #endregion
+
+    #region ActionBeginHandler
+    /// <summary>
+    /// ActionBeginHandler für das Grid. Behandelt das Speichern, Bearbeiten und Löschen von Datensätzen.
+    /// </summary>
+    /// <param name="args"></param>
+    /// <returns></returns>
+    public async Task ActionBeginHandler(ActionEventArgs<Water_SupplierModel> args)
+    {
+        if (args?.Data is null) return;
+
+        switch (args.RequestType)
+        {
+            case Syncfusion.Blazor.Grids.Action.Save:
+                args.Cancel = true;
+                supplierData = args.Data;
+
+                if (args.Action == "Add")
+                {
+                    currentOperation = GridOperation.Add;
+                    OpenDialog("Datensatz speichern ?", "130px", "220px", true);
+                }
+                else if (args.Action == "Edit")
+                {
+                    currentOperation = GridOperation.Edit;
+                    OpenDialog("Datensatz ändern ?", "130px", "220px", true);
+                }
+                break;
+
+            case Syncfusion.Blazor.Grids.Action.Delete:
+                // 1. Automatische Grid-Löschung stoppen, damit wir die Kontrolle behalten
+                args.Cancel = true;
+
+                // Sicherheitshalber prüfen, ob eine gültige ID vorliegt
+                if (args.Data.Id <= 0)
+                {
+                    ShowToast(false, "Ungültiger Datensatz. Löschen nicht möglich!");
+                    return;
+                }
+
+                // 2. Daten für die 'YesClick'-Methode zwischenspeichern
+                supplierData = args.Data;
+                currentOperation = GridOperation.Delete;
+
+                // 3. Bestätigungsdialog für das Löschen öffnen
+                OpenDialog("Datensatz wirklich löschen ?", "130px", "300px", true);
+                break;
+        }
+    }
+    #endregion
+
 }

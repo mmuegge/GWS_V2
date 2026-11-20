@@ -1,235 +1,263 @@
+using AutoMapper;
 using GWS_Api.Dtos.Electric;
 using GWS_Api.Models.Electric;
 using GWS_Api.Repositories.Electric;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
-using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 
 namespace GWS_Api.Controllers
 {
     [ApiController]
     //[Route("api/[controller]")]
     [Route("api/strom")]    // uri mit anderer Route und nicht mit Controllername
-    public class ElectricController(ILogger<ElectricController> logger, IElectricRepository repo, IMapper mapper) : ControllerBase
+    public class ElectricController(IElectricRepository repo, IMapper mapper) : ControllerBase
     {
-        #region Variablendeklaration
-        private readonly IElectricRepository _repo = repo;
-        private readonly ILogger<ElectricController> _logger = logger;
-        private readonly IMapper _mapper = mapper;   // für Dto's
-        public ElectricModel electricModel = new();
-        #endregion
-
         #region GET
+        #region [HttpGet("anbieter")]
         /// <summary>
         /// Get: Abfrage alle Anbieter
         /// Route: /api/strom/anbieter
         /// </summary>
         /// <returns></returns>
         [HttpGet("anbieter")]
-        public async Task<ActionResult<IEnumerable<ElectricTarifReadDto>>> GetSuppliers()
+        [ProducesResponseType(typeof(IEnumerable<ElectricTarifReadDto>), StatusCodes.Status200OK)]
+        public async Task<ActionResult<IEnumerable<ElectricTarifReadDto>>> GetSuppliers(CancellationToken cancellationToken)
         {
-            try
-            {
-                var result = await _repo.GetSuppliersAsync();
-                if (result == null || !result.Any())
-                {
-                    return NotFound($"Keine Anbieter vorhanden!");
-                }
-                return Ok(_mapper.Map<IEnumerable<ElectricTarifReadDto>>(result));
-            }
-            catch (Exception)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Fehler beim Lesen der Daten aus der Datenbank");
-            }
-        }
+            var suppliers = await repo.GetSuppliersAsync(cancellationToken);
 
+            if (suppliers is null || !suppliers.Any())
+            {
+                return Ok(Enumerable.Empty<ElectricTarifReadDto>());
+            }
+
+            var dtos = mapper.Map<IEnumerable<ElectricTarifReadDto>>(suppliers);
+            return Ok(dtos);
+        }
+        #endregion
+
+        #region [HttpGet("anbieter/{id:int:min(1)}")]
         /// <summary>
         /// Get: Abfrage eines bestimmten Anbieters
         /// Route: /api/strom/anbieter/id
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        [HttpGet("anbieter/{id}", Name = "GetElectricSupplierById")]
-        public async Task<ActionResult<ElectricTarifReadDto>> GetElectricSupplierById(int id)
+        [HttpGet("anbieter/{id:int:min(1)}")]
+        [ProducesResponseType(typeof(ElectricTarifReadDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<ElectricTarifReadDto>> GetSupplierById(int id, CancellationToken cancellationToken)
         {
-            var result = await _repo.GetSupplierByIdAsync(id);
-            if (result == null)
-            {
-                return NotFound($"Kein Anbieter mit Id={id} vorhanden!");
-            }
-            return Ok(_mapper.Map<ElectricTarifReadDto>(result));
-        }
+            var supplier = await repo.GetSupplierByIdAsync(id, cancellationToken);
 
+            if (supplier is null)
+            {
+                return NotFound(new ProblemDetails
+                {
+                    Title = "Anbieter nicht gefunden",
+                    Detail = $"Kein Anbieter mit der Id {id} vorhanden.",
+                    Status = StatusCodes.Status404NotFound
+                });
+            }
+
+            var dto = mapper.Map<ElectricTarifReadDto>(supplier);
+            return Ok(dto);
+        }
+        #endregion
+
+        #region [HttpGet("zaehlerstaende")]
         /// <summary>
         /// Get: Abfrage aller Zählerstände
         /// Route: /api/strom/zaehlerstaende
         /// </summary>
         /// <returns></returns>
         [HttpGet("zaehlerstaende")]
-        public async Task<ActionResult<IEnumerable<ElectricCounterReadDto>>> GetElectricCounters()
+        [ProducesResponseType(typeof(IEnumerable<ElectricCounterReadDto>), StatusCodes.Status200OK)]
+        public async Task<ActionResult<IEnumerable<ElectricCounterReadDto>>> GetCounters(CancellationToken cancellationToken)
         {
-            try
-            {
-                var result = await _repo.GetCountersAsync();
-                if (result == null || !result.Any())
-                {
-                    return NotFound($"Keine Zählerstände vorhanden!");
-                }
-                return Ok(_mapper.Map<IEnumerable<ElectricCounterReadDto>>(result));
-            }
-            catch (System.Exception)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Fehler beim Lesen der Daten aus der Datenbank");
-            }
-        }
+            var counters = await repo.GetCountersAsync(cancellationToken);
 
+            if (counters is null || !counters.Any())
+            {
+                return Ok(Enumerable.Empty<ElectricCounterReadDto>());
+            }
+
+            return Ok(mapper.Map<IEnumerable<ElectricCounterReadDto>>(counters));
+        }
+        #endregion
+
+        #region [HttpGet("zaehlerstaende/anbieter/{id:int:min(1)}")]
         /// <summary>
         /// Get: Abfrage der Zählerstände eines Anbieters
         /// Route: /api/strom/zaehlerstaende/anbieter/id
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        [HttpGet("zaehlerstaende/anbieter/{id}", Name = "GetElectricCounterBySupplier")]
-        public async Task<ActionResult<IEnumerable<ElectricCounterReadDto>>> GetElectricCounterBySupplier(int id)
+        [HttpGet("zaehlerstaende/anbieter/{id:int:min(1)}")]
+        [ProducesResponseType(typeof(IEnumerable<ElectricCounterReadDto>), StatusCodes.Status200OK)]
+        public async Task<ActionResult<IEnumerable<ElectricCounterReadDto>>> GetCounterBySupplier(int id, CancellationToken cancellationToken)
         {
-            try
-            {
-                var result = await _repo.GetCountersBySupplierAsync(id);
-                if (result == null || !result.Any())
-                {
-                    return NotFound($"Keine Zaehlerstände vom Anbieter mit Id={id} vorhanden!");
-                }
-                return Ok(_mapper.Map<IEnumerable<ElectricCounterReadDto>>(result));
-            }
-            catch (System.Exception)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Fehler beim Lesen der Daten aus der Datenbank");
-            }
-        }
+            var counters = await repo.GetCountersBySupplierAsync(id, cancellationToken);
 
+            if (counters is null || !counters.Any())
+            {
+                return Ok(Enumerable.Empty<ElectricCounterReadDto>());
+            }
+
+            return Ok(mapper.Map<IEnumerable<ElectricCounterReadDto>>(counters));
+        }
+        #endregion
+
+        #region [HttpGet("zaehlerstand/{day:datetime}")]
         /// <summary>
         /// Get: Abfrage eines Zählerstandes eines bestimmten Datums
         /// Route: /api/strom/zaehlerstand/day --> (2021.10.23)
         /// </summary>
         /// <param name="day"></param>
         /// <returns></returns>
-        [HttpGet("zaehlerstand/{day}", Name = "GetElectricCounterByDay")]
-        public async Task<ActionResult<ElectricCounterReadDto>> GetElectricCounterByDay(DateTime day)
+        [HttpGet("zaehlerstand/{day:datetime}")]
+        [ProducesResponseType(typeof(ElectricCounterReadDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<ElectricCounterReadDto>> GetElectricCounterByDay(DateTime day, CancellationToken cancellationToken)
         {
-            var result = await _repo.GetCounterByDateAsync(day);
-            if (result == null)
-            {
-                return NotFound($"Kein Zaehlerstand ({day}) vorhanden!");
-            }
-            return Ok(_mapper.Map<ElectricCounterReadDto>(result));
-        }
+            var counter = await repo.GetCounterByDateAsync(day, cancellationToken);
 
+            if (counter is null)
+            {
+                return NotFound(new ProblemDetails
+                {
+                    Title = "Zählerstand nicht gefunden",
+                    Detail = $"Kein Zählerstand für das Datum {day:yyyy-MM-dd} vorhanden.",
+                    Status = StatusCodes.Status404NotFound
+                });
+            }
+
+            return Ok(mapper.Map<ElectricCounterReadDto>(counter));
+        }
+        #endregion
+
+        #region [HttpGet("zaehlerstand/id/{id:int:min(1)}")]
         /// <summary>
         /// Get: Abfrage eines Zählerstandes mit einer bestimmten Id
         /// Route: /api/strom/zaehlerstand/id
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        [HttpGet("zaehlerstand/id/{id}", Name = "GetElectricCounterById")]
-        public async Task<ActionResult<ElectricCounterReadDto>> GetElectricCounterById(int id)
+        [HttpGet("zaehlerstand/id/{id:int:min(1)}")]
+        [ProducesResponseType(typeof(ElectricCounterReadDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<ElectricCounterReadDto>> GetElectricCounterById(int id, CancellationToken cancellationToken)
         {
-            var result = await _repo.GetCounterByIdAsync(id);
-            if (result == null)
-            {
-                return NotFound($"Kein Zaehlerstand mit Id={id} vorhanden!");
-            }
-            return Ok(_mapper.Map<ElectricCounterReadDto>(result));
-        }
+            var counter = await repo.GetCounterByIdAsync(id, cancellationToken);
 
+            if (counter is null)
+            {
+                return NotFound(new ProblemDetails
+                {
+                    Title = "Zählerstand nicht gefunden",
+                    Detail = $"Kein Zählerstand mit der Id {id} vorhanden.",
+                    Status = StatusCodes.Status404NotFound
+                });
+            }
+
+            return Ok(mapper.Map<ElectricCounterReadDto>(counter));
+        }
+        #endregion
+
+        #region  [HttpGet("zahlungen")]
         /// <summary>
         /// Get: Abfrage aller Zahlungen
         /// Route: /api/strom/zahlungen
         /// </summary>
         /// <returns></returns>
         [HttpGet("zahlungen")]
-        public async Task<ActionResult<IEnumerable<ElectricPaymentReadDto>>> GetElectricPayments()
+        [ProducesResponseType(typeof(IEnumerable<ElectricPaymentReadDto>), StatusCodes.Status200OK)]
+        public async Task<ActionResult<IEnumerable<ElectricPaymentReadDto>>> GetElectricPayments(CancellationToken cancellationToken)
         {
-            try
-            {
-                var result = await _repo.GetPaymentsAsync();
-                if (result == null || !result.Any())
-                {
-                    return NotFound($"Keine Zahlungen vorhanden!");
-                }
-                return Ok(_mapper.Map<IEnumerable<ElectricPaymentReadDto>>(result));
-            }
-            catch (System.Exception)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Fehler beim Lesen der Daten aus der Datenbank");
-            }
-        }
+            var payments = await repo.GetPaymentsAsync(cancellationToken);
 
+            if (payments is null || !payments.Any())
+            {
+                return Ok(Enumerable.Empty<ElectricPaymentReadDto>());
+            }
+
+            return Ok(mapper.Map<IEnumerable<ElectricPaymentReadDto>>(payments));
+        }
+        #endregion
+
+        #region [HttpGet("zahlungen/anbieter/{id:int:min(1)}")]
         /// <summary>
         /// Get: Abfrage Zahlungen eines bestimmten Anbieters
         /// Route: /api/strom/zahlungen/anbieter/id
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        [HttpGet("zahlungen/anbieter/{id}", Name = "GetElectricPaymentsBySupplier")]
-        public async Task<ActionResult<IEnumerable<ElectricPaymentReadDto>>> GetElectricPaymentsBySupplier(int id)
+        [HttpGet("zahlungen/anbieter/{id:int:min(1)}")]
+        [ProducesResponseType(typeof(IEnumerable<ElectricPaymentReadDto>), StatusCodes.Status200OK)]
+        public async Task<ActionResult<IEnumerable<ElectricPaymentReadDto>>> GetElectricPaymentsBySupplier(int id, CancellationToken cancellationToken)
         {
-            try
-            {
-                var result = await _repo.GetPaymentsBySupplierAsync(id);
-                if (result == null || !result.Any())
-                {
-                    return NotFound($"Kein Zahlungen vom Anbieter mit Id={id} vorhanden!");
-                }
-                return Ok(_mapper.Map<IEnumerable<ElectricPaymentReadDto>>(result));
-            }
-            catch (System.Exception)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Fehler beim Lesen der Daten aus der Datenbank");
-            }
-        }
+            var payments = await repo.GetPaymentsBySupplierAsync(id, cancellationToken);
 
+            if (payments is null || !payments.Any())
+            {
+                return Ok(Enumerable.Empty<ElectricPaymentReadDto>());
+            }
+
+            return Ok(mapper.Map<IEnumerable<ElectricPaymentReadDto>>(payments));
+        }
+        #endregion
+
+        #region [HttpGet("zahlungen/{id:int:min(1)}")]
         /// <summary>
         /// Get: Abfrage einer Zahlungen nach Id
         /// Route: /api/strom/zahlungen/id
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        [HttpGet("zahlungen/{id}", Name = "GetElectricPaymentById")]
-        public async Task<ActionResult<ElectricPaymentReadDto>> GetElectricPaymentById(int id)
+        [HttpGet("zahlungen/{id:int:min(1)}")]
+        [ProducesResponseType(typeof(ElectricPaymentReadDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<ElectricPaymentReadDto>> GetElectricPaymentById(int id, CancellationToken cancellationToken)
         {
-            var result = await _repo.GetPaymentByIdAsync(id);
-            if (result == null)
-            {
-                return NotFound($"Kein Zahlung mit Id={id} vorhanden!");
-            }
-            return Ok(_mapper.Map<ElectricPaymentReadDto>(result));
-        }
+            var payment = await repo.GetPaymentByIdAsync(id, cancellationToken);
 
+            if (payment is null)
+            {
+                return NotFound(new ProblemDetails
+                {
+                    Title = "Zahlung nicht gefunden",
+                    Detail = $"Keine Zahlung mit der Id {id} vorhanden.",
+                    Status = StatusCodes.Status404NotFound
+                });
+            }
+
+            return Ok(mapper.Map<ElectricPaymentReadDto>(payment));
+        }
+        #endregion
+
+        #region [HttpGet("zahlungsart")]
         /// <summary>
         /// Get: Abfrage aller Zahlungsarten
         /// Route: /api/strom/zahlungsart
         /// </summary>
         /// <returns></returns>
         [HttpGet("zahlungsart")]
-        public async Task<ActionResult<IEnumerable<ElectricPaymentMethodReadDto>>> GetElectricPaymentMethods()
+        [ProducesResponseType(typeof(IEnumerable<ElectricPaymentMethodReadDto>), StatusCodes.Status200OK)]
+        public async Task<ActionResult<IEnumerable<ElectricPaymentMethodReadDto>>> GetElectricPaymentMethods(CancellationToken cancellationToken)
         {
-            try
-            {
-                var result = await _repo.GetPaymentMethodsAsync();
-                if (result == null || !result.Any())
-                {
-                    return NotFound($"Keine Zahlungsart vorhanden!");
-                }
-                return Ok(_mapper.Map<IEnumerable<ElectricPaymentMethodReadDto>>(result));
-            }
-            catch (System.Exception)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Fehler beim Lesen der Daten aus der Datenbank");
-            }
-        }
+            var methods = await repo.GetPaymentMethodsAsync(cancellationToken);
 
+            if (methods is null || !methods.Any())
+            {
+                return Ok(Enumerable.Empty<ElectricPaymentMethodReadDto>());
+            }
+
+            return Ok(mapper.Map<IEnumerable<ElectricPaymentMethodReadDto>>(methods));
+        }
+        #endregion
+
+        #region [HttpGet("kosten/anbieter/{id:int:min(1)}")]
         /// <summary>
         /// Get: Abfrage Kosten eines Anbieters nach Anbieter-Id (nur vohanden wenn während der Vertragslaufzeit geänderte monatliche Kosten eines Anbieters vorhanden ist)
         /// es können mehr als eine Kostenänderung vorhanden sein
@@ -237,120 +265,116 @@ namespace GWS_Api.Controllers
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        [HttpGet("kosten/anbieter/{id}", Name = "GetElectricCostsBySupplier")]
-        public async Task<ActionResult<IEnumerable<ElectricCostReadDto>>> GetElectricCostsBySupplier(int id)
+        [HttpGet("kosten/anbieter/{id:int:min(1)}")]
+        [ProducesResponseType(typeof(IEnumerable<ElectricCostReadDto>), StatusCodes.Status200OK)]
+        public async Task<ActionResult<IEnumerable<ElectricCostReadDto>>> GetElectricCostsBySupplier(int id, CancellationToken cancellationToken)
         {
-            try
-            {
-                var result = await _repo.GetCostsBySupplierIdAsync(id);
-                if (result == null || !result.Any())
-                {
-                    return NotFound($"Keine Kosten vom Anbieter mit Id={id} vorhanden!");
-                }
-                return Ok(_mapper.Map<IEnumerable<ElectricCostReadDto>>(result));
-            }
-            catch (System.Exception)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Fehler beim Lesen der Daten aus der Datenbank");
-            }
-        }
+            var costs = await repo.GetCostsBySupplierIdAsync(id, cancellationToken);
 
+            if (costs is null || !costs.Any())
+            {
+                return Ok(Enumerable.Empty<ElectricCostReadDto>());
+            }
+
+            return Ok(mapper.Map<IEnumerable<ElectricCostReadDto>>(costs));
+        }
+        #endregion
+
+        #region [HttpGet("zaehlerwechsel")]
         /// <summary>
         /// Get: Abfrage alle Zählerwechsel
         /// Route: /api/strom/zaehlerwechsel
         /// </summary>
         /// <returns></returns>
         [HttpGet("zaehlerwechsel")]
-        public async Task<ActionResult<IEnumerable<ElectricCounterChangeReadDto>>> GetElectricCounterChanges()
+        [ProducesResponseType(typeof(IEnumerable<ElectricCounterChangeReadDto>), StatusCodes.Status200OK)]
+        public async Task<ActionResult<IEnumerable<ElectricCounterChangeReadDto>>> GetElectricCounterChanges(CancellationToken cancellationToken)
         {
-            try
-            {
-                var result = await _repo.GetCounterChangesAsync();
-                if (result == null || !result.Any())
-                {
-                    return NotFound($"Keine Zählerwechsel vorhanden!");
-                }
-                return Ok(_mapper.Map<IEnumerable<ElectricCounterChangeReadDto>>(result));
-            }
-            catch (Exception)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Fehler beim Lesen der Daten aus der Datenbank");
-            }
-        }
+            var changes = await repo.GetCounterChangesAsync(cancellationToken);
 
+            if (changes is null || !changes.Any())
+            {
+                return Ok(Enumerable.Empty<ElectricCounterChangeReadDto>());
+            }
+
+            return Ok(mapper.Map<IEnumerable<ElectricCounterChangeReadDto>>(changes));
+        }
+        #endregion
+
+        #region [HttpGet("zaehlerwechsel/{id:int:min(1)}")]
         /// <summary>
         /// Get: Abfrage Zählerwechsel nach Id
         /// Route: /api/strom/zaehlerwechsel/id
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        [HttpGet("zaehlerwechsel/{id}", Name = "GetElectricCounterChangeById")]
-        public async Task<ActionResult<ElectricCounterChangeReadDto>> GetElectricCounterChangeById(int id)
+        [HttpGet("zaehlerwechsel/{id:int:min(1)}")]
+        [ProducesResponseType(typeof(ElectricCounterChangeReadDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<ElectricCounterChangeReadDto>> GetElectricCounterChangeById(int id, CancellationToken cancellationToken)
         {
-            try
-            {
-                var result = await _repo.GetCounterChangeByIdAsync(id);
-                if (result == null)
-                {
-                    return NotFound($"Kein Zählerwechsel mit Id={id} vorhanden!");
-                }
-                return Ok(_mapper.Map<ElectricCounterChangeReadDto>(result));
-            }
-            catch (System.Exception)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Fehler beim Lesen der Daten aus der Datenbank");
-            }
-        }
+            var change = await repo.GetCounterChangeByIdAsync(id, cancellationToken);
 
+            if (change is null)
+            {
+                return NotFound(new ProblemDetails
+                {
+                    Title = "Zählerwechsel nicht gefunden",
+                    Detail = $"Kein Zählerwechsel mit der Id {id} vorhanden.",
+                    Status = StatusCodes.Status404NotFound
+                });
+            }
+
+            return Ok(mapper.Map<ElectricCounterChangeReadDto>(change));
+        }
+        #endregion
+
+        #region [HttpGet("zaehlerwechsel/anbieter/{id:int:min(1)}")]
         /// <summary>
         /// Get: Abfrage Zaehlerwechsel nach Anbieter-Id
         /// Route: /api/strom/zaehlerwechsel/anbieter/1 (ein Anbieter kann mehrere Zählerwechsel haben)
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        [HttpGet("zaehlerwechsel/anbieter/{id}", Name = "GetElectricCounterChangesBySupplier")]
-        public async Task<ActionResult<IEnumerable<ElectricCounterChangeReadDto>>> GetElectricCounterChangesBySupplier(int id)
+        [HttpGet("zaehlerwechsel/anbieter/{id:int:min(1)}")]
+        [ProducesResponseType(typeof(IEnumerable<ElectricCounterChangeReadDto>), StatusCodes.Status200OK)]
+        public async Task<ActionResult<IEnumerable<ElectricCounterChangeReadDto>>> GetElectricCounterChangesBySupplier(int id, CancellationToken cancellationToken)
         {
-            try
-            {
-                var result = await _repo.GetCounterChangesBySupplierAsync(id);
-                if (result == null || !result.Any())
-                {
-                    return NotFound($"Keine Zaehlerwechsel vom Anbieter mit Id={id} vorhanden!");
-                }
-                return Ok(_mapper.Map<IEnumerable<ElectricCounterChangeReadDto>>(result));
-            }
-            catch (System.Exception)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Fehler beim Lesen der Daten aus der Datenbank");
-            }
-        }
+            var changes = await repo.GetCounterChangesBySupplierAsync(id, cancellationToken);
 
+            if (changes is null || !changes.Any())
+            {
+                return Ok(Enumerable.Empty<ElectricCounterChangeReadDto>());
+            }
+
+            return Ok(mapper.Map<IEnumerable<ElectricCounterChangeReadDto>>(changes));
+        }
+        #endregion
+
+        #region [HttpGet("kosten")]
         /// <summary>
         /// Get: Abfrage aller Kosten (alle Anbieter)
         /// Route: /api/strom/kosten
         /// </summary>
         /// <returns></returns>
         [HttpGet("kosten")]
-        public async Task<ActionResult<IEnumerable<ElectricCostReadDto>>> GetElectricCosts()
+        [ProducesResponseType(typeof(IEnumerable<ElectricCostReadDto>), StatusCodes.Status200OK)]
+        public async Task<ActionResult<IEnumerable<ElectricCostReadDto>>> GetElectricCosts(CancellationToken cancellationToken)
         {
-            try
+            var costs = await repo.GetCostsAsync(cancellationToken);
+
+            if (costs is null || !costs.Any())
             {
-                var result = await _repo.GetCostsAsync();
-                if (result == null || !result.Any())
-                {
-                    return NotFound($"Keine Kosten vorhanden!");
-                }
-                return Ok(_mapper.Map<IEnumerable<ElectricCostReadDto>>(result));
+                return Ok(Enumerable.Empty<ElectricCostReadDto>());
             }
-            catch (System.Exception)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Fehler beim Lesen der Daten aus der Datenbank");
-            }
+
+            return Ok(mapper.Map<IEnumerable<ElectricCostReadDto>>(costs));
         }
+        #endregion
         #endregion
 
         #region POST
+        #region [HttpPost("zaehlerstand")]
         /// <summary>
         /// Post: neuen Zählerstand schreiben
         /// Route: /api/strom/zaehlerstand
@@ -358,32 +382,47 @@ namespace GWS_Api.Controllers
         /// <param name="electricCounterCreateDto"></param>
         /// <returns></returns>
         [HttpPost("zaehlerstand")]
-        public async Task<ActionResult<ElectricCounterReadDto>> AddCounter(ElectricCounterCreateDto electricCounterCreateDto)
+        [ProducesResponseType(typeof(ElectricCounterReadDto), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+        public async Task<ActionResult<ElectricCounterReadDto>> AddCounter(ElectricCounterCreateDto electricCounterCreateDto, CancellationToken cancellationToken)
         {
-            if (electricCounterCreateDto.Ablesetag == null)
+            if (electricCounterCreateDto.Ablesetag is not DateTime day)
             {
-                return BadRequest($"Kein gültiges Datum vorhanden! (Ablesetag={electricCounterCreateDto.Ablesetag})");
+                return BadRequest(new ProblemDetails
+                {
+                    Title = "Ungültiges Datum",
+                    Detail = "Es wurde kein gültiges Ablesedatum angegeben.",
+                    Status = StatusCodes.Status400BadRequest
+                });
             }
 
-            DateTime day = (DateTime)electricCounterCreateDto.Ablesetag;
-            var result = await _repo.GetCounterByDateAsync(day);
-            if (result != null)
+            var existingCounter = await repo.GetCounterByDateAsync(day, cancellationToken);
+            if (existingCounter is not null)
             {
-                return BadRequest($"Zählerstand schon vorhanden! (Ablesetag={result!.Ablesetag.GetValueOrDefault():dd.MM.yyyy})");
+                return Conflict(new ProblemDetails
+                {
+                    Title = "Zählerstand bereits vorhanden",
+                    Detail = $"Für den Ablesetag {existingCounter.Ablesetag:dd.MM.yyyy} existiert bereits ein Zählerstand.",
+                    Status = StatusCodes.Status409Conflict
+                });
             }
 
-            var counterModel = _mapper.Map<ElectricCounter>(electricCounterCreateDto);
-            if (counterModel == null)
-            {
-                //var day = (DateTime)counterModel.Ablesetag;
-                return BadRequest($"Kein gültiger Zählerstand oder Zählerstand schon vorhanden! (Ablesetag={result!.Ablesetag.GetValueOrDefault():dd.MM.yyyy})");
-            }
-            await _repo.AddCounterAsync(counterModel);
-            await _repo.SaveChangesAsync();
-            var counterReadDto = _mapper.Map<ElectricCounterReadDto>(counterModel);
-            return CreatedAtRoute(nameof(GetElectricCounterByDay), new { day = counterReadDto.ID_Tag }, counterReadDto);
+            var counterModel = mapper.Map<ElectricCounter>(electricCounterCreateDto);
+
+            await repo.AddCounterAsync(counterModel, cancellationToken);
+            await repo.SaveChangesAsync(cancellationToken);
+
+            var counterReadDto = mapper.Map<ElectricCounterReadDto>(counterModel);
+
+            return CreatedAtAction(
+                nameof(GetElectricCounterById),
+                new { id = counterReadDto.ID_Tag },
+                counterReadDto);
         }
+        #endregion
 
+        #region [HttpPost("anbieter")]
         /// <summary>
         /// Post: neuen Anbieter schreiben
         /// Route: /api/strom/anbieter
@@ -391,19 +430,25 @@ namespace GWS_Api.Controllers
         /// <param name="electricTarifCreateDto"></param>
         /// <returns></returns>
         [HttpPost("anbieter")]
-        public async Task<ActionResult<ElectricTarifReadDto>> AddElectricSupplier(ElectricTarifCreateDto electricTarifCreateDto)
+        [ProducesResponseType(typeof(ElectricTarifReadDto), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<ElectricTarifReadDto>> AddSupplier(ElectricTarifCreateDto electricTarifCreateDto, CancellationToken cancellationToken)
         {
-            var tarifModel = _mapper.Map<ElectricTarif>(electricTarifCreateDto);
-            if (tarifModel == null)
-            {
-                return BadRequest("Kein gültiger Anbieter!");
-            }
-            await _repo.AddSupplierAsync(tarifModel);
-            await _repo.SaveChangesAsync();
-            var tarifReadDto = _mapper.Map<ElectricTarifReadDto>(tarifModel);
-            return CreatedAtRoute(nameof(GetElectricSupplierById), new { Id = tarifReadDto.Id }, tarifReadDto);
-        }
+            var tarifModel = mapper.Map<ElectricTarif>(electricTarifCreateDto);
 
+            await repo.AddSupplierAsync(tarifModel, cancellationToken);
+            await repo.SaveChangesAsync(cancellationToken);
+
+            var tarifReadDto = mapper.Map<ElectricTarifReadDto>(tarifModel);
+
+            return CreatedAtAction(
+                nameof(GetSupplierById),
+                new { id = tarifReadDto.Id },
+                tarifReadDto);
+        }
+        #endregion
+
+        #region [HttpPost("zahlung")]
         /// <summary>
         /// Post: neue Zahlung schreiben
         /// Route: /api/strom/zahlung
@@ -411,19 +456,25 @@ namespace GWS_Api.Controllers
         /// <param name="electricPaymentCreateDto"></param>
         /// <returns></returns>
         [HttpPost("zahlung")]
-        public async Task<ActionResult<ElectricPaymentReadDto>> AddElectricPayment(ElectricPaymentCreateDto electricPaymentCreateDto)
+        [ProducesResponseType(typeof(ElectricPaymentReadDto), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<ElectricPaymentReadDto>> AddElectricPayment(ElectricPaymentCreateDto electricPaymentCreateDto, CancellationToken cancellationToken)
         {
-            var paymentModel = _mapper.Map<ElectricPayment>(electricPaymentCreateDto);
-            if (paymentModel == null)
-            {
-                return BadRequest("Keine gültige Zahlung!");
-            }
-            await _repo.AddPaymentAsync(paymentModel);
-            await _repo.SaveChangesAsync();
-            var paymentReadDto = _mapper.Map<ElectricPaymentReadDto>(paymentModel);
-            return CreatedAtRoute(nameof(GetElectricPaymentsBySupplier), new { Id = paymentReadDto.ID_Zahlung }, paymentReadDto);
-        }
+            var paymentModel = mapper.Map<ElectricPayment>(electricPaymentCreateDto);
 
+            await repo.AddPaymentAsync(paymentModel, cancellationToken);
+            await repo.SaveChangesAsync(cancellationToken);
+
+            var paymentReadDto = mapper.Map<ElectricPaymentReadDto>(paymentModel);
+
+            return CreatedAtAction(
+                nameof(GetElectricPaymentById),
+                new { id = paymentReadDto.ID_Zahlung },
+                paymentReadDto);
+        }
+        #endregion
+
+        #region [HttpPost("kosten")]
         /// <summary>
         /// Post: neue Kosten schreiben
         /// Route: /api/strom/kosten
@@ -431,19 +482,25 @@ namespace GWS_Api.Controllers
         /// <param name="electricCostsCreateDto"></param>
         /// <returns></returns>
         [HttpPost("kosten")]
-        public async Task<ActionResult<ElectricCostReadDto>> AddElectricCosts(ElectricCostCreateDto electricCostsCreateDto)
+        [ProducesResponseType(typeof(ElectricCostReadDto), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<ElectricCostReadDto>> AddElectricCosts(ElectricCostCreateDto electricCostCreateDto, CancellationToken cancellationToken)
         {
-            var costsModel = _mapper.Map<ElectricCost>(electricCostsCreateDto);
-            if (costsModel == null)
-            {
-                return BadRequest("Keinen gültigen Kosten!");
-            }
-            await _repo.AddCostAsync(costsModel);
-            await _repo.SaveChangesAsync();
-            var costsReadDto = _mapper.Map<ElectricCostReadDto>(costsModel);
-            return CreatedAtRoute(nameof(GetElectricCostsBySupplier), new { costsReadDto.Id }, costsReadDto);
-        }
+            var costModel = mapper.Map<ElectricCost>(electricCostCreateDto);
 
+            await repo.AddCostAsync(costModel, cancellationToken);
+            await repo.SaveChangesAsync(cancellationToken);
+
+            var costReadDto = mapper.Map<ElectricCostReadDto>(costModel);
+
+            return CreatedAtAction(
+                nameof(GetElectricCostsBySupplier),
+                new { id = costReadDto.Id_Anbieter }, // Wichtig: Hier muss die Anbieter-ID übergeben werden!
+                costReadDto);
+        }
+        #endregion
+
+        #region [HttpPost("zaehlerwechsel")]
         /// <summary>
         /// Post: neuen Zaehlerwechsel schreiben
         /// Route: /api/strom/zaehlerwechsel
@@ -451,134 +508,211 @@ namespace GWS_Api.Controllers
         /// <param name="electricCounterChangeCreateDto"></param>
         /// <returns></returns>
         [HttpPost("zaehlerwechsel")]
-        public async Task<ActionResult<ElectricCounterChangeReadDto>> AddElectricCounterChange(ElectricCounterChangeCreateDto electricCounterChangeCreateDto)
+        [ProducesResponseType(typeof(ElectricCounterChangeReadDto), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<ElectricCounterChangeReadDto>> AddElectricCounterChange(ElectricCounterChangeCreateDto electricCounterChangeCreateDto, CancellationToken cancellationToken)
         {
-            var counterChangeModel = _mapper.Map<ElectricCounterChange>(electricCounterChangeCreateDto);
-            if (counterChangeModel == null)
-            {
-                return BadRequest("Keinen gültigen Zaehlerwechsel!");
-            }
-            await _repo.AddCounterChangeAsync(counterChangeModel);
-            await _repo.SaveChangesAsync();
-            var counterChangeReadDto = _mapper.Map<ElectricCounterChangeReadDto>(counterChangeModel);
-            return CreatedAtRoute(nameof(GetElectricCounterChangesBySupplier), new { counterChangeReadDto.Id }, counterChangeReadDto);
+            var counterChangeModel = mapper.Map<ElectricCounterChange>(electricCounterChangeCreateDto);
+
+            await repo.AddCounterChangeAsync(counterChangeModel, cancellationToken);
+            await repo.SaveChangesAsync(cancellationToken);
+
+            var counterChangeReadDto = mapper.Map<ElectricCounterChangeReadDto>(counterChangeModel);
+
+            return CreatedAtAction(
+                nameof(GetElectricCounterChangeById),
+                new { id = counterChangeReadDto.Id },
+                counterChangeReadDto);
         }
+        #endregion
         #endregion
 
         #region DELETE
+        #region  [HttpDelete("anbieter/{id:int:min(1)}")]
         /// <summary>
-        /// Delete: Löschen eines Anbieters
+        /// Löscht einen Anbieter anhand seiner ID
         /// Route: /api/strom/anbieter/id
         /// </summary>
-        /// <param name="id"></param>
-        /// <returns></returns>
-        [HttpDelete("anbieter/{id:int}")]
-        public async Task<ActionResult> DeleteElectricSupplier(int id)
+        /// <param name="id">Die eindeutige ID des zu löschenden Anbieters.</param>
+        /// <returns>Ein HTTP-Statuscode und optional der gelöschte Anbieter.</returns>
+        /// <response code="200">Anbieter wurde erfolgreich gelöscht und als Objekt zurückgegeben.</response>
+        /// <response code="404">Anbieter mit der angegebenen ID wurde nicht gefunden.</response>
+        /// <response code="409">Anbieter kann nicht gelöscht werden, da er noch mit anderen Daten verknüpft ist (z. B. Rechnungen/Zahlungen).</response>
+        /// <response code="500">Ein interner Serverfehler ist beim Löschen in der Datenbank aufgetreten.</response>
+        [HttpDelete("anbieter/{id:int:min(1)}")]
+        [ProducesResponseType(typeof(ElectricTarifReadDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+        public async Task<ActionResult<ElectricTarifReadDto>> DeleteSupplier(
+            int id,
+            CancellationToken cancellationToken)
         {
-            // 1. Existenzprüfung im Repository
-            var supplierFromRepo = await _repo.GetSupplierByIdAsync(id);
-
-            if (supplierFromRepo == null)
+            var supplier = await repo.GetSupplierByIdAsync(id, cancellationToken);
+            if (supplier is null)
             {
-                // Gibt 404 mit dem Text aus, den Blazor in 'MyResponseString' anzeigt
-                return NotFound($"Anbieter mit Id = {id} nicht gefunden");
+                return NotFound(new ProblemDetails
+                {
+                    Title = "Anbieter nicht gefunden",
+                    Detail = $"Kein Anbieter mit der Id {id} vorhanden.",
+                    Status = StatusCodes.Status404NotFound
+                });
             }
+
+            // Mappt vor dem Löschen das DTO für die Rückgabe an Blazor
+            var deletedDto = mapper.Map<ElectricTarifReadDto>(supplier);
 
             try
             {
-                // 2. Löschen und Speichern
-                await _repo.DeleteSupplierAsync(supplierFromRepo);
-                await _repo.SaveChangesAsync();
+                await repo.DeleteSupplierAsync(supplier, cancellationToken);
+                await repo.SaveChangesAsync(cancellationToken);
 
-                // 3. REST-Konvention: Entweder 204 NoContent oder 200 Ok mit dem gelöschten Objekt
-                return Ok(supplierFromRepo);
+                return Ok(deletedDto);
             }
-            catch (Exception)
+            catch (DbUpdateException)
             {
-                // Schützt die API vor unhandled 500-Exceptions (z.B. wegen DB-Datenintegrität/Foreign Keys)
-                return StatusCode(StatusCodes.Status500InternalServerError, "Fehler beim Löschen des Datensatzes in der Datenbank.");
+                // Gezieltes Abfangen von Foreign-Key-Konflikten für HTTP 409
+                return Conflict(new ProblemDetails
+                {
+                    Title = "Löschen nicht möglich",
+                    Detail = "Der Anbieter kann nicht gelöscht werden, da er noch mit anderen Datensätzen verknüpft ist.",
+                    Status = StatusCodes.Status409Conflict
+                });
             }
-
-        }
-
-        /// <summary>
-        /// Delete: Löschen eines Zählerstandes
-        /// Route: /api/strom/zaehlerstand/day
-        /// </summary>
-        /// <param name="day"></param>
-        /// <returns></returns>
-        [HttpDelete("zaehlerstand/{day}")]
-        public async Task<ActionResult> DeleteCounter(DateTime day)
-        {
-            var counterModelFromRepo = await _repo.GetCounterByDateAsync(day);
-            if (counterModelFromRepo == null)
-            {
-                return NotFound($"Zähler-Ablesetag mit Datum= {day} nicht gefunden");
-            }
-            await _repo.DeleteCounterAsync(counterModelFromRepo);
-            await _repo.SaveChangesAsync();
-            return Ok(counterModelFromRepo);
-        }
-
-        /// <summary>
-        /// Delete: Löschen einer Zahlung
-        /// Route: /api/strom/zahlung/id
-        /// </summary>
-        /// <param></param>
-        /// <returns></returns>
-        [HttpDelete("zahlung/{id:int}")]
-        public async Task<ActionResult> DeletePayment(int id)
-        {
-            var paymentModelFromRepo = await _repo.GetPaymentByIdAsync(id);
-            if (paymentModelFromRepo == null)
-            {
-                return NotFound($"Zahlung mit Id= {id} nicht gefunden");
-            }
-            await _repo.DeletePaymentAsync(paymentModelFromRepo);
-            await _repo.SaveChangesAsync();
-            return Ok(paymentModelFromRepo);
-        }
-
-        /// <summary>
-        /// Delete: Löschen eines Kostensatzes
-        /// Route: /api/strom/kosten/id
-        /// </summary>
-        /// <param></param>
-        /// <returns></returns>
-        [HttpDelete("kosten/{id:int}")]
-        public async Task<ActionResult> DeleteCost(int id)
-        {
-            var costsModelFromRepo = await _repo.GetCostByIdAsync(id);
-            if (costsModelFromRepo == null)
-            {
-                return NotFound($"Kosten mit Id= {id} nicht gefunden");
-            }
-            await _repo.DeleteCostAsync(costsModelFromRepo);
-            await _repo.SaveChangesAsync();
-            return Ok(costsModelFromRepo);
-        }
-
-        /// <summary>
-        /// Delete: Löschen eines Zaehlerwechsels
-        /// Route: /api/strom/zaehlerwechsel/id
-        /// </summary>
-        /// <param></param>
-        /// <returns></returns>
-        [HttpDelete("zaehlerwechsel/{id:int}")]
-        public async Task<ActionResult> DeleteCounterChange(int id)
-        {
-            var counterChangeModelFromRepo = await _repo.GetCounterChangeByIdAsync(id);
-            if (counterChangeModelFromRepo == null)
-            {
-                return NotFound($"Zaehlerwechsel mit Id= {id} nicht gefunden");
-            }
-            await _repo.DeleteCounterChangeAsync(counterChangeModelFromRepo);
-            await _repo.SaveChangesAsync();
-            return Ok(counterChangeModelFromRepo);
         }
         #endregion
 
+        #region [HttpDelete("zaehlerstand/{id:int:min(1)}")]
+        /// <summary>
+        /// Löscht einen Zählerstand anhand seiner ID
+        /// </summary>
+        /// <param name="id">Die eindeutige ID des Zählerstandes.</param>
+        /// <returns>Der gelöschte Zählerstand oder ein NotFound-Ergebnis.</returns>
+        /// <response code="200">Erfolgreich gelöscht. Gibt das gelöschte Objekt zurück.</response>
+        /// <response code="404">Wenn kein Zählerstand mit der ID existiert.</response>
+        [HttpDelete("zaehlerstand/{id:int:min(1)}")]
+        [ProducesResponseType(typeof(ElectricCounterReadDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<ElectricCounterReadDto>> DeleteCounter(int id, CancellationToken cancellationToken)
+        {
+            var counter = await repo.GetCounterByIdAsync(id, cancellationToken);
+            if (counter is null)
+            {
+                return NotFound(new ProblemDetails
+                {
+                    Title = "Zählerstand nicht gefunden",
+                    Detail = $"Kein Zählerstand mit der Id {id} vorhanden.",
+                    Status = StatusCodes.Status404NotFound
+                });
+            }
+
+            var deletedDto = mapper.Map<ElectricCounterReadDto>(counter);
+
+            await repo.DeleteCounterAsync(counter, cancellationToken);
+            await repo.SaveChangesAsync(cancellationToken);
+
+            return Ok(deletedDto);
+        }
+        #endregion
+
+        #region [HttpDelete("zahlung/{id:int:min(1)}")]
+        ///// <summary>
+        ///// Delete: Löschen einer Zahlung
+        ///// Route: /api/strom/zahlung/id
+        ///// </summary>
+        ///// <param></param>
+        ///// <returns></returns>
+        [HttpDelete("zahlung/{id:int:min(1)}")]
+        [ProducesResponseType(typeof(ElectricPaymentReadDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<ElectricPaymentReadDto>> DeletePayment(int id, CancellationToken cancellationToken)
+        {
+            var payment = await repo.GetPaymentByIdAsync(id, cancellationToken);
+            if (payment is null)
+            {
+                return NotFound(new ProblemDetails
+                {
+                    Title = "Zahlung nicht gefunden",
+                    Detail = $"Keine Zahlung mit der Id {id} vorhanden.",
+                    Status = StatusCodes.Status404NotFound
+                });
+            }
+
+            var deletedDto = mapper.Map<ElectricPaymentReadDto>(payment);
+
+            await repo.DeletePaymentAsync(payment, cancellationToken);
+            await repo.SaveChangesAsync(cancellationToken);
+
+            return Ok(deletedDto);
+        }
+        #endregion
+
+        #region  [HttpDelete("kosten/{id:int:min(1)}")]
+        ///// <summary>
+        ///// Delete: Löschen eines Kostensatzes
+        ///// Route: /api/strom/kosten/id
+        ///// </summary>
+        ///// <param></param>
+        ///// <returns></returns>
+        [HttpDelete("kosten/{id:int:min(1)}")]
+        [ProducesResponseType(typeof(ElectricCostReadDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<ElectricCostReadDto>> DeleteCost(int id, CancellationToken cancellationToken)
+        {
+            var cost = await repo.GetCostByIdAsync(id, cancellationToken);
+            if (cost is null)
+            {
+                return NotFound(new ProblemDetails
+                {
+                    Title = "Kosten nicht gefunden",
+                    Detail = $"Keine Kosten mit der Id {id} vorhanden.",
+                    Status = StatusCodes.Status404NotFound
+                });
+            }
+
+            var deletedDto = mapper.Map<ElectricCostReadDto>(cost);
+
+            await repo.DeleteCostAsync(cost, cancellationToken);
+            await repo.SaveChangesAsync(cancellationToken);
+
+            return Ok(deletedDto);
+        }
+        #endregion
+
+        #region  [HttpDelete("zaehlerwechsel/{id:int:min(1)}")]
+        ///// <summary>
+        ///// Delete: Löschen eines Zaehlerwechsels
+        ///// Route: /api/strom/zaehlerwechsel/id
+        ///// </summary>
+        ///// <param></param>
+        ///// <returns></returns>
+        [HttpDelete("zaehlerwechsel/{id:int:min(1)}")]
+        [ProducesResponseType(typeof(ElectricCounterChangeReadDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<ElectricCounterChangeReadDto>> DeleteCounterChange(int id, CancellationToken cancellationToken)
+        {
+            var counterChange = await repo.GetCounterChangeByIdAsync(id, cancellationToken);
+            if (counterChange is null)
+            {
+                return NotFound(new ProblemDetails
+                {
+                    Title = "Zählerwechsel nicht gefunden",
+                    Detail = $"Kein Zählerwechsel mit der Id {id} vorhanden.",
+                    Status = StatusCodes.Status404NotFound
+                });
+            }
+
+            var deletedDto = mapper.Map<ElectricCounterChangeReadDto>(counterChange);
+
+            await repo.DeleteCounterChangeAsync(counterChange, cancellationToken);
+            await repo.SaveChangesAsync(cancellationToken);
+
+            return Ok(deletedDto);
+        }
+        #endregion
+        #endregion
+
         #region UPDATE
+        #region [HttpPut("anbieter/{id:int:min(1)}")]
         /// <summary>
         /// Put: Update eines Anbieters
         /// Route: /api/strom/anbieter/id
@@ -586,20 +720,33 @@ namespace GWS_Api.Controllers
         /// <param name="id"></param>
         /// <param name="electricTarifUpdateDto"></param>
         /// <returns></returns>
-        [HttpPut("anbieter/{id:int}")]
-        public async Task<ActionResult> UpdateSupplier(int id, ElectricTarifUpdateDto electricTarifUpdateDto)
+        [HttpPut("anbieter/{id:int:min(1)}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> UpdateSupplier(int id, ElectricTarifUpdateDto electricTarifUpdateDto, CancellationToken cancellationToken)
         {
-            var tarifModelFromRepo = await _repo.GetSupplierByIdAsync(id);
-            if (tarifModelFromRepo == null)
+            var supplier = await repo.GetSupplierByIdAsync(id, cancellationToken);
+            if (supplier is null)
             {
-                return NotFound($"Anbieter mit Id= {id} nicht gefunden");
+                return NotFound(new ProblemDetails
+                {
+                    Title = "Anbieter nicht gefunden",
+                    Detail = $"Kein Anbieter mit der Id {id} vorhanden.",
+                    Status = StatusCodes.Status404NotFound
+                });
             }
-            _mapper.Map(electricTarifUpdateDto, tarifModelFromRepo);
-            await _repo.UpdateSupplierAsync(tarifModelFromRepo);
-            await _repo.SaveChangesAsync();
+
+            mapper.Map(electricTarifUpdateDto, supplier);
+
+            await repo.UpdateSupplierAsync(supplier, cancellationToken);
+            await repo.SaveChangesAsync(cancellationToken);
+
             return NoContent();
         }
+        #endregion
 
+        #region [HttpPut("zaehlerstand/{day:datetime}")]
         /// <summary>
         /// Put: Update eines Zählerstandes nach Datum
         /// Route: /api/strom/zaehlerstand/day
@@ -607,20 +754,33 @@ namespace GWS_Api.Controllers
         /// <param name="day"></param>
         /// <param name="electricCounterUpdateDto"></param>
         /// <returns></returns>
-        [HttpPut("zaehlerstand/{day}")]
-        public async Task<ActionResult> UpdateElectricCounter(DateTime day, ElectricCounterUpdateDto electricCounterUpdateDto)
+        [HttpPut("zaehlerstand/{day:datetime}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> UpdateElectricCounter(DateTime day, ElectricCounterUpdateDto electricCounterUpdateDto, CancellationToken cancellationToken)
         {
-            var counterModelFromRepo = await _repo.GetCounterByDateAsync(day);
-            if (counterModelFromRepo == null)
+            var counter = await repo.GetCounterByDateAsync(day, cancellationToken);
+            if (counter is null)
             {
-                return NotFound($"Zaehlerstand mit Datum= {day:dd.MM.yyyy} nicht gefunden");
+                return NotFound(new ProblemDetails
+                {
+                    Title = "Zählerstand nicht gefunden",
+                    Detail = $"Kein Zählerstand für das Datum {day:yyyy-MM-dd} vorhanden.",
+                    Status = StatusCodes.Status404NotFound
+                });
             }
-            _mapper.Map(electricCounterUpdateDto, counterModelFromRepo);
-            await _repo.UpdateCounterAsync(counterModelFromRepo);
-            await _repo.SaveChangesAsync();
+
+            mapper.Map(electricCounterUpdateDto, counter);
+
+            await repo.UpdateCounterAsync(counter, cancellationToken);
+            await repo.SaveChangesAsync(cancellationToken);
+
             return NoContent();
         }
+        #endregion
 
+        #region [HttpPut("zaehlerstand/id/{id:int:min(1)}")]
         /// <summary>
         /// Put: Update eines Zählerstandes nach Id
         /// Route: /api/strom/zaehlerstand/id
@@ -628,20 +788,33 @@ namespace GWS_Api.Controllers
         /// <param name="id"></param>
         /// <param name="electricCounterUpdateDto"></param>
         /// <returns></returns>
-        [HttpPut("zaehlerstand/id/{id:int}")]
-        public async Task<ActionResult> UpdateElectricCounter(int id, ElectricCounterUpdateDto electricCounterUpdateDto)
+        [HttpPut("zaehlerstand/id/{id:int:min(1)}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> UpdateElectricCounterById(int id, ElectricCounterUpdateDto electricCounterUpdateDto, CancellationToken cancellationToken)
         {
-            var counterModelFromRepo = await _repo.GetCounterByIdAsync(id);
-            if (counterModelFromRepo == null)
+            var counter = await repo.GetCounterByIdAsync(id, cancellationToken);
+            if (counter is null)
             {
-                return NotFound($"Zaehlerstand mit Id= {id} nicht gefunden");
+                return NotFound(new ProblemDetails
+                {
+                    Title = "Zählerstand nicht gefunden",
+                    Detail = $"Kein Zählerstand mit der Id {id} vorhanden.",
+                    Status = StatusCodes.Status404NotFound
+                });
             }
-            _mapper.Map(electricCounterUpdateDto, counterModelFromRepo);
-            await _repo.UpdateCounterAsync(counterModelFromRepo);
-            await _repo.SaveChangesAsync();
+
+            mapper.Map(electricCounterUpdateDto, counter);
+
+            await repo.UpdateCounterAsync(counter, cancellationToken);
+            await repo.SaveChangesAsync(cancellationToken);
+
             return NoContent();
         }
+        #endregion
 
+        #region [HttpPut("zahlung/{id:int:min(1)}")]
         /// <summary>
         /// Put: Update einer Zahlung
         /// Route: /api/strom/zahlung/id
@@ -649,20 +822,33 @@ namespace GWS_Api.Controllers
         /// <param></param>
         /// <param name="electricPaymentUpdateDto"></param>
         /// <returns></returns>
-        [HttpPut("zahlung/{id}")]
-        public async Task<ActionResult> UpdateElectricPayment(int id, ElectricPaymentUpdateDto electricPaymentUpdateDto)
+        [HttpPut("zahlung/{id:int:min(1)}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> UpdateElectricPayment(int id, ElectricPaymentUpdateDto electricPaymentUpdateDto, CancellationToken cancellationToken)
         {
-            var paymentModelFromRepo = await _repo.GetPaymentByIdAsync(id);
-            if (paymentModelFromRepo == null)
+            var payment = await repo.GetPaymentByIdAsync(id, cancellationToken);
+            if (payment is null)
             {
-                return NotFound($"Zahlung mit Id= {id} nicht gefunden");
+                return NotFound(new ProblemDetails
+                {
+                    Title = "Zahlung nicht gefunden",
+                    Detail = $"Keine Zahlung mit der Id {id} vorhanden.",
+                    Status = StatusCodes.Status404NotFound
+                });
             }
-            _mapper.Map(electricPaymentUpdateDto, paymentModelFromRepo);
-            await _repo.UpdatePaymentAsync(paymentModelFromRepo);
-            await _repo.SaveChangesAsync();
+
+            mapper.Map(electricPaymentUpdateDto, payment);
+
+            await repo.UpdatePaymentAsync(payment, cancellationToken);
+            await repo.SaveChangesAsync(cancellationToken);
+
             return NoContent();
         }
+        #endregion
 
+        #region [HttpPut("kosten/{id:int:min(1)}")]
         /// <summary>
         /// Put: Update eines Kostensatzes
         /// Route: /api/strom/kosten/id
@@ -670,20 +856,33 @@ namespace GWS_Api.Controllers
         /// <param></param>
         /// <param name="electricCostsUpdateDto"></param>
         /// <returns></returns>
-        [HttpPut("kosten/{id}")]
-        public async Task<ActionResult> UpdateElectricCosts(int id, ElectricCostUpdateDto electricCostsUpdateDto)
+        [HttpPut("kosten/{id:int:min(1)}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> UpdateElectricCosts(int id, ElectricCostUpdateDto electricCostUpdateDto, CancellationToken cancellationToken)
         {
-            var costsModelFromRepo = await _repo.GetCostByIdAsync(id);
-            if (costsModelFromRepo == null)
+            var cost = await repo.GetCostByIdAsync(id, cancellationToken);
+            if (cost is null)
             {
-                return NotFound($"Kosten mit Id= {id} nicht gefunden");
+                return NotFound(new ProblemDetails
+                {
+                    Title = "Kosten nicht gefunden",
+                    Detail = $"Keine Kosten mit der Id {id} vorhanden.",
+                    Status = StatusCodes.Status404NotFound
+                });
             }
-            _mapper.Map(electricCostsUpdateDto, costsModelFromRepo);
-            await _repo.UpdateCostAsync(costsModelFromRepo);
-            await _repo.SaveChangesAsync();
+
+            mapper.Map(electricCostUpdateDto, cost);
+
+            await repo.UpdateCostAsync(cost, cancellationToken);
+            await repo.SaveChangesAsync(cancellationToken);
+
             return NoContent();
         }
+        #endregion
 
+        #region [HttpPut("zaehlerwechsel/{id:int:min(1)}")]
         /// <summary>
         /// Put: Update eines Zaehlerwechsels
         /// Route: /api/wasser/zaehlerwechsel/id
@@ -691,23 +890,36 @@ namespace GWS_Api.Controllers
         /// <param name="id"></param>
         /// <param name="electricCounterChangeUpdateDto"></param>
         /// <returns></returns>
-        [HttpPut("zaehlerwechsel/{id:int}")]
-        public async Task<ActionResult> UpdateCounterChange(int id, ElectricCounterChangeUpdateDto electricCounterChangeUpdateDto)
+        [HttpPut("zaehlerwechsel/{id:int:min(1)}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> UpdateCounterChange(int id, ElectricCounterChangeUpdateDto electricCounterChangeUpdateDto, CancellationToken cancellationToken)
         {
-            var counterChangeModelFromRepo = await _repo.GetCounterChangeByIdAsync(id);
-            if (counterChangeModelFromRepo == null)
+            var counterChange = await repo.GetCounterChangeByIdAsync(id, cancellationToken);
+            if (counterChange is null)
             {
-                return NotFound($"Zaehlerwechsel mit Id= {id} nicht gefunden");
+                return NotFound(new ProblemDetails
+                {
+                    Title = "Zählerwechsel nicht gefunden",
+                    Detail = $"Kein Zählerwechsel mit der Id {id} vorhanden.",
+                    Status = StatusCodes.Status404NotFound
+                });
             }
-            _mapper.Map(electricCounterChangeUpdateDto, counterChangeModelFromRepo);
-            await _repo.UpdateCounterChangeAsync(counterChangeModelFromRepo);
-            await _repo.SaveChangesAsync();
+
+            mapper.Map(electricCounterChangeUpdateDto, counterChange);
+
+            await repo.UpdateCounterChangeAsync(counterChange, cancellationToken);
+            await repo.SaveChangesAsync(cancellationToken);
+
             return NoContent();
         }
+        #endregion
         #endregion
 
         #region PATCH
 
+        #region [HttpPatch("anbieter/{id:int:min(1)}")]
         /// <summary>
         /// Patch: Patch eines Anbieters
         /// Route: /api/strom/zaehlerwechsel/id
@@ -725,28 +937,43 @@ namespace GWS_Api.Controllers
 
         ]
         */
-        [HttpPatch("anbieter/{id:int}")]
-        public async Task<ActionResult> PartialElectricSupplierUpdate(int id, JsonPatchDocument<ElectricTarifUpdateDto> patchDoc)
+
+        [HttpPatch("anbieter/{id:int:min(1)}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> PartialSupplierUpdate(int id, JsonPatchDocument<ElectricTarifUpdateDto> patchDoc, CancellationToken cancellationToken)
         {
-            var tarifModelFromRepo = await _repo.GetSupplierByIdAsync(id);
-            if (tarifModelFromRepo == null)
+            var supplier = await repo.GetSupplierByIdAsync(id, cancellationToken);
+            if (supplier is null)
             {
-                return NotFound($"Anbieter mit Id= {id} nicht gefunden");
+                return NotFound(new ProblemDetails
+                {
+                    Title = "Anbieter nicht gefunden",
+                    Detail = $"Kein Anbieter mit der Id {id} vorhanden.",
+                    Status = StatusCodes.Status404NotFound
+                });
             }
-            var tarifToPatch = _mapper.Map<ElectricTarifUpdateDto>(tarifModelFromRepo);  //CreateMap<Strom_tarif, ElectricTarifUpdateDto>() wird hier benutzt
+
+            var tarifToPatch = mapper.Map<ElectricTarifUpdateDto>(supplier);
+
             patchDoc.ApplyTo(tarifToPatch, ModelState);
 
             if (!TryValidateModel(tarifToPatch))
             {
                 return ValidationProblem(ModelState);
             }
-            _mapper.Map(tarifToPatch, tarifModelFromRepo);
 
-            await _repo.UpdateSupplierAsync(tarifModelFromRepo);
-            await _repo.SaveChangesAsync();
+            mapper.Map(tarifToPatch, supplier);
+
+            await repo.UpdateSupplierAsync(supplier, cancellationToken);
+            await repo.SaveChangesAsync(cancellationToken);
+
             return NoContent();
         }
+        #endregion
 
+        #region [HttpPatch("zaehlerstand/{day:datetime}")]
         /// <summary>
         /// Patch: Patch eines Zählerstandes
         /// Route: /api/strom/zaehlerstand/day
@@ -763,28 +990,42 @@ namespace GWS_Api.Controllers
          }
        ]
        */
-        [HttpPatch("zaehlerstand/{day}")]
-        public async Task<ActionResult> PartialElectricCounterUpdate(DateTime day, JsonPatchDocument<ElectricCounterUpdateDto> patchDoc)
+        [HttpPatch("zaehlerstand/{day:datetime}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> PartialCounterUpdate(DateTime day, JsonPatchDocument<ElectricCounterUpdateDto> patchDoc, CancellationToken cancellationToken)
         {
-            var counterModelFromRepo = await _repo.GetCounterByDateAsync(day);
-            if (counterModelFromRepo == null)
+            var counter = await repo.GetCounterByDateAsync(day, cancellationToken);
+            if (counter is null)
             {
-                return NotFound($"Zahlerstand mit Datum= {day::dd.MM.yyyy} nicht gefunden");
+                return NotFound(new ProblemDetails
+                {
+                    Title = "Zählerstand nicht gefunden",
+                    Detail = $"Kein Zählerstand für das Datum {day:yyyy-MM-dd} vorhanden.",
+                    Status = StatusCodes.Status404NotFound
+                });
             }
-            var counterToPatch = _mapper.Map<ElectricCounterUpdateDto>(counterModelFromRepo);  //CreateMap<Strom_counter, ElectricCounterUpdateDto>() wird hier benutzt
+
+            var counterToPatch = mapper.Map<ElectricCounterUpdateDto>(counter);
+
             patchDoc.ApplyTo(counterToPatch, ModelState);
 
             if (!TryValidateModel(counterToPatch))
             {
                 return ValidationProblem(ModelState);
             }
-            _mapper.Map(counterToPatch, counterModelFromRepo);
 
-            await _repo.UpdateCounterAsync(counterModelFromRepo);
-            await _repo.SaveChangesAsync();
+            mapper.Map(counterToPatch, counter);
+
+            await repo.UpdateCounterAsync(counter, cancellationToken);
+            await repo.SaveChangesAsync(cancellationToken);
+
             return NoContent();
         }
+        #endregion
 
+        #region [HttpPatch("zahlung/{id:int:min(1)}")]
         /// <summary>
         /// Patch: Patch einer Zahlung
         /// Route: /api/strom/zahlung/id
@@ -792,28 +1033,42 @@ namespace GWS_Api.Controllers
         /// <param name="id"></param>
         /// <param name="patchDoc"></param>
         /// <returns></returns>
-        [HttpPatch("zahlung/{id}")]
-        public async Task<ActionResult> PartialElectricPaymentsUpdate(int id, JsonPatchDocument<ElectricPaymentUpdateDto> patchDoc)
+        [HttpPatch("zahlung/{id:int:min(1)}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> PartialElectricPaymentsUpdate(int id, JsonPatchDocument<ElectricPaymentUpdateDto> patchDoc, CancellationToken cancellationToken)
         {
-            var paymentModelFromRepo = await _repo.GetPaymentByIdAsync(id);
-            if (paymentModelFromRepo == null)
+            var payment = await repo.GetPaymentByIdAsync(id, cancellationToken);
+            if (payment is null)
             {
-                return NotFound($"Zahlung mit Id= {id} nicht gefunden");
+                return NotFound(new ProblemDetails
+                {
+                    Title = "Zahlung nicht gefunden",
+                    Detail = $"Keine Zahlung mit der Id {id} vorhanden.",
+                    Status = StatusCodes.Status404NotFound
+                });
             }
-            var paymentToPatch = _mapper.Map<ElectricPaymentUpdateDto>(paymentModelFromRepo); //CreateMap<Electric_payment, ElectricPaymentUpdateDto>() wird hier benutzt
+
+            var paymentToPatch = mapper.Map<ElectricPaymentUpdateDto>(payment);
+
             patchDoc.ApplyTo(paymentToPatch, ModelState);
 
             if (!TryValidateModel(paymentToPatch))
             {
                 return ValidationProblem(ModelState);
             }
-            _mapper.Map(paymentToPatch, paymentModelFromRepo);
 
-            await _repo.UpdatePaymentAsync(paymentModelFromRepo);
-            await _repo.SaveChangesAsync();
+            mapper.Map(paymentToPatch, payment);
+
+            await repo.UpdatePaymentAsync(payment, cancellationToken);
+            await repo.SaveChangesAsync(cancellationToken);
+
             return NoContent();
         }
+        #endregion
 
+        #region [HttpPatch("kosten/{id:int:min(1)}")]
         /// <summary>
         /// Patch: Patch eines Kostensatzes
         /// Route: /api/wasser/kosten/id
@@ -821,28 +1076,42 @@ namespace GWS_Api.Controllers
         /// <param name="id"></param>
         /// <param name="patchDoc"></param>
         /// <returns></returns>
-        [HttpPatch("kosten/{id}")]
-        public async Task<ActionResult> PartialElectricCostsUpdate(int id, JsonPatchDocument<ElectricCostUpdateDto> patchDoc)
+        [HttpPatch("kosten/{id:int:min(1)}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> PartialElectricCostsUpdate(int id, JsonPatchDocument<ElectricCostUpdateDto> patchDoc, CancellationToken cancellationToken)
         {
-            var costsModelFromRepo = await _repo.GetCostByIdAsync(id);
-            if (costsModelFromRepo == null)
+            var cost = await repo.GetCostByIdAsync(id, cancellationToken);
+            if (cost is null)
             {
-                return NotFound($"Kosten mit Id= {id} nicht gefunden");
+                return NotFound(new ProblemDetails
+                {
+                    Title = "Kosten nicht gefunden",
+                    Detail = $"Keine Kosten mit der Id {id} vorhanden.",
+                    Status = StatusCodes.Status404NotFound
+                });
             }
-            var costsToPatch = _mapper.Map<ElectricCostUpdateDto>(costsModelFromRepo); //CreateMap<Electric_costs, ElectricCostsUpdateDto>() wird hier benutzt
-            patchDoc.ApplyTo(costsToPatch, ModelState);
 
-            if (!TryValidateModel(costsToPatch))
+            var costToPatch = mapper.Map<ElectricCostUpdateDto>(cost);
+
+            patchDoc.ApplyTo(costToPatch, ModelState);
+
+            if (!TryValidateModel(costToPatch))
             {
                 return ValidationProblem(ModelState);
             }
-            _mapper.Map(costsToPatch, costsModelFromRepo);
 
-            await _repo.UpdateCostAsync(costsModelFromRepo);
-            await _repo.SaveChangesAsync();
+            mapper.Map(costToPatch, cost);
+
+            await repo.UpdateCostAsync(cost, cancellationToken);
+            await repo.SaveChangesAsync(cancellationToken);
+
             return NoContent();
         }
+        #endregion
 
+        #region [HttpPatch("zaehlerwechsel/{id:int:min(1)}")]
         /// <summary>
         /// Patch eines Zaehlerwechsels
         /// Route: /api/strom/zaehlerwechsel/id
@@ -850,27 +1119,40 @@ namespace GWS_Api.Controllers
         /// <param name="id"></param>
         /// <param name="patchDoc"></param>
         /// <returns></returns>
-        [HttpPatch("zaehlerwechsel/{id:int}")]
-        public async Task<ActionResult> PartialElectricCounterChangeUpdate(int id, JsonPatchDocument<ElectricCounterChangeUpdateDto> patchDoc)
+        [HttpPatch("zaehlerwechsel/{id:int:min(1)}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> PartialElectricCounterChangeUpdate(int id, JsonPatchDocument<ElectricCounterChangeUpdateDto> patchDoc, CancellationToken cancellationToken)
         {
-            var counterChangeModelFromRepo = await _repo.GetCounterChangeByIdAsync(id);
-            if (counterChangeModelFromRepo == null)
+            var counterChange = await repo.GetCounterChangeByIdAsync(id, cancellationToken);
+            if (counterChange is null)
             {
-                return NotFound($"Zaehlerwechsel mit Id= {id} nicht gefunden");
+                return NotFound(new ProblemDetails
+                {
+                    Title = "Zählerwechsel nicht gefunden",
+                    Detail = $"Kein Zählerwechsel mit der Id {id} vorhanden.",
+                    Status = StatusCodes.Status404NotFound
+                });
             }
-            var counterChangeToPatch = _mapper.Map<ElectricCounterChangeUpdateDto>(counterChangeModelFromRepo);
+
+            var counterChangeToPatch = mapper.Map<ElectricCounterChangeUpdateDto>(counterChange);
+
             patchDoc.ApplyTo(counterChangeToPatch, ModelState);
 
             if (!TryValidateModel(counterChangeToPatch))
             {
                 return ValidationProblem(ModelState);
             }
-            _mapper.Map(counterChangeToPatch, counterChangeModelFromRepo);
 
-            await _repo.UpdateCounterChangeAsync(counterChangeModelFromRepo);
-            await _repo.SaveChangesAsync();
+            mapper.Map(counterChangeToPatch, counterChange);
+
+            await repo.UpdateCounterChangeAsync(counterChange, cancellationToken);
+            await repo.SaveChangesAsync(cancellationToken);
+
             return NoContent();
         }
+        #endregion
         #endregion
     }
 }

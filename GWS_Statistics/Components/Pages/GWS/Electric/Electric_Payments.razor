@@ -3,6 +3,7 @@
 @using GWS_Statistics.Components.Services
 @using GWS_Statistics.Helper
 @using System.Net
+@using Syncfusion.Blazor.Navigations
 
 @inject MyAppConfigModel myAppSettings
 @inject HttpClient myHttpClient
@@ -57,44 +58,40 @@
 @* Grid *@
 @if (paymentList != null)
 {
-    <div class="control-section" id="target" align="left">
-        <SfGrid ID="Grid" @ref="sfDataGrid" 
-            DataSource="@paymentList"
-            AllowPaging="true"
-            AllowFiltering="true"
-            AllowReordering="true"
-            AllowResizing="true"
-            AllowExcelExport="true"
-            AllowPdfExport="true"
-            EnableHover="true"
-            AllowTextWrap="true"
-            AllowSelection="true"
-            AllowSorting="true"
-            Height="100%" 
-            Width="100%"
-            Toolbar=@toolbar
-            EnableStickyHeader="true">
+    @* Der Haupt-Container für die gesamte Ansicht *@
+    <div class="control-section elevated-grid-container" id="target" style="position: relative; height: 100%; width: 100%; padding: 4px;">
 
-            <GridEditSettings AllowAdding="true"
-                AllowEditing="true"
-                AllowDeleting="true"
-                ShowDeleteConfirmDialog="false"
-                Mode="EditMode.Dialog"
-                Dialog="DialogParams">
+        @* 1. Die Toolbar (liegt jetzt sauber außerhalb des elevated-Containers) *@
+        <div class="e-toolbar mb-2 p-1 d-flex gap-2 bg-light border rounded">
+            <button type="button" class="btn btn-light btn-sm d-flex align-items-center gap-1 border" @onclick="OnToolbarAddClick">
+                <span class="e-icons e-plus text-primary"></span> Hinzufügen
+            </button>
 
-                <HeaderTemplate>
-                @{
-                    var DialogHeader = GetDialogHeader((context as GWS_PaymentModel));
-                    <span>@DialogHeader</span>
-                }
-                </HeaderTemplate>
-            </GridEditSettings>
+            <button type="button" class="btn btn-light btn-sm d-flex align-items-center gap-1 border" @onclick="OnToolbarExcelClick">
+                <span class="e-icons e-export-xls text-success"></span> Excel-Export
+            </button>
 
-            <GridEvents OnToolbarClick="ToolbarBtnClickHandler"
-                        RowCreating="RowCreatingHandler"
-                        OnActionBegin="ActionBeginHandler"
-                        TValue="GWS_PaymentModel">
-            </GridEvents>
+            <button type="button" class="btn btn-light btn-sm d-flex align-items-center gap-1 border" @onclick="OnToolbarPdfClick">
+                <span class="e-icons e-export-pdf text-danger"></span> PDF-Export
+            </button>
+        </div>
+
+            <SfGrid ID="Grid" @ref="sfDataGrid"
+                    DataSource="@paymentList"
+                    AllowPaging="true"
+                    AllowFiltering="true"
+                    AllowReordering="true"
+                    AllowResizing="true"
+                    AllowExcelExport="true"
+                    AllowPdfExport="true"
+                    EnableHover="true"
+                    AllowTextWrap="true"
+                    AllowSelection="true"
+                    AllowSorting="true"
+                    Height="calc(100% - 52px)"
+                    Width="100%"
+                    EnableStickyHeader="true">
+
 
             <GridPageSettings PageSize="20" PageSizes="true"></GridPageSettings>
 
@@ -131,10 +128,14 @@
                 <GridColumn 
                     Field="@nameof(GWS_PaymentModel.ID_Zahlung)"
                     IsPrimaryKey="true"
-                    Visible="false">
+                    Visible="false"
+                    Width="0"
+                    AllowSorting="false"
+                    AllowFiltering="false"
+                    AllowEditing="false">
                 </GridColumn>
 
-                <GridColumn Field=@nameof(GWS_PaymentModel.ID_Anbieter) Width="200" EditType="EditType.DropDownEdit" HeaderText="Anbieter">
+                <GridColumn Field=@nameof(GWS_PaymentModel.ID_Anbieter) Width="200" HeaderText="Anbieter">
                     @* Zeigt im normalen Grid-Modus den Text statt der ID an --> *@
                     <Template>
                         @{
@@ -143,33 +144,12 @@
                             <span>@supplierName</span>
                         }
                     </Template>
-
-                    <EditTemplate>
-                        <SfDropDownList Placeholder="Anbieter wählen"
-                                        FloatLabelType="FloatLabelType.Always"
-                                        ID="ID_Anbieter"
-                                        TItem="Electric_SupplierDataModel"
-                                        TValue="int"
-                                        @bind-Value="@((context as GWS_PaymentModel)!.ID_Anbieter)"
-                                        DataSource="@supplierList">
-                            @* Value="Id" (int) wird in ID_Anbieter gespeichert, Text="Anbieter" (string) wird angezeigt *@
-                            <DropDownListFieldSettings Value="Id" Text="Anbieter"></DropDownListFieldSettings>
-                        </SfDropDownList>
-                    </EditTemplate>
-
-                    <HeaderTemplate>
-                        <SfTooltip Content="@GetTooltipContent("Anbieter")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
-                            <span><b>Anbieter</b></span>
-                        </SfTooltip>
-                    </HeaderTemplate>
                 </GridColumn>
 
                 <GridColumn Field=@nameof(GWS_PaymentModel.Datum)
-                Format="d"
-                EditType="EditType.DatePickerEdit"
-                Width="110"
-                DefaultValue="DateTime.Now"
-                HeaderText="Datum">
+                    Format="d"
+                    Width="110"
+                    HeaderText="Datum">
 
                     <HeaderTemplate>
                         <SfTooltip Content="@GetTooltipContent("Datum")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
@@ -179,21 +159,8 @@
                 </GridColumn>
 
                 <GridColumn Field=@nameof(GWS_PaymentModel.Zahlungsart)
-                EditType="EditType.DropDownEdit"
-                Width="110"
-                HeaderText="Zahlungsart">
-
-                    <EditTemplate>
-                        <SfDropDownList Placeholder="Zahlungsart"
-                        FloatLabelType="FloatLabelType.Always"
-                        TItem="GWS_PaymentsMethodModel"
-                        TValue="string"
-                        DataSource="@paymentsMethodList"
-                        @bind-Value="@((context as GWS_PaymentModel)!.Zahlungsart)">
-
-                            <DropDownListFieldSettings Value="Zahlungsart" Text="Zahlungsart"></DropDownListFieldSettings>
-                        </SfDropDownList>
-                    </EditTemplate>
+                    Width="110"
+                    HeaderText="Zahlungsart">
 
                     <HeaderTemplate>
                         <SfTooltip Content="@GetTooltipContent("Art")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
@@ -204,19 +171,9 @@
                 </GridColumn>
 
                 <GridColumn Field=@nameof(GWS_PaymentModel.Zahlungen)
-                Format="C2"
-                EditType="EditType.NumericEdit"
-                Width="110"
-                HeaderText="Betrag">
-
-                    <EditTemplate>
-                        <SfNumericTextBox Placeholder="Betrag"
-                        FloatLabelType="FloatLabelType.Always"
-                        TValue="Double?"
-                        @bind-Value="@((context as GWS_PaymentModel)!.Zahlungen)"
-                        Format="C2">
-                        </SfNumericTextBox>
-                    </EditTemplate>
+                    Format="C2"
+                    Width="110"
+                    HeaderText="Betrag">
 
                     <HeaderTemplate>
                         <SfTooltip Content="@GetTooltipContent("Betrag")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
@@ -226,8 +183,8 @@
                 </GridColumn>
 
                 <GridColumn Field=@nameof(GWS_PaymentModel.Bemerkungen)
-                Width="300"
-                HeaderText="Bemerkung">
+                    Width="300"
+                    HeaderText="Bemerkung">
 
                     <HeaderTemplate>
                         <SfTooltip Content="@GetTooltipContent("Bemerkung")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
@@ -236,33 +193,25 @@
                     </HeaderTemplate>
                 </GridColumn>
 
-                <GridColumn HeaderText="Funktion" Width="20%" MinWidth="110">
-                    <GridCommandColumns>
-                        <GridCommandColumn Type="CommandButtonType.Edit"
-                        ButtonOption="@(new CommandButtonOptions(){
-                                                    IconCss="e-icons e-edit",
-                                                    CssClass="e-flat"
-                                               })">
-                        </GridCommandColumn>
-                        <GridCommandColumn Type="CommandButtonType.Delete"
-                        ButtonOption="@(new CommandButtonOptions(){
-                                                    IconCss ="e-icons e-delete",
-                                                    CssClass="e-flat"
-                                               })">
-                        </GridCommandColumn>
-                        <GridCommandColumn Type="CommandButtonType.Save"
-                        ButtonOption="@(new CommandButtonOptions(){
-                                                    IconCss="e-icons e-update",
-                                                    CssClass="e-flat"
-                                               })">
-                        </GridCommandColumn>
-                        <GridCommandColumn Type="CommandButtonType.Cancel"
-                        ButtonOption="@(new CommandButtonOptions(){
-                                                    IconCss="e-icons e-cancel-icon",
-                                                    CssClass="e-flat"
-                                               })">
-                        </GridCommandColumn>
-                    </GridCommandColumns>
+                <GridColumn HeaderText="Funktion" Width="100">
+                    <Template>
+                        @{
+                            var currentItem = (context as GWS_PaymentModel);
+
+                            if (currentItem != null)
+                            {
+                                <div class="d-flex justify-content-around">
+                                    <a href="javascript:void(0)" class="text-secondary" @onclick="() => OnCustomEditClick(currentItem)" @onclick:stopPropagation="true" title="Bearbeiten">
+                                        <span class="e-icons e-edit" style="font-size: 16px; cursor: pointer;"></span>
+                                    </a>
+
+                                    <a href="javascript:void(0)" class="text-danger" @onclick="() => OnCustomDeleteClick(currentItem)" @onclick:stopPropagation="true" title="Löschen">
+                                        <span class="e-icons e-delete" style="font-size: 16px; cursor: pointer;"></span>
+                                    </a>
+                                </div>
+                            }
+                        }
+                    </Template>
                 </GridColumn>
             </GridColumns>
         </SfGrid>
@@ -287,33 +236,112 @@ else
 }
 
 @* Dialog*@
-<div>
-    <SfDialog Target="#target"
-                      Width="@dialogWidth"
-                      Height="@dialogHeight"
-                      AllowDragging="true"
-                      ShowCloseIcon="true"
-                      @bind-Visible="@DialogVisible"
-                      AllowPrerender="true"
-                      IsModal="true" 
-                      CssClass="MyCss">
+<SfDialog Width="@dialogWidth" Height="auto" IsModal="true" @bind-Visible="@IsFormDialogVisible" Header="@FormDialogTitle" ShowCloseIcon="true">
 
-        <DialogTemplates>
-            <Header>@header</Header>
-        </DialogTemplates>
+    <DialogEvents OnClose="CloseForm" />
 
-        <DialogPositionData X="@dialogXValue" Y="@dialogYValue"></DialogPositionData>
-        <DialogAnimationSettings Effect="@animationEffect"></DialogAnimationSettings>
+    <DialogTemplates>
+        <Content>
+            @if (paymentData != null)
+            {
+                <EditForm Model="@paymentData" OnValidSubmit="SaveForm">
+                    <DataAnnotationsValidator />
 
-        @if (showDialogButtons)
-        {
-            <DialogButtons>
-                <DialogButton Content="Ja" IsPrimary="true" OnClick="@YesClick" />
-                <DialogButton Content="Abbrechen" OnClick="@CancelClick" />
-            </DialogButtons>
-        }
-    </SfDialog>
-</div>
+                <div class="form-group mb-3">
+                    <label class="form-label dialog-custom-label">Anbieter wählen</label>
+                    <SfDropDownList TItem="Electric_SupplierDataModel"
+                                    TValue="int"
+                                    Placeholder="Anbieter wählen"
+                                    DataSource="@supplierList"
+                                    @bind-Value="@paymentData.ID_Anbieter">
+                        <DropDownListFieldSettings Value="Id" Text="Anbieter"></DropDownListFieldSettings>
+                    </SfDropDownList>
+                </div>
+
+                    <div class="form-group mb-3">
+                    <label class="form-label dialog-custom-label font-weight-bold">Datum</label>
+                        <SfDatePicker TValue="DateTime" @bind-Value="@paymentData.Datum" Format="dd.MM.yyyy" Placeholder="Datum wählen" />
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="form-label font-weight-bold">Zahlungsart</label>
+
+                        <SfDropDownList TItem="GWS_PaymentsMethodModel"
+                                        TValue="string"
+                                        Placeholder="Zahlungsart wählen"
+                                        FloatLabelType="FloatLabelType.Never"
+                                        AllowFiltering="true"
+                                        DataSource="@paymentsMethodList"
+                                        @bind-Value="@paymentData.Zahlungsart">
+
+                            @* Das hat im Custom-Dialog gefehlt, damit Syncfusion die Objekte lesen kann: *@
+                            <DropDownListFieldSettings Value="Zahlungsart" Text="Zahlungsart"></DropDownListFieldSettings>
+
+                        </SfDropDownList>
+                    </div>
+
+                    <div class="form-group mb-3">
+                    <label class="form-label dialog-custom-label font-weight-bold">Betrag</label>
+                        <SfNumericTextBox Placeholder="Betrag eingeben" TValue="Double?" @bind-Value="@paymentData.Zahlungen" Format="C2" />
+                    </div>
+
+                    <div class="form-group mb-3">
+                    <label class="form-label dialog-custom-label font-weight-bold">Bemerkung</label>
+                        <SfTextBox Placeholder="Bemerkung eingeben" @bind-Value="@paymentData.Bemerkungen" Multiline="true" Rows="1" />
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 mt-4 pt-2 border-top px-4 pb-4">
+                        <button type="submit" class="btn btn-primary px-4">Speichern</button>
+                        <button type="button" class="btn btn-outline-secondary px-4" @onclick="@(() => IsFormDialogVisible = false)">Abbrechen</button>
+                    </div>
+                </EditForm>
+            }
+        </Content>
+    </DialogTemplates>
+</SfDialog>
+
+
+@* BOMBENSICHERER SCHUTZ: Wenn DialogVisible false ist, wird die Komponente komplett vernichtet.
+   Asynchrone Grid-Events können die Box niemals wieder eigenmächtig aufreißen! *@
+@if (DialogVisible)
+{
+    <div>
+        <SfDialog Target="body"
+                  Width="340px"
+                  Height="auto"
+                  AllowDragging="true"
+                  ShowCloseIcon="true"
+                  AllowPrerender="false"
+                  IsModal="true"
+                  CssClass="@(showDialogButtons ? "MyCss has-buttons" : "MyCss")"
+                  @bind-Visible="@DialogVisible">
+
+            <DialogTemplates>
+                <Header>
+                    <div style="color: #FFFFFF !important; font-weight: bold !important; font-size: 15px !important; font-family: sans-serif; width: 100%; padding-right: 24px; display: inline-block;">
+                        @header
+                    </div>
+                </Header>
+            </DialogTemplates>
+
+            <DialogPositionData X="center" Y="center"></DialogPositionData>
+
+            @if (showDialogButtons)
+            {
+                <DialogButtons>
+                    <DialogButton Content="Ja" CssClass="btn-win-yes" OnClick="@YesClick" />
+                    <DialogButton Content="Abbrechen" CssClass="btn-win-no" OnClick="@CancelClick" />
+                </DialogButtons>
+            }
+        </SfDialog>
+    </div>
+}
+
+
+
+
+
+
 
 <style>
     /* 1. Zwingt das gesamte Spinner-Container-System nach ganz vorne */
@@ -392,7 +420,73 @@ else
         font-size: 14px;
         margin-bottom: 2px;
     }
+
+
+    /* Erzeugt den modernen Schatten- und Glow-Effekt um das Syncfusion Grid */
+    .elevated-grid-container .e-grid {
+        box-shadow: 0 4px 20px rgba(0, 120, 212, 0.15) !important;
+        border: 1px solid rgba(0, 120, 212, 0.2) !important;
+        border-radius: 4px !important;
+    }
+
+        /* Verhindert, dass die abgerundeten Ecken vom inneren Grid-Header abgeschnitten werden */
+        .elevated-grid-container .e-grid .e-gridheader {
+            border-top-left-radius: 4px !important;
+            border-top-right-radius: 4px !important;
+        }
+
+        .elevated-grid-container .e-grid .e-gridpager {
+            border-bottom-left-radius: 4px !important;
+            border-bottom-right-radius: 4px !important;
+        }
+
+    /* Aktiviert den Schatten- und Glow-Effekt exakt für diese Container-Struktur */
+    .elevated-grid-container {
+        box-shadow: 0 4px 20px rgba(0, 120, 212, 0.15) !important;
+        border: 1px solid rgba(0, 120, 212, 0.2) !important;
+        background-color: #FFFFFF !important;
+        border-radius: 4px !important;
+    }
+
+        /* Sorgt dafür, dass Syncfusion-interne Komponenten den Schatten nicht blockieren */
+        .elevated-grid-container .e-grid {
+            box-shadow: none !important;
+            border: none !important;
+        }
+
+    /* Dialog: Datensatz ändern/löschen (Deine stabile, funktionierende Basis-Farbe) */
+    .MyCss .e-dlg-header-content {
+        background-color: red !important;
+    }
+
+    /* ==========================================================================
+       ULTIMATIVES SCHUTZSCHILD GEGEN ASYNCHRONE GEISTER-BOXEN
+       ========================================================================== */
+
+    /* Wenn keine Operation aktiv ist (None), entziehen wir der roten Box
+       radikal jegliche Sichtbarkeit und schrumpfen sie auf 0 Pixel zusammen! */
+    .MyCss.e-dialog[style*="display: block"] .e-dlg-header-content {
+        transition: none !important;
+    }
+
+    /* Der finale Retter: Falls Syncfusion die Box heimlich öffnet,
+       wird der rote Container komplett im Browser weggesprengt */
+    .MyCss.e-dialog .e-dlg-header-content {
+        background-color: red; /* Deine funktionierende Basis */
+    }
+
+    /* Wenn die Buttons ausgeblendet sind (Info-Modus) und wir uns im Lösch-Leerlauf befinden,
+       wird das rote Feld unsichtbar geschaltet */
+    .MyCss.e-dialog:not(.has-buttons) .e-dlg-header-content {
+        display: none !important;
+        visibility: hidden !important;
+        height: 0px !important;
+        padding: 0px !important;
+        border: none !important;
+    }
+
 </style>
+
 
 @code
 {
@@ -400,13 +494,21 @@ else
     //private string? ToastContent { get; set; }
     public bool spinnerVisibleProperty { get; set; } = false;
 
-    private DialogSettings DialogParams = new DialogSettings { MinHeight = "400px", Width = "450px" };
+    private bool isSaving = false;
+    private bool isReloadingAfterSave = false;
+
+    private DialogSettings dialogParams = new DialogSettings { MinHeight = "400px", Width = "450px" };
     public DialogEffect animationEffect = DialogEffect.Zoom;
     public bool DialogVisible { get; set; } = false;
+    private string DialogHeader { get; set; } = "";
+    private string DialogMessage { get; set; } = "";
     private bool showDialogButtons = false;
     private string dialogText { get; set; } = string.Empty;
-    private string dialogXValue = "center";
-    private string dialogYValue = "center";
+
+    // Sichtbarkeiten und Texte für die beiden Dialoge
+    private bool IsFormDialogVisible { get; set; }
+    private string FormDialogTitle { get; set; } = "";
+
     private string dialogHeight = "130px";
     private string dialogWidth = "380px";
 
@@ -452,13 +554,20 @@ else
 
     // Dictionary for column descriptions
     public Dictionary<string, string> ColumnDescriptions = new()
-    {
+    {   
         { "Anbieter", "Anbieter" },
         { "Datum", "Zahlungs-Datum" },
         { "Art", "Zahlungs-Art" },
         { "Betrag", "Betrag" },
         { "Bemerkung", "Bemerkung" }
     };
+
+    private List<string> ToolbarList = new List<string>() { "Add", "ExcelExport", "PdfExport" };
+
+
+    private List<object> ToolbarItems { get; set; } = new List<object>();
+
+
 
     // PDF-Export Properties
     public List<PdfHeaderFooterContent> HeaderContent = new List<PdfHeaderFooterContent>
@@ -485,6 +594,13 @@ else
     /// <returns></returns>
     protected override async Task OnInitializedAsync()
     {
+        ToolbarItems = new List<object>
+        {
+            new { text = "Hinzufügen", id = "custom_add", prefixIcon = "e-icons e-add" },
+            new { text = "Excel-Export", id = "Grid_excelexport", prefixIcon = "e-icons e-excel-export" },
+            new { text = "PDF-Export", id = "Grid_pdfexport", prefixIcon = "e-icons e-pdf-export" }
+        };
+
         // 1. Spinner sofort einschalten
         spinnerVisibleProperty = true;
 
@@ -555,6 +671,51 @@ else
     /// Auslesen Ablesetage des neuen ausgewählten Anbieters
     /// </summary>
     /// <param name="args"></param>
+    // private async Task ValueSelectHandler(SelectEventArgs<Electric_SupplierDataModel> args)
+    // {
+    //     // 1. Guard Clauses: Abbrechen, wenn Argumente oder API-Service fehlen
+    //     if (args?.ItemData == null || gwsP == null) return;
+
+    //     supplierData = args.ItemData;
+
+    //     if (supplierData.Id > 0)
+    //     {
+    //         // 2. Spinner SOFORT einschalten, bevor die asynchronen Aktionen starten
+    //         spinnerVisibleProperty = true;
+
+    //         try
+    //         {
+    //             // Einstellungen schreiben
+    //             success = await GetSetMyAppConfig.SetMyAppSettings.WriteSettingsAsync(
+    //                 myAppSettings, "Supplier_Id.Electric", 
+    //                 supplierData.Id.ToString());
+
+    //             // Zeiträume zuweisen
+    //             startDate = supplierData.Zeitraum_Start;
+    //             endDate = supplierData.Zeitraum_Ende;
+
+    //             // API-Aufruf (Der Spinner läuft währenddessen im Hintergrund)
+    //             paymentList = await gwsP.LoadDataAsync<GWS_PaymentModel>($"{urlPaymentsSupplier}{supplierData.Id}");
+
+    //             if ((paymentList == null || !paymentList.Any()) && !isReloadingAfterSave)
+    //             {
+    //                 OpenDialog("Keine Strom-Zahlungen vorhanden!", "60px", "380px", false);
+    //             }
+
+    //             // Grid asynchron aktualisieren
+    //             if (sfDataGrid != null)
+    //             {
+    //                 await sfDataGrid.Refresh();
+    //             }
+    //         }
+    //         finally
+    //         {
+    //             // 3. Spinner GARANTIERT wieder ausschalten (auch im Fehlerfall)
+    //             spinnerVisibleProperty = false;
+    //         }
+    //     }
+    // }
+
     private async Task ValueSelectHandler(SelectEventArgs<Electric_SupplierDataModel> args)
     {
         // 1. Guard Clauses: Abbrechen, wenn Argumente oder API-Service fehlen
@@ -571,7 +732,7 @@ else
             {
                 // Einstellungen schreiben
                 success = await GetSetMyAppConfig.SetMyAppSettings.WriteSettingsAsync(
-                    myAppSettings, "Supplier_Id.Electric", 
+                    myAppSettings, "Supplier_Id.Electric",
                     supplierData.Id.ToString());
 
                 // Zeiträume zuweisen
@@ -581,9 +742,29 @@ else
                 // API-Aufruf (Der Spinner läuft währenddessen im Hintergrund)
                 paymentList = await gwsP.LoadDataAsync<GWS_PaymentModel>($"{urlPaymentsSupplier}{supplierData.Id}");
 
+                // ==========================================================================
+                // BOMBENFESTE GUARD CLAUSE:
+                // Wenn wir gerade im Speicher- oder Editierprozess sind, brechen wir hier sofort ab!
+                // Wir lassen nicht zu, dass der Dialog geöffnet oder manipuliert wird.
+                // ==========================================================================
+                if (isSaving)
+                {
+                    if (sfDataGrid != null)
+                    {
+                        await sfDataGrid.Refresh();
+                    }
+                    return; // Verlässt die Methode auf der Stelle!
+                }
+
+                // Dieser Block läuft NUR noch, wenn der Benutzer MANUELL im Dropdown wechselt
                 if (paymentList == null || !paymentList.Any())
                 {
                     OpenDialog("Keine Strom-Zahlungen vorhanden!", "60px", "380px", false);
+                }
+                else
+                {
+                    // Wenn Daten da sind, stellen wir sicher, dass das Popup zu bleibt
+                    DialogVisible = false;
                 }
 
                 // Grid asynchron aktualisieren
@@ -600,12 +781,13 @@ else
         }
     }
 
+
     #endregion
 
     #region ToolbarBtnClickHandler
     /// <summary>
-    /// ToolbarBtnClickHandler
-    ///
+    /// Toolbar-Button-Klick-Handler für das Grid.
+    /// Behandelt das Hinzufügen über ein eigenes Formular sowie Excel- und PDF-Exporte mit temporärer Spaltenausblendung.
     /// </summary>
     /// <param name="args"></param>
 
@@ -616,16 +798,32 @@ else
         string? itemId = args.Item?.Id;
         if (string.IsNullOrEmpty(itemId)) return;
 
+        // --- NEU: Hinzufügen-Aktion abfangen BEVOR der Export-Block oder Spinner läuft ---
+        if (itemId.Equals("Grid_add", StringComparison.OrdinalIgnoreCase))
+        {
+            // 1. Automatischen Syncfusion-Dialog stoppen
+            args.Cancel = true;
+
+            // 2. Ein frisches Modell instanziieren (vorausgefüllt mit dem heutigen Datum)
+            paymentData = new GWS_PaymentModel
+            {
+                Datum = DateTime.Now,
+                ID_Zahlung = 0
+            };
+
+            // 3. Zustand setzen und dein eigenes Formular-Popup anzeigen
+            currentOperation = GridOperation.Add;
+            FormDialogTitle = "Einzahlung: neue Einzahlung";
+            IsFormDialogVisible = true;
+
+            return; // Methode hier beenden, da kein Export stattfindet!
+        }
+        // ----------------------------------------------------------------------------------
+
         try
         {
-            // 1. Spinner aktivieren & UI aktualisieren
+            // 1. Spinner aktivieren & UI aktualisieren (wird nur bei Exporten erreicht)
             IsExporting = true;
-
-            // Test Spinner sichtbar machen
-            // 2. ERZWINGEN, dass Blazor das UI JETZT sofort neu zeichnet
-            // StateHasChanged();
-            // 3. TEST: 3 Sekunden warten, um zu sehen, ob der Spinner auftaucht
-            // await Task.Delay(3000);
 
             string dateSuffix = DateTime.Now.ToString("ddMMyyyy");
 
@@ -668,13 +866,16 @@ else
         }
         catch (Exception ex)
         {
-            // Hier optionales Logging oder Benutzer-Fehlermeldung integrieren
             Console.WriteLine($"Export fehlgeschlagen: {ex.Message}");
         }
         finally
         {
-            // 3. Spalten wieder einblenden & Spinner deaktivieren (läuft IMMER durch)
-            await ToggleActionColumnsAsync(hide: false);
+            // 3. Spalten wieder einblenden & Spinner deaktivieren (läuft nur durch, wenn Export stattfand)
+            if (itemId.Contains("_excelexport", StringComparison.OrdinalIgnoreCase) ||
+                itemId.Contains("_pdfexport", StringComparison.OrdinalIgnoreCase))
+            {
+                await ToggleActionColumnsAsync(hide: false);
+            }
             IsExporting = false;
         }
     }
@@ -698,6 +899,7 @@ else
         }
     }
     #endregion
+
 
     #region CancelClick
     /// <summary>
@@ -736,9 +938,325 @@ else
     /// YesClick
     /// </summary>
     ///
+    // private async Task YesClick()
+    // {
+    //     DialogVisible = false;
+    //     if (gwsP is null || paymentData is null || currentOperation == GridOperation.None) return;
+
+    //     try
+    //     {
+    //         bool isSuccess = false;
+    //         string successMessage = string.Empty;
+    //         string defaultErrorMessage = "Aktion konnte nicht ausgeführt werden.";
+
+    //         // Vor jedem Aufruf die alte API-Response zurücksetzen!
+    //         apiResponse = null;
+
+    //         switch (currentOperation)
+    //         {
+    //             case GridOperation.Add:
+    //                 apiResponse = await gwsP.PostDataAsync<GWS_PaymentModel>(urlPayment, paymentData);
+    //                 isSuccess = apiResponse?.MyHttpStatusCode == HttpStatusCode.Created;
+    //                 successMessage = "Datensatz erfolgreich gespeichert!";
+    //                 defaultErrorMessage = "Datensatz konnte nicht gespeichert werden.";
+    //                 break;
+
+    //             case GridOperation.Edit:
+    //                 string urlEdit = $"{urlPayment.TrimEnd('/')}/{paymentData.ID_Zahlung}";
+    //                 apiResponse = await gwsP.UpdateDataAsync<GWS_PaymentModel>(urlEdit, paymentData);
+    //                 isSuccess = apiResponse?.MyHttpStatusCode == HttpStatusCode.NoContent;
+    //                 successMessage = "Datensatz erfolgreich aktualisiert!";
+    //                 defaultErrorMessage = "Datensatz konnte nicht aktualisiert werden.";
+    //                 break;
+
+    //             case GridOperation.Delete:
+    //                 string deleteUrl = urlPayment.EndsWith("/") ? urlPayment : urlPayment + "/";
+    //                 string idToDelete = paymentData.ID_Zahlung.ToString();
+
+    //                 var deletedData = await gwsP.DeleteDataAsync<GWS_PaymentModel>(deleteUrl, idToDelete);
+
+    //                 // Falls DeleteDataAsync intern doch die apiResponse befüllt,
+    //                 // wäre es ideal, diese hier zuzuweisen. Wenn nicht, reicht das:
+    //                 isSuccess = deletedData is not null;
+    //                 successMessage = "Datensatz erfolgreich gelöscht!";
+    //                 defaultErrorMessage = "Datensatz konnte nicht gelöscht werden.";
+    //                 break;
+    //         }
+
+    //         if (isSuccess)
+    //         {
+    //             ShowToast(true, successMessage);
+
+    //             // UI-UPDATE: Lokale Liste manipulieren für sofortiges Feedback
+    //             if (currentOperation == GridOperation.Delete)
+    //             {
+    //                 var itemToRemove = paymentList?.FirstOrDefault(x => x.ID_Zahlung == paymentData.ID_Zahlung);
+    //                 if (itemToRemove is not null) paymentList?.Remove(itemToRemove);
+    //             }
+    //             else if (currentOperation == GridOperation.Add || currentOperation == GridOperation.Edit)
+    //             {
+    //                 // NEU: Signalisiere der Komponente, dass dies ein Reload nach dem Speichern ist!
+    //                 isReloadingAfterSave = true;
+                    
+    //                 // Daten frisch vom Server holen, um alle Änderungen/neuen IDs exakt zu laden
+    //                 paymentList = await gwsP.LoadDataAsync<GWS_PaymentModel>($"{urlPaymentsSupplier}{supplierData!.Id}");
+
+    //                 isReloadingAfterSave = false; // Direkt danach wieder freigeben
+    //             }
+    //         }
+    //         else
+    //         {
+    //             string errorMessage = defaultErrorMessage;
+    //             // Die Prüfung stellt sicher, dass wir nicht aus Versehen alte Response-Daten anzeigen
+    //             if (apiResponse is not null && !string.IsNullOrWhiteSpace(apiResponse.MyResponseString))
+    //             {
+    //                 errorMessage = $"Fehler ({apiResponse.MyHttpStatusCode}): {apiResponse.MyResponseString}";
+    //             }
+    //             ShowToast(false, errorMessage);
+    //         }
+
+    //         if (sfDataGrid is not null)
+    //         {
+    //             await sfDataGrid.Refresh();
+    //         }
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         ShowToast(false, $"Netzwerkfehler: {ex.Message}");
+    //     }
+    //     finally
+    //     {
+    //         currentOperation = GridOperation.None;
+    //         isSaving = false; // <-- HIER ZURÜCKSETZEN für den nächsten Durchgang!
+    //     }
+    // }
+
+    // private async Task YesClick()
+    // {
+    //     DialogVisible = false;
+    //     if (gwsP is null || paymentData is null || currentOperation == GridOperation.None) return;
+
+    //     try
+    //     {
+    //         bool isSuccess = false;
+    //         string successMessage = string.Empty;
+    //         string defaultErrorMessage = "Aktion konnte nicht ausgeführt werden.";
+
+    //         apiResponse = null;
+
+    //         switch (currentOperation)
+    //         {
+    //             case GridOperation.Add:
+    //                 apiResponse = await gwsP.PostDataAsync<GWS_PaymentModel>(urlPayment, paymentData);
+    //                 isSuccess = apiResponse?.MyHttpStatusCode == HttpStatusCode.Created;
+    //                 successMessage = "Datensatz erfolgreich gespeichert!";
+    //                 defaultErrorMessage = "Datensatz konnte nicht gespeichert werden.";
+    //                 break;
+
+    //             case GridOperation.Edit:
+    //                 string urlEdit = $"{urlPayment.TrimEnd('/')}/{paymentData.ID_Zahlung}";
+    //                 apiResponse = await gwsP.UpdateDataAsync<GWS_PaymentModel>(urlEdit, paymentData);
+    //                 isSuccess = apiResponse?.MyHttpStatusCode == HttpStatusCode.NoContent;
+    //                 successMessage = "Datensatz erfolgreich aktualisiert!";
+    //                 defaultErrorMessage = "Datensatz konnte nicht aktualisiert werden.";
+    //                 break;
+
+    //             case GridOperation.Delete:
+    //                 string deleteUrl = urlPayment.EndsWith("/") ? urlPayment : urlPayment + "/";
+    //                 string idToDelete = paymentData.ID_Zahlung.ToString();
+
+    //                 var deletedData = await gwsP.DeleteDataAsync<GWS_PaymentModel>(deleteUrl, idToDelete);
+    //                 isSuccess = deletedData is not null;
+    //                 successMessage = "Datensatz erfolgreich gelöscht!";
+    //                 defaultErrorMessage = "Datensatz konnte nicht gelöscht werden.";
+    //                 break;
+    //         }
+
+    //         if (isSuccess)
+    //         {
+    //             ShowToast(true, successMessage);
+
+    //             if (currentOperation == GridOperation.Delete)
+    //             {
+    //                 var itemToRemove = paymentList?.FirstOrDefault(x => x.ID_Zahlung == paymentData.ID_Zahlung);
+    //                 if (itemToRemove is not null) paymentList?.Remove(itemToRemove);
+
+    //                 // Nach dem Löschen prüfen: Wenn die Liste jetzt leer ist, zeige die echte Infobox an!
+    //                 if (paymentList == null || !paymentList.Any())
+    //                 {
+    //                     header = "Keine Strom-Zahlungen vorhanden!";
+    //                     showDialogButtons = false;
+    //                     DialogVisible = true;
+    //                 }
+    //                 else
+    //                 {
+    //                     DialogVisible = false; // Ansonsten bleibt das Fenster sicher zu
+    //                 }
+    //             }
+    //             else if (currentOperation == GridOperation.Add || currentOperation == GridOperation.Edit)
+    //             {
+    //                 isReloadingAfterSave = true;
+
+    //                 // Daten frisch vom Server laden
+    //                 paymentList = await gwsP.LoadDataAsync<GWS_PaymentModel>($"{urlPaymentsSupplier}{supplierData!.Id}");
+
+    //                 isReloadingAfterSave = false;
+
+    //                 // FIX: Wenn nach dem Speichern/Editieren Daten vorhanden sind, zwingen wir den Dialog auf FALSE!
+    //                 if (paymentList != null && paymentList.Any())
+    //                 {
+    //                     this.DialogVisible = false; // Lässt das leere rote Feld verschwinden!
+    //                 }
+    //                 else
+    //                 {
+    //                     // Sicherheitsnetz: Falls wirklich gar keine Daten zurückkommen
+    //                     header = "Keine Strom-Zahlungen vorhanden!";
+    //                     showDialogButtons = false;
+    //                     this.DialogVisible = true;
+    //                 }
+    //             }
+    //         }
+    //         else
+    //         {
+    //             string errorMessage = defaultErrorMessage;
+    //             if (apiResponse is not null && !string.IsNullOrWhiteSpace(apiResponse.MyResponseString))
+    //             {
+    //                 errorMessage = $"Fehler ({apiResponse.MyHttpStatusCode}): {apiResponse.MyResponseString}";
+    //             }
+    //             ShowToast(false, errorMessage);
+    //         }
+
+    //         if (sfDataGrid is not null)
+    //         {
+    //             await sfDataGrid.Refresh();
+    //         }
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         ShowToast(false, $"Netzwerkfehler: {ex.Message}");
+    //     }
+    //     finally
+    //     {
+    //         // Wenn wir den Dialog oben geschlossen haben, darf er hier nicht wieder aufgerissen werden
+    //         if (paymentList != null && paymentList.Any())
+    //         {
+    //             this.DialogVisible = false;
+    //         }
+
+    //         currentOperation = GridOperation.None;
+    //         isSaving = false;
+    //     }
+    // }
+
+    // private async Task YesClick()
+    // {
+    //     // BOMBENSICHERER FIX: Zwingt Syncfusion, das Fenster sofort vollständig zu schließen,
+    //     // bevor irgendeine asynchrone API-Aktion die UI durcheinanderbringt!
+    //     if (ConfirmationDialog is not null)
+    //     {
+    //         await ConfirmationDialog.HideAsync();
+    //     }
+    //     DialogVisible = false;
+
+    //     if (gwsP is null || paymentData is null || currentOperation == GridOperation.None) return;
+
+    //     try
+    //     {
+    //         bool isSuccess = false;
+    //         string successMessage = string.Empty;
+    //         string defaultErrorMessage = "Aktion konnte nicht ausgeführt werden.";
+
+    //         apiResponse = null;
+
+    //         switch (currentOperation)
+    //         {
+    //             case GridOperation.Add:
+    //                 apiResponse = await gwsP.PostDataAsync<GWS_PaymentModel>(urlPayment, paymentData);
+    //                 isSuccess = apiResponse?.MyHttpStatusCode == HttpStatusCode.Created;
+    //                 successMessage = "Datensatz erfolgreich gespeichert!";
+    //                 defaultErrorMessage = "Datensatz konnte nicht gespeichert werden.";
+    //                 break;
+
+    //             case GridOperation.Edit:
+    //                 string urlEdit = $"{urlPayment.TrimEnd('/')}/{paymentData.ID_Zahlung}";
+    //                 apiResponse = await gwsP.UpdateDataAsync<GWS_PaymentModel>(urlEdit, paymentData);
+    //                 isSuccess = apiResponse?.MyHttpStatusCode == HttpStatusCode.NoContent;
+    //                 successMessage = "Datensatz erfolgreich aktualisiert!";
+    //                 defaultErrorMessage = "Datensatz konnte nicht aktualisiert werden.";
+    //                 break;
+
+    //             case GridOperation.Delete:
+    //                 string deleteUrl = urlPayment.EndsWith("/") ? urlPayment : urlPayment + "/";
+    //                 string idToDelete = paymentData.ID_Zahlung.ToString();
+
+    //                 var deletedData = await gwsP.DeleteDataAsync<GWS_PaymentModel>(deleteUrl, idToDelete);
+    //                 isSuccess = deletedData is not null;
+    //                 successMessage = "Datensatz erfolgreich gelöscht!";
+    //                 defaultErrorMessage = "Datensatz konnte nicht gelöscht werden.";
+    //                 break;
+    //         }
+
+    //         if (isSuccess)
+    //         {
+    //             ShowToast(true, successMessage);
+
+    //             // WICHTIG: Auch beim Löschen den Reload/Änderungsschutz aktivieren!
+    //             isReloadingAfterSave = true;
+    //             isSaving = true;
+
+    //             if (currentOperation == GridOperation.Delete)
+    //             {
+    //                 var itemToRemove = paymentList?.FirstOrDefault(x => x.ID_Zahlung == paymentData.ID_Zahlung);
+    //                 if (itemToRemove is not null) paymentList?.Remove(itemToRemove);
+
+    //                 // Nur wenn nach dem Löschen alles leer ist, öffnen wir die Infobox neu
+    //                 if (paymentList == null || !paymentList.Any())
+    //                 {
+    //                     OpenDialog("Keine Strom-Zahlungen vorhanden!", "60px", "380px", false);
+    //                 }
+    //             }
+    //             else if (currentOperation == GridOperation.Add || currentOperation == GridOperation.Edit)
+    //             {
+    //                 // Daten frisch laden
+    //                 paymentList = await gwsP.LoadDataAsync<GWS_PaymentModel>($"{urlPaymentsSupplier}{supplierData!.Id}");
+    //             }
+    //         }
+    //         else
+    //         {
+    //             string errorMessage = defaultErrorMessage;
+    //             if (apiResponse is not null && !string.IsNullOrWhiteSpace(apiResponse.MyResponseString))
+    //             {
+    //                 errorMessage = $"Fehler ({apiResponse.MyHttpStatusCode}): {apiResponse.MyResponseString}";
+    //             }
+    //             ShowToast(false, errorMessage);
+    //         }
+
+    //         if (sfDataGrid is not null)
+    //         {
+    //             await sfDataGrid.Refresh();
+    //         }
+    //     }
+    //     catch (Exception ex)
+    //     { 
+    //         ShowToast(false, $"Netzwerkfehler: {ex.Message}");
+    //     }
+    //     finally
+    //     {
+    //         currentOperation = GridOperation.None;
+    //         isSaving = false;
+    //         StateHasChanged();
+    //     }
+    // }
+
     private async Task YesClick()
     {
+        // 1. Schließt das Fenster optisch sofort im C#-State
         DialogVisible = false;
+        StateHasChanged();
+
+        // 2. GIBT SYNCFUSION DIE NÖTIGE ZEIT (150ms), UM DAS GRAUE OVERLAY SAUBER ABZUBAUEN!
+        await Task.Delay(150);
+
         if (gwsP is null || paymentData is null || currentOperation == GridOperation.None) return;
 
         try
@@ -747,7 +1265,6 @@ else
             string successMessage = string.Empty;
             string defaultErrorMessage = "Aktion konnte nicht ausgeführt werden.";
 
-            // Vor jedem Aufruf die alte API-Response zurücksetzen!
             apiResponse = null;
 
             switch (currentOperation)
@@ -772,9 +1289,6 @@ else
                     string idToDelete = paymentData.ID_Zahlung.ToString();
 
                     var deletedData = await gwsP.DeleteDataAsync<GWS_PaymentModel>(deleteUrl, idToDelete);
-
-                    // Falls DeleteDataAsync intern doch die apiResponse befüllt,
-                    // wäre es ideal, diese hier zuzuweisen. Wenn nicht, reicht das:
                     isSuccess = deletedData is not null;
                     successMessage = "Datensatz erfolgreich gelöscht!";
                     defaultErrorMessage = "Datensatz konnte nicht gelöscht werden.";
@@ -785,23 +1299,47 @@ else
             {
                 ShowToast(true, successMessage);
 
-                // Zwinge das Grid zum sofortigen UI-Update, indem du das Element lokal entfernst
-                if (paymentList is not null)
+                // Schutz für den asynchronen ValueSelectHandler aktivieren
+                isReloadingAfterSave = true;
+                isSaving = true;
+
+                if (currentOperation == GridOperation.Delete)
                 {
-                    var itemToRemove = paymentList.FirstOrDefault(x => x.ID_Zahlung == paymentData.ID_Zahlung);
-                    if (itemToRemove is not null)
+                    var itemToRemove = paymentList?.FirstOrDefault(x => x.ID_Zahlung == paymentData.ID_Zahlung);
+                    if (itemToRemove is not null) paymentList?.Remove(itemToRemove);
+
+                    // NUR wenn nach dem Löschen wirklich absolut KEINE Daten mehr da sind,
+                    // darf sich die Infobox mit dem Text neu öffnen!
+                    if (paymentList == null || !paymentList.Any())
                     {
-                        paymentList.Remove(itemToRemove);
+                        header = "Keine Strom-Zahlungen vorhanden!";
+                        showDialogButtons = false;
+                        DialogVisible = true;
+                    }
+                    else
+                    {
+                        DialogVisible = false; // Sicherstellen, dass das Fenster zu bleibt
                     }
                 }
+                else if (currentOperation == GridOperation.Add || currentOperation == GridOperation.Edit)
+                {
+                    paymentList = await gwsP.LoadDataAsync<GWS_PaymentModel>($"{urlPaymentsSupplier}{supplierData!.Id}");
 
-                // Erst danach im Hintergrund die Liste frisch vom Server holen
-                paymentList = await gwsP.LoadDataAsync<GWS_PaymentModel>($"{urlPaymentsSupplier}{supplierData!.Id}");
+                    if (paymentList == null || !paymentList.Any())
+                    {
+                        header = "Keine Strom-Zahlungen vorhanden!";
+                        showDialogButtons = false;
+                        DialogVisible = true;
+                    }
+                    else
+                    {
+                        DialogVisible = false;
+                    }
+                }
             }
             else
             {
                 string errorMessage = defaultErrorMessage;
-                // Die Prüfung stellt sicher, dass wir nicht aus Versehen alte Response-Daten anzeigen
                 if (apiResponse is not null && !string.IsNullOrWhiteSpace(apiResponse.MyResponseString))
                 {
                     errorMessage = $"Fehler ({apiResponse.MyHttpStatusCode}): {apiResponse.MyResponseString}";
@@ -820,9 +1358,31 @@ else
         }
         finally
         {
+            // 1. Wenn nach der Aktion noch Einträge in der Tabelle sind,
+            // halten wir den Dialog absolut und bedingungslos geschlossen!
+            if (paymentList != null && paymentList.Any())
+            {
+                DialogVisible = false;
+            }
+            else
+            {
+                // Nur wenn die Liste wirklich komplett leer ist, bereiten wir
+                // das Flag für die Anzeige der Infobox vor
+                showDialogButtons = false;
+            }
+
             currentOperation = GridOperation.None;
+            isSaving = false;
+            isReloadingAfterSave = false;
+
+            // 2. Blazor anweisen, die UI flüssig und ohne Blockaden neu zu zeichnen
+            StateHasChanged();
         }
     }
+
+
+
+
     #endregion
 
     #region ShowToast
@@ -935,26 +1495,50 @@ else
     /// <returns></returns>
     public async Task ActionBeginHandler(ActionEventArgs<GWS_PaymentModel> args)
     {
+        // if (args?.Data is null) return;
+
+        // switch (args.RequestType)
+        // {
+        //     case Syncfusion.Blazor.Grids.Action.Save:
+        //         args.Cancel = true;
+        //         paymentData = args.Data;
+
+        //         if (args.Action == "Add")
+        //         {
+        //             currentOperation = GridOperation.Add;
+        //             OpenDialog("Datensatz speichern ?", "130px", "220px", true);
+        //         }
+        //         else if (args.Action == "Edit")
+        //         {
+        //             currentOperation = GridOperation.Edit;
+        //             OpenDialog("Datensatz ändern ?", "130px", "220px", true);
+        //         }
+        //         break;
+
+        //     case Syncfusion.Blazor.Grids.Action.Delete:
+        //         // 1. Automatische Grid-Löschung stoppen, damit wir die Kontrolle behalten
+        //         args.Cancel = true;
+
+        //         // Sicherheitshalber prüfen, ob eine gültige ID vorliegt
+        //         if (args.Data.ID_Zahlung <= 0)
+        //         {
+        //             ShowToast(false, "Ungültiger Datensatz. Löschen nicht möglich!");
+        //             return;
+        //         }
+
+        //         // 2. Daten für die 'YesClick'-Methode zwischenspeichern
+        //         paymentData = args.Data;
+        //         currentOperation = GridOperation.Delete;
+
+        //         // 3. Bestätigungsdialog für das Löschen öffnen
+        //         OpenDialog("Datensatz wirklich löschen ?", "130px", "300px", true);
+        //         break;
+        // }
+
         if (args?.Data is null) return;
 
         switch (args.RequestType)
         {
-            case Syncfusion.Blazor.Grids.Action.Save:
-                args.Cancel = true;
-                paymentData = args.Data;
-
-                if (args.Action == "Add")
-                {
-                    currentOperation = GridOperation.Add;
-                    OpenDialog("Datensatz speichern ?", "130px", "220px", true);
-                }
-                else if (args.Action == "Edit")
-                {
-                    currentOperation = GridOperation.Edit;
-                    OpenDialog("Datensatz ändern ?", "130px", "220px", true);
-                }
-                break;
-
             case Syncfusion.Blazor.Grids.Action.Delete:
                 // 1. Automatische Grid-Löschung stoppen, damit wir die Kontrolle behalten
                 args.Cancel = true;
@@ -966,7 +1550,7 @@ else
                     return;
                 }
 
-                // 2. Daten für die 'YesClick'-Methode zwischenspeichern
+                // 2. Daten für die Lösch-Bestätigung zwischenspeichern
                 paymentData = args.Data;
                 currentOperation = GridOperation.Delete;
 
@@ -976,4 +1560,223 @@ else
         }
     }
     #endregion
+
+    private void OnCustomEditClick(GWS_PaymentModel model)
+    {
+        if (model is null) return;
+
+        paymentData = new GWS_PaymentModel
+        {
+            ID_Zahlung = model.ID_Zahlung,
+            ID_Anbieter = model.ID_Anbieter,
+            Anbieter = model.Anbieter,
+            Datum = model.Datum,
+            Zahlungsart = model.Zahlungsart,
+            Zahlungen = model.Zahlungen,
+            Bemerkungen = model.Bemerkungen
+        };
+
+        currentOperation = GridOperation.Edit;
+        FormDialogTitle = "Einzahlung bearbeiten";
+
+        // Wichtig: Sichtbarkeit einschalten und Blazor zum Zeichnen zwingen
+        IsFormDialogVisible = true;
+        StateHasChanged();
+    }
+
+    private void OnCustomDeleteClick(GWS_PaymentModel model)
+    {
+        if (model is null || model.ID_Zahlung <= 0) return;
+
+        paymentData = model;
+        currentOperation = GridOperation.Delete;
+
+        // Sicherheitsabfrage befüllen
+        DialogHeader = "Datensatz wirklich löschen ?";
+        DialogMessage = "Möchten Sie diesen Eintrag unwiderruflich aus der Datenbank entfernen?";
+
+        // Wichtig: Sichtbarkeit einschalten und Blazor zum Zeichnen zwingen
+        DialogVisible = true;
+        StateHasChanged();
+    }
+
+    // --- 1. DIREKT-KLICK AUF HINZUFÜGEN ---
+    private void OnToolbarAddClick()
+    {
+        if (paymentList is null || paymentsMethodList is null || paymentData is null)
+        {
+            paymentData = new GWS_PaymentModel
+            {
+                Datum = DateTime.Today,
+                ID_Zahlung = 0,
+                Zahlungsart = "Abschlag"
+            };
+        }
+        else
+        {
+            paymentData.Datum = DateTime.Today;
+
+            var lastPayment = paymentList?.LastOrDefault();
+            if (lastPayment != null)
+            {
+                paymentData.ID_Anbieter = lastPayment.ID_Anbieter;
+                paymentData.Anbieter = lastPayment.Anbieter;
+                paymentData.Zahlungsart = lastPayment.Zahlungsart;
+                paymentData.Zahlungen = lastPayment.Zahlungen;
+                paymentData.Bemerkungen = lastPayment.Bemerkungen;
+            }
+            
+        }
+
+        // paymentData = new GWS_PaymentModel
+        // {
+        //     Datum = DateTime.Now,
+        //     ID_Zahlung = 0,
+        //     Zahlungsart = paymentsMethodList?.FirstOrDefault()?.Zahlungsart ?? ""
+        // };
+
+        currentOperation = GridOperation.Add;
+        FormDialogTitle = "Einzahlung: neue Einzahlung";
+
+        // Wichtig: Sichtbarkeit einschalten und Blazor zum Zeichnen zwingen
+        IsFormDialogVisible = true;
+
+        StateHasChanged();
+    }
+
+    // --- 2. DIREKT-KLICK AUF EXCEL-EXPORT ---
+    private async Task OnToolbarExcelClick()
+    {
+        try
+        {
+            IsExporting = true;
+            string dateSuffix = DateTime.Now.ToString("ddMMyyyy");
+
+            var excelExportProperties = new ExcelExportProperties
+            {
+                FileName = $"Stromanbieter_{dateSuffix}.xlsx",
+                Theme = new ExcelTheme
+                {
+                    Header = new ExcelStyle { FontName = "Calibri", FontSize = 12, Bold = true },
+                    Record = new ExcelStyle { FontName = "Calibri", FontSize = 10, Bold = false }
+                }
+            };
+
+            await ToggleActionColumnsAsync(hide: true);
+            await sfDataGrid.ExportToExcelAsync(excelExportProperties);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Export fehlgeschlagen: {ex.Message}");
+        }
+        finally
+        {
+            await ToggleActionColumnsAsync(hide: false);
+            IsExporting = false;
+        }
+    }
+
+    private async Task OnToolbarPdfClick()
+    {
+        try
+        {
+            IsExporting = true;
+            string dateSuffix = DateTime.Now.ToString("ddMMyyyy");
+
+            var pdfExportProperties = new PdfExportProperties
+            {
+                IsRepeatHeader = true,
+                FileName = $"Stromanbieter_{dateSuffix}.pdf",
+                PageOrientation = Syncfusion.Blazor.Grids.PageOrientation.Landscape,
+                Header = new PdfHeader { FromTop = 0, Height = 80, Contents = HeaderContent },
+                Footer = new PdfFooter { FromBottom = 0, Height = 80, Contents = FooterContent },
+                Theme = new PdfTheme
+                {
+                    Header = new PdfThemeStyle { FontColor = "Blue", FontName = "Calibri", FontSize = 8, Bold = true }
+                }
+            };
+
+            await ToggleActionColumnsAsync(hide: true);
+            await sfDataGrid.ExportToPdfAsync(pdfExportProperties);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Export fehlgeschlagen: {ex.Message}");
+        }
+        finally
+        {
+            await ToggleActionColumnsAsync(hide: false);
+            IsExporting = false;
+        }
+    }
+
+    // private void SaveForm()
+    // {
+    //     // Signalisieren, dass wir speichern und NICHT abbrechen
+    //     isSaving = true;
+
+    //     // Erst die Eingabemaske schließen
+    //     IsFormDialogVisible = false;
+
+    //     if (currentOperation == GridOperation.Add)
+    //     {
+    //         DialogHeader = "Datensatz speichern ?";
+    //         //DialogMessage = "Soll die neue Einzahlung jetzt angelegt werden?";
+    //     }
+    //     else if (currentOperation == GridOperation.Edit)
+    //     {
+    //         DialogHeader = "Datensatz ändern ?";
+    //         DialogMessage = "Möchten Sie die Änderungen an dieser Einzahlung übernehmen?";
+    //     }
+
+    //     // Bestätigungs-Popup öffnen
+    //     DialogVisible = true;
+    //     StateHasChanged();
+    // }
+
+    private void SaveForm()
+    {
+        // 1. Eingabemaske schließen
+        IsFormDialogVisible = false;
+
+        // 2. Texte für den Dialog vorbereiten (wie gehabt)
+        if (currentOperation == GridOperation.Add)
+        {
+            header = "Datensatz speichern ?";
+        }
+        else if (currentOperation == GridOperation.Edit)
+        {
+            header = "Datensatz ändern ?";
+        }
+
+        // 3. WICHTIG: Die Knöpfe für die Bestätigung explizit EINSCHALTEN!
+        showDialogButtons = true;
+
+        // 4. Bestätigungs-Popup öffnen
+        DialogVisible = true;
+
+        // 5. Erst JETZT das Flag setzen, um asynchrone Doppelklicks im Hintergrund zu blockieren
+        isSaving = true;
+
+        StateHasChanged();
+    }
+
+    // Logik für deinen neuen Abbrechen-Button
+    private void CloseForm()
+    {
+        IsFormDialogVisible = false;
+
+        // Zwingt die Box im C#-Code zu, wenn manuell abgebrochen wird
+        DialogVisible = false;
+
+        if (!isSaving)
+        {
+            paymentData = null;
+            currentOperation = GridOperation.None;
+        }
+
+        StateHasChanged();
+}
+    }
+
 }

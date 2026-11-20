@@ -3,23 +3,35 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace GWS_Api.Models.Electric
 {
+    [Table("strom_zaehlerwechsel")]
     public class ElectricCounterChange
     {
         [Key]
+        [Column("Id")]
         public int Id { get; set; }
+
         [Required]
         public int? Id_Anbieter { get; set; }
+
         [NotMapped]
-        public string? Anbieter { get; set; }
+        public string? Anbieter { get; set; } = string.Empty;
+
         [Required]
         public DateTime? Wechsel_Datum { get; set; }
+
         public double? Zaehlerstand_alt { get; set; }
+
         public double? Zaehlerstand_neu { get; set; }
+
         public double? Zaehlerstand_280_alt { get; set; }
+
         public double? Zaehlerstand_280_neu { get; set; }
+
         public double? Zaehlerstand_Enfluri_alt { get; set; }
+
         public double? Zaehlerstand_Enfluri_neu { get; set; }
+
         [MaxLength(250)]
-        public string? Bemerkung { get; set; }
+        public string? Bemerkung { get; set; } = string.Empty;
     }
 }

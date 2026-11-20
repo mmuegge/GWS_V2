@@ -3,7 +3,6 @@
 @using GWS_Statistics.Helper
 @using static GWS_Statistics.Helper.HelperMethods
 @using GWS_Statistics.Calculation
-@using System.Globalization
 @using Syncfusion.Blazor
 @using Syncfusion.Blazor.Charts
 @using Syncfusion.Blazor.Data
@@ -197,11 +196,18 @@ else
 
 @* Dialog*@
 <div>
-    <SfDialog Target="#target" Width="320px" Height=@dialogHeight AllowDragging="true" ShowCloseIcon=" true" @bind-Visible="DialogVisible" AllowPrerender="true" IsModal="true">
+    <SfDialog Target="body" 
+              Width="320px" 
+              Height=@dialogHeight 
+              AllowDragging="true" 
+              ShowCloseIcon=" true" 
+              @bind-Visible="DialogVisible" 
+              AllowPrerender="false" 
+              IsModal="true">
         <DialogTemplates>
             <Header>@Header</Header>
         </DialogTemplates>
-        <DialogPositionData X="@dialogXValue" Y="@dialogYValue"></DialogPositionData>
+        <DialogPositionData X="center" Y="center"></DialogPositionData>
         <DialogAnimationSettings Effect="@animationEffect"></DialogAnimationSettings>
     </SfDialog>
 </div>
@@ -262,8 +268,6 @@ else
     bool DialogVisible { get; set; } = false;
     private bool showDialogButtons = false;
     private string DialogText { get; set; } = string.Empty;
-    private string dialogXValue = "center";
-    private string dialogYValue = "center";
     private string dialogHeight = "130px";
     private string dialogWidth = "380px";
     #endregion
@@ -363,8 +367,11 @@ else
             // Warten, bis beide HTTP-Anfragen parallel abgeschlossen sind
             await Task.WhenAll(supplierTask, paymentTask);
 
-            supplierList = supplierTask.Result;
-            paymentList = paymentTask.Result;
+            var rawSuppliers = await supplierTask;
+            supplierList = rawSuppliers?.OrderBy(s => s.Id).ToList() ?? [];
+
+            var rawPayments = await paymentTask;
+            paymentList = rawPayments?.OrderBy(p => p.ID_Anbieter).ToList() ?? [];
 
             // 3. Early Exits (Frühzeitiger Ausstieg) statt tiefer If-Verschachtelungen
             if (supplierList == null || supplierList.Count == 0)

@@ -6,13 +6,15 @@ namespace GWS_Api.Repositories.Electric
     public class Mock_ElectricRepository : IElectricRepository
     {
         #region Variablendeklaration
-        int id_Tarif = 0;
-        int id_Counter = 0;
-        int id_Payment = 0;
-        int id_Costs = 0;
-        int id_CounterChange = 0;
+        private int id_Tarif = 100;
+        private int id_Counter = 100;
+        private int id_Payment = 100;
+        private int id_Costs = 100;
+        private int id_CounterChange = 100;
 
-        private static readonly List<ElectricTarif> electricTarifList =
+        private readonly Lock _lock = new();
+
+        private readonly List<ElectricTarif> _electricTarifList =
         [
             new ()
             {
@@ -79,7 +81,7 @@ namespace GWS_Api.Repositories.Electric
             },
         ];
 
-        private static readonly List<ElectricCounter> electricCounterList =
+        private readonly List<ElectricCounter> _electricCounterList =
         [
             new ()
             {
@@ -113,7 +115,7 @@ namespace GWS_Api.Repositories.Electric
             },
         ];
 
-        private static readonly List<ElectricPayment> electricPaymentList =
+        private readonly List<ElectricPayment> _electricPaymentList =
         [
             new ()
             {
@@ -156,7 +158,7 @@ namespace GWS_Api.Repositories.Electric
                 Bemerkungen="Zahlung 2"
             },
         ];
-        private static readonly List<PaymentMethod> electricPaymentMethodList =
+        private readonly List<PaymentMethod> _electricPaymentMethodList =
         [
             new ()
             {
@@ -179,7 +181,7 @@ namespace GWS_Api.Repositories.Electric
                 Zahlungsart="Endabrechnung",
             },
         ];
-        private static readonly List<ElectricCost> electricCostsList =
+        private readonly List<ElectricCost> _electricCostsList =
         [
             new ()
             {
@@ -215,8 +217,8 @@ namespace GWS_Api.Repositories.Electric
                 Bemerkung="test3"
              }
         ];
-        private static readonly List<ElectricCounterChange> electricCounterChangeList =
-      [
+        private readonly List<ElectricCounterChange> _electricCounterChangeList =
+        [
           new ()
             {
                 Id=1,
@@ -259,335 +261,734 @@ namespace GWS_Api.Repositories.Electric
                 Zaehlerstand_Enfluri_neu=0.0d,
                 Bemerkung="test3"
              }
-      ];
+        ];
         #endregion
+
         public Mock_ElectricRepository()
         {
-            id_Tarif = electricTarifList.Count;
-            id_Counter = electricCounterList.Count;
-            id_Payment = electricPaymentList.Count;
-            id_Costs = electricCostsList.Count;
-            id_CounterChange = electricCounterChangeList.Count;
+            id_Tarif = _electricTarifList.Count;
+            id_Counter = _electricCounterList.Count;
+            id_Payment = _electricPaymentList.Count;
+            id_Costs = _electricCostsList.Count;
+            id_CounterChange = _electricCounterChangeList.Count;
         }
 
         #region ADD
-        public async Task<ElectricCounter?> AddCounterAsync(ElectricCounter counter)
+        #region AddCounterAsync
+        public Task<ElectricCounter?> AddCounterAsync(ElectricCounter counter, CancellationToken cancellationToken = default)
         {
-            counter.ID_Tag = ++id_Counter;
-            electricCounterList.Add(counter);
-            // Name des Anbieters[id]
-            var tarif = electricTarifList.Find(m => m.Id == counter.ID_Anbieter);
-            if (tarif != null)
+            ArgumentNullException.ThrowIfNull(counter);
+
+            if (cancellationToken.IsCancellationRequested)
             {
-                counter.Anbieter = tarif.Anbieter;
+                return Task.FromCanceled<ElectricCounter?>(cancellationToken);
             }
-            return await Task.FromResult(counter);
+
+            var ablesetagDate = counter.Ablesetag?.Date;
+            if (ablesetagDate is null || ablesetagDate > DateTime.Today)
+            {
+                return Task.FromResult<ElectricCounter?>(null);
+            }
+
+
+            lock (_lock)
+            {
+                bool exists = _electricCounterList.Exists(m =>
+                    m.Ablesetag?.Date == ablesetagDate &&
+                    m.ID_Anbieter == counter.ID_Anbieter);
+
+                if (exists)
+                {
+                    return Task.FromResult<ElectricCounter?>(null);
+                }
+
+                var tarif = _electricTarifList.FindLast(m => m.Id == counter.ID_Anbieter);
+                if (tarif is not null)
+                {
+                    counter.Anbieter = tarif.Anbieter ?? string.Empty;
+                }
+
+                counter.ID_Tag = ++id_Counter;
+                counter.Ablesetag = ablesetagDate;
+
+                _electricCounterList.Add(counter);
+            }
+
+            return Task.FromResult<ElectricCounter?>(counter);
         }
-        public async Task<ElectricTarif?> AddSupplierAsync(ElectricTarif supplier)
+        #endregion
+
+        #region AddSupplierAsync
+        public Task<ElectricTarif> AddSupplierAsync(ElectricTarif supplier, CancellationToken cancellationToken = default)
         {
-            supplier.Id = ++id_Tarif;
-            electricTarifList.Add(supplier);
-            return await Task.FromResult(supplier);
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<ElectricTarif>(cancellationToken);
+            }
+
+            lock (_lock)
+            {
+                supplier.Id = ++id_Tarif;
+                _electricTarifList.Add(supplier);
+            }
+
+            return Task.FromResult(supplier);
         }
-        public async Task<ElectricPayment?> AddPaymentAsync(ElectricPayment payment)
+        #endregion
+
+        #region AddPaymentAsync
+        public Task<ElectricPayment> AddPaymentAsync(ElectricPayment payment, CancellationToken cancellationToken = default)
         {
-            payment.ID_Zahlung = ++id_Payment;
-            electricPaymentList.Add(payment);
-            return await Task.FromResult(payment);
+            ArgumentNullException.ThrowIfNull(payment);
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<ElectricPayment>(cancellationToken);
+            }
+
+            lock (_lock)
+            {
+                payment.ID_Zahlung = ++id_Payment;
+                _electricPaymentList.Add(payment);
+            }
+
+            return Task.FromResult(payment);
         }
-        public async Task<ElectricCost?> AddCostAsync(ElectricCost costs)
+        #endregion
+
+        #region AddCostAsync
+        public Task<ElectricCost> AddCostAsync(ElectricCost cost, CancellationToken cancellationToken = default)
         {
-            costs.Id = ++id_Costs;
-            electricCostsList.Add(costs);
-            return await Task.FromResult(costs);
+            ArgumentNullException.ThrowIfNull(cost);
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<ElectricCost>(cancellationToken);
+            }
+
+            lock (_lock)
+            {
+                cost.Id = ++id_Costs;
+                _electricCostsList.Add(cost);
+            }
+
+            return Task.FromResult(cost);
         }
-        public async Task<ElectricCounterChange?> AddCounterChangeAsync(ElectricCounterChange counterChange)
+        #endregion
+
+        #region AddCounterChangeAsync
+        public Task<ElectricCounterChange> AddCounterChangeAsync(ElectricCounterChange counterChange, CancellationToken cancellationToken = default)
         {
-            counterChange.Id = ++id_CounterChange;
-            electricCounterChangeList.Add(counterChange);
-            return await Task.FromResult(counterChange);
+            ArgumentNullException.ThrowIfNull(counterChange);
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<ElectricCounterChange>(cancellationToken);
+            }
+
+            lock (_lock)
+            {
+                counterChange.Id = ++id_CounterChange;
+                _electricCounterChangeList.Add(counterChange);
+            }
+
+            return Task.FromResult(counterChange);
         }
+        #endregion
         #endregion
 
         #region DELETE
-        public Task DeleteCounterAsync(ElectricCounter counter)
+        #region DeleteCounterAsync
+        public Task DeleteCounterAsync(ElectricCounter counter, CancellationToken cancellationToken)
         {
-            var result = electricCounterList.Find(m => m.ID_Tag == counter.ID_Tag);
-            if (result != null)
+            ArgumentNullException.ThrowIfNull(counter);
+
+            if (cancellationToken.IsCancellationRequested)
             {
-                electricCounterList.Remove(result);
+                return Task.FromCanceled(cancellationToken);
             }
-            return Task.FromResult(result);
+
+            lock (_lock)
+            {
+                _electricCounterList.RemoveAll(m => m.ID_Tag == counter.ID_Tag);
+            }
+
+            return Task.CompletedTask;
         }
-        public Task DeleteSupplierAsync(ElectricTarif supplier)
+        #endregion
+
+        #region DeleteSupplierAsync
+        public Task DeleteSupplierAsync(ElectricTarif supplier, CancellationToken cancellationToken)
         {
-            var result = electricTarifList.Find(m => m.Id == supplier.Id);
-            if (result != null)
+            ArgumentNullException.ThrowIfNull(supplier);
+
+            if (cancellationToken.IsCancellationRequested)
             {
-                electricTarifList.Remove(result);
+                return Task.FromCanceled(cancellationToken);
             }
-            return Task.FromResult(result);
+
+            lock (_lock)
+            {
+                _electricCostsList.RemoveAll(m => m.Id == supplier.Id);
+            }
+
+            return Task.CompletedTask;
         }
-        public Task DeletePaymentAsync(ElectricPayment payment)
+        #endregion
+
+        #region DeletePaymentAsync
+        public Task DeletePaymentAsync(ElectricPayment payment, CancellationToken cancellationToken)
         {
-            var result = electricPaymentList.Find(m => m.ID_Zahlung == payment.ID_Zahlung);
-            if (result != null)
+            ArgumentNullException.ThrowIfNull(payment);
+
+            if (cancellationToken.IsCancellationRequested)
             {
-                electricPaymentList.Remove(result);
+                return Task.FromCanceled(cancellationToken);
             }
-            return Task.FromResult(result);
+
+            lock (_lock)
+            {
+                _electricCostsList.RemoveAll(m => m.Id == payment.ID_Zahlung);
+            }
+
+            return Task.CompletedTask;
         }
-        public Task DeleteCostAsync(ElectricCost costs)
+        #endregion
+
+        #region DeleteCostAsync
+        public Task DeleteCostAsync(ElectricCost cost, CancellationToken cancellationToken)
         {
-            var result = electricCostsList.Find(m => m.Id == costs.Id);
-            if (result != null)
+            ArgumentNullException.ThrowIfNull(cost);
+
+            if (cancellationToken.IsCancellationRequested)
             {
-                electricCostsList.Remove(result);
+                return Task.FromCanceled(cancellationToken);
             }
-            return Task.FromResult(result);
+
+            lock (_lock)
+            {
+                _electricCostsList.RemoveAll(m => m.Id == cost.Id);
+            }
+
+            return Task.CompletedTask;
         }
-        public Task DeleteCounterChangeAsync(ElectricCounterChange counterChange)
+        #endregion
+
+        #region DeleteCounterChangeAsync
+        public Task DeleteCounterChangeAsync(ElectricCounterChange counterChange, CancellationToken cancellationToken)
         {
-            var result = electricCounterChangeList.Find(m => m.Id == counterChange.Id);
-            if (result != null)
+            ArgumentNullException.ThrowIfNull(counterChange);
+
+            if (cancellationToken.IsCancellationRequested)
             {
-                electricCounterChangeList.Remove(result);
+                return Task.FromCanceled(cancellationToken);
             }
-            return Task.FromResult(result);
+
+            lock (_lock)
+            {
+                _electricCounterChangeList.RemoveAll(m => m.Id == counterChange.Id);
+            }
+
+            return Task.CompletedTask;
         }
+        #endregion
         #endregion
 
         #region GET
-        public async Task<ElectricCounter?> GetCounterByDateAsync(DateTime date)
+        #region GetCounterByDateAsync
+        public Task<ElectricCounter?> GetCounterByDateAsync(DateTime date, CancellationToken cancellationToken = default)
         {
-            var counter = electricCounterList.Find(m => m.Ablesetag == date);
-            if (counter != null)
+            if (cancellationToken.IsCancellationRequested)
             {
-                var tarif = electricTarifList.FindLast(m => m.Id == counter.ID_Anbieter);
-                counter.Anbieter = tarif!.Anbieter;
+                return Task.FromCanceled<ElectricCounter?>(cancellationToken);
             }
-            return await Task.FromResult(counter!);
-        }
-        public async Task<IEnumerable<ElectricCounter?>> GetCountersBySupplierAsync(int supplierId)
-        {
-            var result = electricCounterList.FindAll(m => m.ID_Anbieter == supplierId);
-            if (result.Count > 0)
+
+            lock (_lock)
             {
-                var supplier = electricTarifList.FindLast(m => m.Id == supplierId);
-                foreach (var counter in result)
+                var counter = _electricCounterList.Find(m => m.Ablesetag?.Date == date.Date);
+                if (counter is not null)
                 {
-                    counter.Anbieter = supplier!.Anbieter;
+                    var tarif = _electricTarifList.FindLast(m => m.Id == counter.ID_Anbieter);
+                    if (tarif is not null)
+                    {
+                        counter.Anbieter = tarif.Anbieter ?? string.Empty;
+                    }
                 }
+
+                return Task.FromResult(counter);
             }
-            return await Task.FromResult(result);
-        }
-
-        public async Task<ElectricCounter?> GetCounterByIdAsync(int id)
-        {
-            var counter = electricCounterList.Find(m => m.ID_Tag == id);
-            if (counter != null)
-            {
-                var tarif = electricTarifList.FindLast(m => m.Id == counter.ID_Anbieter);
-                counter.Anbieter = tarif!.Anbieter;
-            }
-            return await Task.FromResult(counter!);
-        }
-
-        public async Task<IEnumerable<ElectricCounter?>> GetCountersAsync()
-        {
-            var counters = electricCounterList;
-            var tarifList = electricTarifList;
-            ElectricTarif tarif = new();
-            foreach (var counter in counters)
-            {
-                tarif = tarifList.FindLast(m => m.Id == counter.ID_Anbieter)!;
-                counter.Anbieter = tarif.Anbieter;
-            }
-
-            return await Task.FromResult(counters);
-        }
-        public async Task<ElectricTarif?> GetSupplierByIdAsync(int supplierId)
-        {
-            return await Task.FromResult(electricTarifList.Find(m => m.Id == supplierId)!);
-        }
-        public async Task<IEnumerable<ElectricTarif?>> GetSuppliersAsync()
-        {
-            return await Task.FromResult(electricTarifList);
-        }
-        public async Task<IEnumerable<ElectricPayment?>> GetPaymentsAsync()
-        {
-            return await Task.FromResult(electricPaymentList);
-        }
-        public async Task<IEnumerable<ElectricPayment?>> GetPaymentsBySupplierAsync(int supplierId)
-        {
-            var result = electricPaymentList.FindAll(m => m.ID_Anbieter == supplierId);
-            if (result.Count > 0)
-            {
-                var payments = electricPaymentList.FindLast(m => m.ID_Anbieter == supplierId);
-                foreach (var payment in result)
-                {
-                    payment.Anbieter = payments!.Anbieter;
-                }
-            }
-            return await Task.FromResult(result);
-        }
-        public async Task<ElectricPayment?> GetPaymentByIdAsync(int paymentId)
-        {
-            var payment = electricPaymentList.Find(m => m.ID_Zahlung == paymentId);
-
-            return await Task.FromResult(payment!);
-        }
-        public async Task<IEnumerable<PaymentMethod?>> GetPaymentMethodsAsync()
-        {
-            return await Task.FromResult(electricPaymentMethodList);
-        }
-        public async Task<IEnumerable<ElectricCost?>> GetCostsBySupplierIdAsync(int supplierId)
-        {
-            var result = electricCostsList.FindAll(m => m.Id_Anbieter == supplierId);
-            if (result.Count > 0)
-            {
-                var costs = electricPaymentList.FindLast(m => m.ID_Anbieter == supplierId);
-                foreach (var cost in result)
-                {
-                    cost.Anbieter = costs!.Anbieter;
-                }
-            }
-
-            return await Task.FromResult(result);
-        }
-        public async Task<IEnumerable<ElectricCost?>> GetCostsAsync()
-        {
-            return await Task.FromResult(electricCostsList);
-        }
-        public async Task<ElectricCost?> GetCostByIdAsync(int costId)
-        {
-            var cost = electricCostsList.Find(m => m.Id == costId);
-
-            return await Task.FromResult(cost!);
-        }
-        public async Task<IEnumerable<ElectricCounterChange?>> GetCounterChangesAsync()
-        {
-            return await Task.FromResult(electricCounterChangeList);
-        }
-        public async Task<ElectricCounterChange?> GetCounterChangeByIdAsync(int counterChangeId)
-        {
-            var counterChange = electricCounterChangeList.Find(m => m.Id == counterChangeId);
-
-            return await Task.FromResult(counterChange!);
-        }
-        public async Task<IEnumerable<ElectricCounterChange?>> GetCounterChangesBySupplierAsync(int supplierId)
-        {
-            var result = electricCounterChangeList.FindAll(m => m.Id_Anbieter == supplierId);
-            if (result.Count > 0)
-            {
-                var counterChanges = electricCounterChangeList.FindLast(m => m.Id_Anbieter == supplierId);
-                foreach (var counterChange in result)
-                {
-                    counterChange.Anbieter = counterChanges!.Anbieter;
-                }
-            }
-
-            return await Task.FromResult(result);
         }
         #endregion
 
-        #region UPDATE
-        public async Task<ElectricCounter?> UpdateCounterAsync(ElectricCounter zaehlerstand)
+        #region GetCountersBySupplierAsync
+        public Task<IEnumerable<ElectricCounter>> GetCountersBySupplierAsync(int supplierId, CancellationToken cancellationToken = default)
         {
-            var result = electricCounterList.Find(m => m.ID_Tag == zaehlerstand.ID_Tag);
-            if (result != null)
+            if (cancellationToken.IsCancellationRequested)
             {
-                result.ID_Tag = zaehlerstand.ID_Tag;
-                result.ID_Anbieter = zaehlerstand.ID_Anbieter;
-                result.Ablesetag = zaehlerstand.Ablesetag;
-                result.Zaehlerstand = zaehlerstand.Zaehlerstand;
-                result.Temperatur_aussen = zaehlerstand.Temperatur_aussen;
-                result.Temperatur_innen = zaehlerstand.Temperatur_innen;
-                result.Bemerkungen = zaehlerstand.Bemerkungen;
-            }
-            return await Task.FromResult(result!);
-        }
-        public async Task<ElectricTarif?> UpdateSupplierAsync(ElectricTarif supplier)
-        {
-            var result = electricTarifList.Find(m => m.Id == supplier.Id);
-            if (result != null)
-            {
-                result.Id = supplier.Id;
-                result.Anbieter = supplier.Anbieter;
-                result.Tarif = supplier.Tarif;
-                result.Zaehlernummer = supplier.Zaehlernummer;
-                result.Kuendigungsfrist = supplier.Kuendigungsfrist;
-                result.Zeitraum_Start = supplier.Zeitraum_Start;
-                result.Zeitraum_Ende = supplier.Zeitraum_Ende;
-                result.Start_Zaehlerstand = supplier.Start_Zaehlerstand;
-                result.Ende_Zaehlerstand = supplier.Ende_Zaehlerstand;
-                result.Start_Zaehlerstand_280 = supplier.Start_Zaehlerstand_280;
-                result.Ende_Zaehlerstand_280 = supplier.Ende_Zaehlerstand_280;
-                result.Start_Zaehlerstand_Enfluri = supplier.Start_Zaehlerstand_Enfluri;
-                result.Ende_Zaehlerstand_Enfluri = supplier.Ende_Zaehlerstand_Enfluri;
-                result.Arbeitspreis = supplier.Arbeitspreis;
-                result.Grundpreis = supplier.Grundpreis;
-                result.Anzahl_Personen = supplier.Anzahl_Personen;
-                result.Bemerkung = supplier.Bemerkung;
-            }
-            return await Task.FromResult(result!);
-        }
-        public async Task<ElectricPayment?> UpdatePaymentAsync(ElectricPayment payment)
-        {
-            var result = electricPaymentList.Find(m => m.ID_Zahlung == payment.ID_Zahlung);
-            if (result != null)
-            {
-                result.ID_Zahlung = payment.ID_Zahlung;
-                result.ID_Anbieter = payment.ID_Anbieter;
-                result.Anbieter = payment.Anbieter;
-                result.Datum = payment.Datum;
-                result.Zahlungsart = payment.Zahlungsart;
-                result.Bemerkungen = payment.Bemerkungen;
+                return Task.FromCanceled<IEnumerable<ElectricCounter>>(cancellationToken);
             }
 
-            return await Task.FromResult(result!);
-        }
-        public async Task<ElectricCost?> UpdateCostAsync(ElectricCost costs)
-        {
-            var result = electricCostsList.Find(m => m.Id == costs.Id);
-            if (result != null)
+            lock (_lock)
             {
-                result.Id = costs.Id;
-                result.Id_Anbieter = costs.Id_Anbieter;
-                result.Anbieter = costs.Anbieter;
-                result.Grundpreis = costs.Grundpreis;
-                result.Arbeitspreis = costs.Arbeitspreis;
-                result.Zaehlermiete = costs.Zaehlermiete;
-                result.Bemerkung = costs.Bemerkung;
-            }
+                var result = _electricCounterList.FindAll(m => m.ID_Anbieter == supplierId);
+                if (result.Count > 0)
+                {
+                    var supplier = _electricTarifList.FindLast(m => m.Id == supplierId);
+                    if (supplier is not null)
+                    {
+                        foreach (var counter in result)
+                        {
+                            counter.Anbieter = supplier.Anbieter ?? string.Empty;
+                        }
+                    }
+                }
 
-            return await Task.FromResult(result!);
-        }
-        public async Task<ElectricCounterChange?> UpdateCounterChangeAsync(ElectricCounterChange counterChange)
-        {
-            var result = electricCounterChangeList.Find(m => m.Id == counterChange.Id);
-            if (result != null)
-            {
-                result.Id = counterChange.Id;
-                result.Id_Anbieter = counterChange.Id_Anbieter;
-                result.Anbieter = counterChange.Anbieter;
-                result.Wechsel_Datum = counterChange.Wechsel_Datum;
-                result.Zaehlerstand_alt = counterChange.Zaehlerstand_alt;
-                result.Zaehlerstand_neu = counterChange.Zaehlerstand_neu;
-                result.Zaehlerstand_Enfluri_alt = counterChange.Zaehlerstand_Enfluri_alt;
-                result.Zaehlerstand_Enfluri_neu = counterChange.Zaehlerstand_Enfluri_neu;
-                result.Bemerkung = counterChange.Bemerkung;
+                return Task.FromResult<IEnumerable<ElectricCounter>>(result);
             }
-
-            return await Task.FromResult(result!);
         }
         #endregion
 
-        public Task<bool> SaveChangesAsync()
+        #region GetCounterByIdAsync
+        public Task<ElectricCounter?> GetCounterByIdAsync(int id, CancellationToken cancellationToken = default)
         {
-            var result = true;
-            return Task.FromResult(result);
-        }
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<ElectricCounter?>(cancellationToken);
+            }
 
+            lock (_lock)
+            {
+                var counter = _electricCounterList.Find(m => m.ID_Tag == id);
+                if (counter is not null)
+                {
+                    var tarif = _electricTarifList.FindLast(m => m.Id == counter.ID_Anbieter);
+                    if (tarif is not null)
+                    {
+                        counter.Anbieter = tarif.Anbieter ?? string.Empty;
+                    }
+                }
+
+                return Task.FromResult(counter);
+            }
+        }
+        #endregion
+
+        #region GetCountersAsync
+        public Task<IEnumerable<ElectricCounter>> GetCountersAsync(CancellationToken cancellationToken = default)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<IEnumerable<ElectricCounter>>(cancellationToken);
+            }
+
+            lock (_lock)
+            {
+                var anbieterById = _electricTarifList
+                .GroupBy(t => t.Id)
+                .ToDictionary(g => g.Key, g => g.Last().Anbieter);
+
+                foreach (var counter in _electricCounterList)
+                {
+                    if (anbieterById.TryGetValue(counter.ID_Anbieter, out var anbieter))
+                    {
+                        counter.Anbieter = anbieter ?? string.Empty;
+                    }
+                }
+
+                return Task.FromResult<IEnumerable<ElectricCounter>>([.. _electricCounterList]);
+            }
+        }
+        #endregion
+
+        #region GetSupplierByIdAsync
+        public Task<ElectricTarif?> GetSupplierByIdAsync(int supplierId, CancellationToken cancellationToken = default)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<ElectricTarif?>(cancellationToken);
+            }
+
+            lock (_lock)
+            {
+                var result = _electricTarifList.Find(m => m.Id == supplierId);
+                return Task.FromResult(result);
+            }
+        }
+        #endregion
+
+        #region GetSuppliersAsync
+        public Task<IEnumerable<ElectricTarif>> GetSuppliersAsync(CancellationToken cancellationToken = default)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<IEnumerable<ElectricTarif>>(cancellationToken);
+            }
+
+            lock (_lock)
+            {
+                return Task.FromResult<IEnumerable<ElectricTarif>>([.. _electricTarifList]);
+            }
+        }
+        #endregion
+
+        #region GetPaymentsAsync
+        public Task<IEnumerable<ElectricPayment>> GetPaymentsAsync(CancellationToken cancellationToken = default)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<IEnumerable<ElectricPayment>>(cancellationToken);
+            }
+
+            lock (_lock)
+            {
+
+                return Task.FromResult<IEnumerable<ElectricPayment>>([.. _electricPaymentList]);
+            }
+        }
+        #endregion
+
+        #region GetPaymentsBySupplierAsync
+        public Task<IEnumerable<ElectricPayment>> GetPaymentsBySupplierAsync(int supplierId, CancellationToken cancellationToken = default)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<IEnumerable<ElectricPayment>>(cancellationToken);
+            }
+
+            lock (_lock)
+            {
+                var result = _electricPaymentList
+                .Where(m => m.ID_Anbieter == supplierId)
+                .ToList();
+
+                var anbieter = result.LastOrDefault(m => m.Anbieter is not null)?.Anbieter;
+
+                if (anbieter is not null)
+                {
+                    foreach (var payment in result)
+                    {
+                        payment.Anbieter = anbieter;
+                    }
+                }
+
+                return Task.FromResult<IEnumerable<ElectricPayment>>(result);
+            }
+        }
+        #endregion
+
+        #region GetPaymentByIdAsync
+        public Task<ElectricPayment?> GetPaymentByIdAsync(int paymentId, CancellationToken cancellationToken = default)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<ElectricPayment?>(cancellationToken);
+            }
+
+            lock (_lock)
+            {
+                var payment = _electricPaymentList.Find(m => m.ID_Zahlung == paymentId);
+                return Task.FromResult<ElectricPayment?>(payment);
+            }
+        }
+        #endregion
+
+        #region GetPaymentMethodsAsync
+        public Task<IEnumerable<PaymentMethod>> GetPaymentMethodsAsync(CancellationToken cancellationToken = default)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<IEnumerable<PaymentMethod>>(cancellationToken);
+            }
+
+            lock (_lock)
+            {
+                return Task.FromResult<IEnumerable<PaymentMethod>>([.. _electricPaymentMethodList]);
+            }
+        }
+        #endregion
+
+        #region GetCostsBySupplierIdAsync
+        public Task<IEnumerable<ElectricCost>> GetCostsBySupplierIdAsync(int supplierId, CancellationToken cancellationToken = default)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<IEnumerable<ElectricCost>>(cancellationToken);
+            }
+
+            lock (_lock)
+            {
+                var result = _electricCostsList
+                .Where(m => m.Id_Anbieter == supplierId)
+                .ToList();
+
+                var anbieter = result.LastOrDefault(m => m.Anbieter is not null)?.Anbieter;
+
+                if (anbieter is not null)
+                {
+                    foreach (var cost in result)
+                    {
+                        cost.Anbieter = anbieter;
+                    }
+                }
+
+                return Task.FromResult<IEnumerable<ElectricCost>>(result);
+            }
+        }
+        #endregion
+
+        #region GetCostsAsync
+        public Task<IEnumerable<ElectricCost>> GetCostsAsync(CancellationToken cancellationToken = default)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<IEnumerable<ElectricCost>>(cancellationToken);
+            }
+
+            lock (_lock)
+            {
+                return Task.FromResult<IEnumerable<ElectricCost>>([.. _electricCostsList]);
+            }
+        }
+        #endregion
+
+        #region GetCostByIdAsync
+        public Task<ElectricCost?> GetCostByIdAsync(int costId, CancellationToken cancellationToken = default)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<ElectricCost?>(cancellationToken);
+            }
+
+            lock (_lock)
+            {
+                var result = _electricCostsList.FirstOrDefault(m => m.Id == costId);
+                return Task.FromResult(result);
+            }
+        }
+        #endregion
+
+        #region GetCounterChangesAsync
+        public Task<IEnumerable<ElectricCounterChange>> GetCounterChangesAsync(CancellationToken cancellationToken = default)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<IEnumerable<ElectricCounterChange>>(cancellationToken);
+            }
+
+            lock (_lock)
+            {
+                return Task.FromResult<IEnumerable<ElectricCounterChange>>([.. _electricCounterChangeList]);
+            }
+        }
+        #endregion
+
+        #region GetCounterChangeByIdAsync
+        public Task<ElectricCounterChange?> GetCounterChangeByIdAsync(int counterChangeId, CancellationToken cancellationToken = default)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<ElectricCounterChange?>(cancellationToken);
+            }
+
+            lock (_lock)
+            {
+                var result = _electricCounterChangeList.FirstOrDefault(m => m.Id == counterChangeId);
+                return Task.FromResult(result);
+            }
+        }
+        #endregion
+
+        #region GetCounterChangesBySupplierAsync
+        public Task<IEnumerable<ElectricCounterChange>> GetCounterChangesBySupplierAsync(int supplierId, CancellationToken cancellationToken = default)
+        {
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<IEnumerable<ElectricCounterChange>>(cancellationToken);
+            }
+
+            lock (_lock)
+            {
+                var result = _electricCounterChangeList
+                    .Where(m => m?.Id_Anbieter == supplierId)
+                    .ToList();
+
+                // Aktuellen Anbieternamen frisch aus der Tarifliste laden
+                var tarif = _electricTarifList.FindLast(m => m.Id == supplierId);
+
+                if (tarif is not null)
+                {
+                    var anbieter = tarif.Anbieter ?? string.Empty;
+                    foreach (var counterChange in result)
+                    {
+                        counterChange.Anbieter = anbieter;
+                    }
+                }
+
+                return Task.FromResult<IEnumerable<ElectricCounterChange>>(result);
+            }
+        }
+        #endregion
+        #endregion
+
+        #region UPDATE (Put)
+        #region UpdateCounterAsync
+        /// <summary>
+        /// UpdateCounterAsync
+        /// </summary>
+        /// <param name="zaehlerstand"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        public Task<ElectricCounter?> UpdateCounterAsync(ElectricCounter zaehlerstand, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(zaehlerstand);
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<ElectricCounter?>(cancellationToken);
+            }
+
+            // Optional: Lock verwenden, falls mehrere Threads gleichzeitig auf die Liste zugreifen können
+            lock (_lock)
+            {
+                var index = _electricCounterList.FindIndex(m => m.ID_Tag == zaehlerstand.ID_Tag);
+
+                if (index == -1)
+                {
+                    return Task.FromResult<ElectricCounter?>(null);
+                }
+
+                // Ersetzt das komplette Objekt auf einen Schlag
+                _electricCounterList[index] = zaehlerstand;
+
+                return Task.FromResult<ElectricCounter?>(zaehlerstand);
+            }
+        }
+        #endregion
+
+        #region UpdateSupplierAsync
+        public Task<ElectricTarif?> UpdateSupplierAsync(ElectricTarif supplier, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(supplier);
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<ElectricTarif?>(cancellationToken);
+            }
+
+            // Optional: Lock verwenden, falls mehrere Threads gleichzeitig auf die Liste zugreifen können
+            lock (_lock)
+            {
+                var index = _electricTarifList.FindIndex(m => m.Id == supplier.Id);
+
+                if (index == -1)
+                {
+                    return Task.FromResult<ElectricTarif?>(null);
+                }
+
+                // Ersetzt das komplette Objekt auf einen Schlag
+                _electricTarifList[index] = supplier;
+
+                return Task.FromResult<ElectricTarif?>(supplier);
+            }
+        }
+        #endregion
+
+        #region UpdatePaymentAsync
+        public Task<ElectricPayment?> UpdatePaymentAsync(ElectricPayment payment, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(payment);
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<ElectricPayment?>(cancellationToken);
+            }
+
+            // Optional: Lock verwenden, falls mehrere Threads gleichzeitig auf die Liste zugreifen können
+            lock (_lock)
+            {
+                var index = _electricPaymentList.FindIndex(m => m.ID_Zahlung == payment.ID_Zahlung);
+
+                if (index == -1)
+                {
+                    return Task.FromResult<ElectricPayment?>(null);
+                }
+
+                // Ersetzt das komplette Objekt auf einen Schlag
+                _electricPaymentList[index] = payment;
+
+                return Task.FromResult<ElectricPayment?>(payment);
+            }
+        }
+        #endregion
+
+        #region UpdateCostAsync
+        public Task<ElectricCost?> UpdateCostAsync(ElectricCost cost, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(cost);
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<ElectricCost?>(cancellationToken);
+            }
+
+            // Optional: Lock verwenden, falls mehrere Threads gleichzeitig auf die Liste zugreifen können
+            lock (_lock)
+            {
+                var index = _electricCostsList.FindIndex(m => m.Id == cost.Id);
+
+                if (index == -1)
+                {
+                    return Task.FromResult<ElectricCost?>(null);
+                }
+
+                // Ersetzt das komplette Objekt auf einen Schlag
+                _electricCostsList[index] = cost;
+
+                return Task.FromResult<ElectricCost?>(cost);
+            }
+        }
+        #endregion
+
+        #region UpdateCounterChangeAsync
+        public Task<ElectricCounterChange?> UpdateCounterChangeAsync(ElectricCounterChange counterChange, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(counterChange);
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<ElectricCounterChange?>(cancellationToken);
+            }
+
+            // Optional: Lock verwenden, falls mehrere Threads gleichzeitig auf die Liste zugreifen können
+            lock (_lock)
+            {
+                var index = _electricCounterChangeList.FindIndex(m => m.Id == counterChange.Id);
+
+                if (index == -1)
+                {
+                    return Task.FromResult<ElectricCounterChange?>(null);
+                }
+
+                // Ersetzt das komplette Objekt auf einen Schlag
+                _electricCounterChangeList[index] = counterChange;
+
+                return Task.FromResult<ElectricCounterChange?>(counterChange);
+            }
+        }
+        #endregion
+        #endregion
+
+        #region SaveChangesAsync
+        public Task<bool> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<bool>(cancellationToken);
+            }
+
+            return Task.FromResult(true);
+        }
+        #endregion
     }
 }

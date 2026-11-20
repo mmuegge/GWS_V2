@@ -53,8 +53,8 @@
  </div>
 
 @* Grid *@
-<div class="control-section" id="target" align="left">
-    <SfGrid ID="Grid" @ref="SfDataGrid" DataSource="@counterChangeList"
+<div class="control-section elevated-grid-container" id="target" align="left">
+    <SfGrid ID="Grid" @ref="sfDataGrid" DataSource="@counterChangeList"
     AllowPaging="true"
     AllowFiltering="true"
     AllowReordering="true"
@@ -74,7 +74,7 @@
         AllowDeleting="true"
         ShowDeleteConfirmDialog="true"
         Mode="Syncfusion.Blazor.Grids.EditMode.Dialog"
-        Dialog="DialogParams">
+        Dialog="dialogParams">
 
             <HeaderTemplate>
                 @{
@@ -109,7 +109,11 @@
             <GridColumn 
                 Field="@nameof(Gas_CounterChangeModel.Id)" 
                 IsPrimaryKey="true" 
-                Visible="false">
+                Visible="false"
+                Width="0"
+                AllowSorting="false"
+                AllowFiltering="false"
+                AllowEditing="false">
             </GridColumn>
 
             <GridColumn Field=@nameof(Gas_CounterChangeModel.Anbieter)
@@ -240,21 +244,21 @@
 
 @* Dialog*@
 <div>
-    <SfDialog Target="#target"
+    <SfDialog Target="body"
               Width="@dialogWidth"
               Height="@dialogHeight"
               AllowDragging="true"
               ShowCloseIcon="true"
               @bind-Visible="@DialogVisible"
-              AllowPrerender="true"
+              AllowPrerender="false"
               IsModal="true" 
               CssClass="MyCss">
 
         <DialogTemplates>
-            <Header>@Header</Header>
+            <Header>@header</Header>
         </DialogTemplates>
 
-        <DialogPositionData X="@dialogXValue" Y="@dialogYValue"></DialogPositionData>
+        <DialogPositionData X="center" Y="center"></DialogPositionData>
         <DialogAnimationSettings Effect="@animationEffect"></DialogAnimationSettings>
 
         @if (showDialogButtons)
@@ -325,33 +329,31 @@
     #region Variablendeklaration
     bool spinnerVisibleProperty { get; set; } = false;
 
-    private DialogSettings DialogParams = new DialogSettings { MinHeight = "400px", Width = "450px" };
+    private DialogSettings dialogParams = new DialogSettings { MinHeight = "400px", Width = "450px" };
     public DialogEffect animationEffect = DialogEffect.Zoom;
     public bool DialogVisible { get; set; } = false;
     private bool showDialogButtons = false;
-    private string DialogText { get; set; } = string.Empty;
-    private string dialogXValue = "center";
-    private string dialogYValue = "center";
+    private string dialogText { get; set; } = string.Empty;
     private string dialogHeight = "130px";
     private string dialogWidth = "380px";
 
     public int? DropDownValueSupplier { get; set; } = 0;
 
+    private bool success = false;
     private bool save = false;
     private bool update = false;
-    private bool success = false;
 
     readonly string urlSupplier = "gas/anbieter/";
     readonly string urlCounterChangeSupplier = "gas/zaehlerwechsel/anbieter/";
      readonly string urlCounterChange = "gas/zaehlerwechsel/";
 
-    string? Header { get; set; }
-    string? Content { get; set; }
+    string? header { get; set; }
+    string? content { get; set; }
 
     GWSProcessor? gwsP;
     ApiResponse? apiResponse;
 
-    private SfGrid<Gas_CounterChangeModel> SfDataGrid = new();
+    private SfGrid<Gas_CounterChangeModel> sfDataGrid = new();
     private List<Gas_SupplierDataModel>? supplierDataList = new();
 
     private Gas_SupplierDataModel? supplierData = new();
@@ -475,7 +477,7 @@
             {
                 OpenDialog("Keine Gas-Zählerwechsel vorhanden!", "60px", "380px", false);
             }
-            SfDataGrid?.Refresh();
+            sfDataGrid?.Refresh();
 
             // Spinner
             await Task.Delay(200);
@@ -517,7 +519,7 @@
 
             excelExportProperties.Theme = Theme;
 
-            await SfDataGrid.ExportToExcelAsync(excelExportProperties);
+            await sfDataGrid.ExportToExcelAsync(excelExportProperties);
         }
         else if (args.Item.Id.Contains("_pdfexport"))
         {
@@ -556,7 +558,7 @@
             pdfExportProperties.Header = pdfHeader;
             pdfExportProperties.Footer = pdfFooter;
 
-            await SfDataGrid.ExportToPdfAsync(pdfExportProperties);
+            await sfDataGrid.ExportToPdfAsync(pdfExportProperties);
         }
         else if (args.Item.Id.Contains("XmlExport"))
         {
@@ -609,9 +611,9 @@
             }
 
             // Sicherer Aufruf über den Null-Conditional-Operator
-            if (SfDataGrid != null)
+            if (sfDataGrid != null)
             {
-                await SfDataGrid.Refresh();
+                await sfDataGrid.Refresh();
             }
         }
     }
@@ -627,7 +629,7 @@
         DialogVisible = false;
         // Zählerwechsel anbieterabhängig auslesen
         counterChangeList = await gwsP!.LoadDataAsync<Gas_CounterChangeModel>(urlCounterChangeSupplier + Convert.ToString(supplierData!.Id));
-        SfDataGrid?.Refresh();
+        sfDataGrid?.Refresh();
     }
     #endregion
 
@@ -672,7 +674,7 @@
                 counterChangeList = await gwsP.LoadDataAsync<Gas_CounterChangeModel>(urlCounterChangeSupplier + Convert.ToString(supplierData!.Id));
             }
         }
-        SfDataGrid?.Refresh();
+        sfDataGrid?.Refresh();
     }
     #endregion
 
@@ -734,7 +736,7 @@
     /// </summary>
     private void OpenDialog(string header, string height, string width, bool showButtons)
     {
-        Header = header;
+        this.header = header;
         dialogHeight = height;
         dialogWidth = width;
         showDialogButtons = showButtons;

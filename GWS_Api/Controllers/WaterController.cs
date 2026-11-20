@@ -1,229 +1,263 @@
 using AutoMapper;
-using GWS_Api.Dtos.Gas;
 using GWS_Api.Dtos.Water;
 using GWS_Api.Models.Water;
 using GWS_Api.Repositories.Water;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
+using Microsoft.EntityFrameworkCore;
 
 namespace GWS_Api.Controllers
 {
     [ApiController]
     //[Route("api/[controller]")]
     [Route("api/wasser")]    // uri mit anderer Route und nicht mit Controllername
-    public class WaterController(ILogger<WaterController> logger, IWaterRepository repo, IMapper mapper) : ControllerBase
+    public class WaterController(IWaterRepository repo, IMapper mapper) : ControllerBase
     {
-        #region Variablendeklaration
-        private readonly IWaterRepository _repo = repo;
-        private readonly ILogger<WaterController> _logger = logger;
-        private readonly IMapper _mapper = mapper;   // für Dto's
-        public WaterModel wasserModel = new();
+        #region GET
+        #region [HttpGet("anbieter")]
+        ///// <summary>
+        ///// Get: Abfrage alle Anbieter
+        ///// Route: /api/wasser/anbieter
+        ///// </summary>
+        ///// <returns></returns>
+        [HttpGet("anbieter")]
+        [ProducesResponseType(typeof(IEnumerable<WaterTarifReadDto>), StatusCodes.Status200OK)]
+        public async Task<ActionResult<IEnumerable<WaterTarifReadDto>>> GetSuppliers(CancellationToken cancellationToken)
+        {
+            var suppliers = await repo.GetSuppliersAsync(cancellationToken);
+
+            if (suppliers is null || !suppliers.Any())
+            {
+                return Ok(Enumerable.Empty<WaterTarifReadDto>());
+            }
+
+            var dtos = mapper.Map<IEnumerable<WaterTarifReadDto>>(suppliers);
+            return Ok(dtos);
+        }
         #endregion
 
-        #region GET
-        /// <summary>
-        /// Get: Abfrage alle Anbieter
-        /// Route: /api/wasser/anbieter
-        /// </summary>
-        /// <returns></returns>
-        [HttpGet("anbieter")]
-        public async Task<ActionResult<IEnumerable<WaterTarifReadDto>>> GetSuppliers()
-        {
-            try
-            {
-                var result = await _repo.GetSuppliersAsync();
-                if (result == null || !result.Any())
-                {
-                    return NotFound($"Keine Anbieter vorhanden!");
-                }
-                return Ok(_mapper.Map<IEnumerable<WaterTarifReadDto>>(result));
-            }
-            catch (Exception)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Fehler beim Lesen der Daten aus der Datenbank");
-            }
-        }
-
+        #region [HttpGet("anbieter/{id:int:min(1)}")]
         /// <summary>
         /// Get: Abfrage eines bestimmten Anbieters
         /// Route: /api/wasser/anbieter/id
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        [HttpGet("anbieter/{id}", Name = "GetSupplierById")]
-        public async Task<ActionResult<WaterTarifReadDto>> GetSupplierById(int id)
+        [HttpGet("anbieter/{id:int:min(1)}")]
+        [ProducesResponseType(typeof(WaterTarifReadDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<WaterTarifReadDto>> GetSupplierById(int id, CancellationToken cancellationToken)
         {
-            var result = await _repo.GetSupplierByIdAsync(id);
-            if (result == null)
-            {
-                return NotFound($"Kein Anbieter mit Id={id} vorhanden!");
-            }
-            return Ok(_mapper.Map<WaterTarifReadDto>(result));
-        }
+            var supplier = await repo.GetSupplierByIdAsync(id, cancellationToken);
 
+            if (supplier is null)
+            {
+                return NotFound(new ProblemDetails
+                {
+                    Title = "Anbieter nicht gefunden",
+                    Detail = $"Kein Anbieter mit der Id {id} vorhanden.",
+                    Status = StatusCodes.Status404NotFound
+                });
+            }
+
+            var dto = mapper.Map<WaterTarifReadDto>(supplier);
+            return Ok(dto);
+        }
+        #endregion
+
+        #region [HttpGet("zaehlerstaende")]
         /// <summary>
         /// Get: Abfrage aller Zählerstände
         /// Route: /api/wasser/zaehlerstaende
         /// </summary>
         /// <returns></returns>
         [HttpGet("zaehlerstaende")]
-        public async Task<ActionResult<IEnumerable<WaterCounterReadDto>>> GetCounters()
+        [ProducesResponseType(typeof(IEnumerable<WaterCounterReadDto>), StatusCodes.Status200OK)]
+        public async Task<ActionResult<IEnumerable<WaterCounterReadDto>>> GetCounters(CancellationToken cancellationToken)
         {
-            try
-            {
-                var result = await _repo.GetCountersAsync();
-                if (result == null || !result.Any())
-                {
-                    return NotFound($"Keine Zählerstände vorhanden!");
-                }
-                return Ok(_mapper.Map<IEnumerable<WaterCounterReadDto>>(result));
-            }
-            catch (System.Exception)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Fehler beim Lesen der Daten aus der Datenbank");
-            }
-        }
+            var counters = await repo.GetCountersAsync(cancellationToken);
 
+            if (counters is null || !counters.Any())
+            {
+                return Ok(Enumerable.Empty<WaterCounterReadDto>());
+            }
+
+            return Ok(mapper.Map<IEnumerable<WaterCounterReadDto>>(counters));
+        }
+        #endregion
+
+        #region [HttpGet("zaehlerstaende/anbieter/{id:int:min(1)}")]
         /// <summary>
         /// Get: Abfrage der Zählerstände eines Anbieters
         /// Route: /api/wasser/zaehlerstaende/anbieter/id
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        [HttpGet("zaehlerstaende/anbieter/{id}", Name = "GetCounterBySupplier")]
-        public async Task<ActionResult<IEnumerable<WaterCounterReadDto>>> GetCounterBySupplier(int id)
+        [HttpGet("zaehlerstaende/anbieter/{id:int:min(1)}")]
+        [ProducesResponseType(typeof(IEnumerable<WaterCounterReadDto>), StatusCodes.Status200OK)]
+        public async Task<ActionResult<IEnumerable<WaterCounterReadDto>>> GetCounterBySupplier(int id, CancellationToken cancellationToken)
         {
-            var result = await _repo.GetCountersBySupplierAsync(id);
-            if (result == null || !result.Any())
-            {
-                return NotFound($"Keine Zaehlerstände vom Anbieter mit Id={id} vorhanden!");
-            }
-            return Ok(_mapper.Map<IEnumerable<WaterCounterReadDto>>(result));
-        }
+            var counters = await repo.GetCountersBySupplierAsync(id, cancellationToken);
 
+            if (counters is null || !counters.Any())
+            {
+                return Ok(Enumerable.Empty<WaterCounterReadDto>());
+            }
+
+            return Ok(mapper.Map<IEnumerable<WaterCounterReadDto>>(counters));
+        }
+        #endregion
+
+        #region [HttpGet("zaehlerstand/{day:datetime}")]
         /// <summary>
         /// Get: Abfrage eines Zählerstandes eines bestimmten Datums
         /// Route: /api/wasser/zaehlerstand/day --> (2021.10.23)
         /// </summary>
         /// <param name="day"></param>
         /// <returns></returns>
-        [HttpGet("zaehlerstand/{day}", Name = "GetWaterCounterByDay")]
-        public async Task<ActionResult<WaterCounterReadDto>> GetWaterCounterByDay(DateTime day)
+        [HttpGet("zaehlerstand/{day:datetime}")]
+        [ProducesResponseType(typeof(WaterCounterReadDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<WaterCounterReadDto>> GetWaterCounterByDay(DateTime day, CancellationToken cancellationToken)
         {
-            var result = await _repo.GetCounterByDateAsync(day);
-            if (result == null)
-            {
-                return NotFound($"Kein Zaehlerstand ({day}) vorhanden!");
-            }
-            return Ok(_mapper.Map<WaterCounterReadDto>(result));
-        }
+            var counter = await repo.GetCounterByDateAsync(day, cancellationToken);
 
+            if (counter is null)
+            {
+                return NotFound(new ProblemDetails
+                {
+                    Title = "Zählerstand nicht gefunden",
+                    Detail = $"Kein Zählerstand für das Datum {day:yyyy-MM-dd} vorhanden.",
+                    Status = StatusCodes.Status404NotFound
+                });
+            }
+
+            return Ok(mapper.Map<WaterCounterReadDto>(counter));
+        }
+        #endregion
+
+        #region [HttpGet("zaehlerstand/id/{id:int:min(1)}")]
         /// <summary>
         /// Get: Abfrage eines Zählerstandes mit einer bestimmten Id
         /// Route: /api/wasser/zaehlerstand/id
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        [HttpGet("zaehlerstand/id/{id}", Name = "GetWaterCounterById")]
-        public async Task<ActionResult<WaterCounterReadDto>> GetWaterCounterById(int id)
+        [HttpGet("zaehlerstand/id/{id:int:min(1)}")]
+        [ProducesResponseType(typeof(WaterCounterReadDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<WaterCounterReadDto>> GetWaterCounterById(int id, CancellationToken cancellationToken)
         {
-            var result = await _repo.GetCounterByIdAsync(id);
-            if (result == null)
-            {
-                return NotFound($"Kein Zaehlerstand mit Id={id} vorhanden!");
-            }
-            return Ok(_mapper.Map<WaterCounterReadDto>(result));
-        }
+            var counter = await repo.GetCounterByIdAsync(id, cancellationToken);
 
+            if (counter is null)
+            {
+                return NotFound(new ProblemDetails
+                {
+                    Title = "Zählerstand nicht gefunden",
+                    Detail = $"Kein Zählerstand mit der Id {id} vorhanden.",
+                    Status = StatusCodes.Status404NotFound
+                });
+            }
+
+            return Ok(mapper.Map<WaterCounterReadDto>(counter));
+        }
+        #endregion
+
+        #region [HttpGet("zahlungen")]
         /// <summary>
         /// Get: Abfrage aller Zahlungen
         /// Route: /api/wasser/zahlungen
         /// </summary>
         /// <returns></returns>
         [HttpGet("zahlungen")]
-        public async Task<ActionResult<IEnumerable<WaterPaymentReadDto>>> GetWaterPayments()
+        [ProducesResponseType(typeof(IEnumerable<WaterPaymentReadDto>), StatusCodes.Status200OK)]
+        public async Task<ActionResult<IEnumerable<WaterPaymentReadDto>>> GetWaterPayments(CancellationToken cancellationToken)
         {
-            try
-            {
-                var result = await _repo.GetPaymentsAsync();
-                if (result == null || !result.Any())
-                {
-                    return NotFound($"Keine Zahlungen vorhanden!");
-                }
-                return Ok(_mapper.Map<IEnumerable<WaterPaymentReadDto>>(result));
-            }
-            catch (System.Exception)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Fehler beim Lesen der Daten aus der Datenbank");
-            }
-        }
+            var payments = await repo.GetPaymentsAsync(cancellationToken);
 
+            if (payments is null || !payments.Any())
+            {
+                return Ok(Enumerable.Empty<WaterPaymentReadDto>());
+            }
+
+            return Ok(mapper.Map<IEnumerable<WaterPaymentReadDto>>(payments));
+        }
+        #endregion
+
+        #region [HttpGet("zahlungen/anbieter/{id:int:min(1)}")]
         /// <summary>
         /// Get: Abfrage Zahlungen eines bestimmten Anbieters
         /// Route: /api/wasser/zahlungen/anbieter/id
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        [HttpGet("zahlungen/anbieter/{id}", Name = "GetWaterPaymentsBySupplier")]
-        public async Task<ActionResult<IEnumerable<WaterPaymentReadDto>>> GetWaterPaymentsBySupplier(int id)
+        [HttpGet("zahlungen/anbieter/{id:int:min(1)}")]
+        [ProducesResponseType(typeof(IEnumerable<WaterPaymentReadDto>), StatusCodes.Status200OK)]
+        public async Task<ActionResult<IEnumerable<WaterPaymentReadDto>>> GetWaterPaymentsBySupplier(int id, CancellationToken cancellationToken)
         {
-            try
-            {
-                var result = await _repo.GetPaymentsBySupplierAsync(id);
-                if (result == null || !result.Any())
-                {
-                    return NotFound($"Kein Zahlungen vom Anbieter mit Id={id} vorhanden!");
-                }
-                return Ok(_mapper.Map<IEnumerable<WaterPaymentReadDto>>(result));
-            }
-            catch (System.Exception)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Fehler beim Lesen der Daten aus der Datenbank");
-            }
-        }
+            var payments = await repo.GetPaymentsBySupplierAsync(id, cancellationToken);
 
+            if (payments is null || !payments.Any())
+            {
+                return Ok(Enumerable.Empty<WaterPaymentReadDto>());
+            }
+
+            return Ok(mapper.Map<IEnumerable<WaterPaymentReadDto>>(payments));
+        }
+        #endregion
+
+        #region [HttpGet("zahlungen/{id:int:min(1)}")]
         /// <summary>
         /// Get: Abfrage einer Zahlungen nach Id
         /// Route: /api/wasser/zahlungen/id
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        [HttpGet("zahlungen/{id}", Name = "GetWaterPaymentById")]
-        public async Task<ActionResult<WaterPaymentReadDto>> GetWaterPaymentById(int id)
+        [HttpGet("zahlungen/{id:int:min(1)}")]
+        [ProducesResponseType(typeof(WaterPaymentReadDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<WaterPaymentReadDto>> GetWaterPaymentById(int id, CancellationToken cancellationToken)
         {
-            var result = await _repo.GetPaymentByIdAsync(id);
-            if (result == null)
-            {
-                return NotFound($"Kein Zahlung mit Id={id} vorhanden!");
-            }
-            return Ok(_mapper.Map<WaterPaymentReadDto>(result));
-        }
+            var payment = await repo.GetPaymentByIdAsync(id, cancellationToken);
 
+            if (payment is null)
+            {
+                return NotFound(new ProblemDetails
+                {
+                    Title = "Zahlung nicht gefunden",
+                    Detail = $"Keine Zahlung mit der Id {id} vorhanden.",
+                    Status = StatusCodes.Status404NotFound
+                });
+            }
+
+            return Ok(mapper.Map<WaterPaymentReadDto>(payment));
+        }
+        #endregion
+
+        #region [HttpGet("zahlungsart")]
         /// <summary>
         /// Get: Abfrage aller Zahlungsarten
         /// Route: /api/wasser/zahlungsart
         /// </summary>
         /// <returns></returns>
         [HttpGet("zahlungsart")]
-        public async Task<ActionResult<IEnumerable<WaterPaymentMethodReadDto>>> GetWaterPaymentMethods()
+        [ProducesResponseType(typeof(IEnumerable<WaterPaymentMethodReadDto>), StatusCodes.Status200OK)]
+        public async Task<ActionResult<IEnumerable<WaterPaymentMethodReadDto>>> GetWaterPaymentMethods(CancellationToken cancellationToken)
         {
-            try
-            {
-                var result = await _repo.GetPaymentMethodsAsync();
-                if (result == null || !result.Any())
-                {
-                    return NotFound($"Keine Zahlungsart vorhanden!");
-                }
-                return Ok(_mapper.Map<IEnumerable<WaterPaymentMethodReadDto>>(result));
-            }
-            catch (System.Exception)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Fehler beim Lesen der Daten aus der Datenbank");
-            }
-        }
+            var methods = await repo.GetPaymentMethodsAsync(cancellationToken);
 
+            if (methods is null || !methods.Any())
+            {
+                return Ok(Enumerable.Empty<WaterPaymentMethodReadDto>());
+            }
+
+            return Ok(mapper.Map<IEnumerable<WaterPaymentMethodReadDto>>(methods));
+        }
+        #endregion
+
+        #region [HttpGet("kosten/anbieter/{id:int:min(1)}")]
         /// <summary>
         /// Get: Abfrage Kosten eines Anbieters nach Anbieter-Id (nur vohanden wenn während der Vertragslaufzeit geänderte monatliche Kosten eines Anbieters vorhanden ist)
         /// es können mehr als eine Kostenänderung vorhanden sein
@@ -231,120 +265,116 @@ namespace GWS_Api.Controllers
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        [HttpGet("kosten/anbieter/{id}", Name = "GetWaterCostsBySupplier")]
-        public async Task<ActionResult<IEnumerable<WaterCostReadDto>>> GetWaterCostsBySupplier(int id)
+        [HttpGet("kosten/anbieter/{id:int:min(1)}")]
+        [ProducesResponseType(typeof(IEnumerable<WaterCostReadDto>), StatusCodes.Status200OK)]
+        public async Task<ActionResult<IEnumerable<WaterCostReadDto>>> GetWaterCostsBySupplier(int id, CancellationToken cancellationToken)
         {
-            try
-            {
-                var result = await _repo.GetCostsBySupplierIdAsync(id);
-                if (result == null || !result.Any())
-                {
-                    return NotFound($"Kein Kosten vom Anbieter mit Id={id} vorhanden!");
-                }
-                return Ok(_mapper.Map<IEnumerable<WaterCostReadDto>>(result));
-            }
-            catch (System.Exception)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Fehler beim Lesen der Daten aus der Datenbank");
-            }
-        }
+            var costs = await repo.GetCostsBySupplierIdAsync(id, cancellationToken);
 
+            if (costs is null || !costs.Any())
+            {
+                return Ok(Enumerable.Empty<WaterCostReadDto>());
+            }
+
+            return Ok(mapper.Map<IEnumerable<WaterCostReadDto>>(costs));
+        }
+        #endregion
+
+        #region [HttpGet("zaehlerwechsel")]
         /// <summary>
         /// Get: Abfrage alle Zählerwechsel
         /// Route: /api/wasser/zaehlerwechsel
         /// </summary>
         /// <returns></returns>
         [HttpGet("zaehlerwechsel")]
-        public async Task<ActionResult<IEnumerable<WaterCounterChangeReadDto>>> GetWaterCounterChanges()
+        [ProducesResponseType(typeof(IEnumerable<WaterCounterChangeReadDto>), StatusCodes.Status200OK)]
+        public async Task<ActionResult<IEnumerable<WaterCounterChangeReadDto>>> GetWaterCounterChanges(CancellationToken cancellationToken)
         {
-            try
-            {
-                var result = await _repo.GetCounterChangesAsync();
-                if (result == null || !result.Any())
-                {
-                    return NotFound($"Keine Zählerwechsel vorhanden!");
-                }
-                return Ok(_mapper.Map<IEnumerable<GasCounterChangeReadDto>>(result));
-            }
-            catch (Exception)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Fehler beim Lesen der Daten aus der Datenbank");
-            }
-        }
+            var changes = await repo.GetCounterChangesAsync(cancellationToken);
 
+            if (changes is null || !changes.Any())
+            {
+                return Ok(Enumerable.Empty<WaterCounterChangeReadDto>());
+            }
+
+            return Ok(mapper.Map<IEnumerable<WaterCounterChangeReadDto>>(changes));
+        }
+        #endregion
+
+        #region [HttpGet("zaehlerwechsel/{id:int:min(1)}")]
         /// <summary>
         /// Get: Abfrage Zählerwechsel nach Id
         /// Route: /api/wasser/zaehlerwechsel/id
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        [HttpGet("zaehlerwechsel/{id}", Name = "GetWaterCounterChangeById")]
-        public async Task<ActionResult<WaterCounterChangeReadDto>> GetWaterCounterChangeById(int id)
+        [HttpGet("zaehlerwechsel/{id:int:min(1)}")]
+        [ProducesResponseType(typeof(WaterCounterChangeReadDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<WaterCounterChangeReadDto>> GetWaterCounterChangeById(int id, CancellationToken cancellationToken)
         {
-            try
-            {
-                var result = await _repo.GetCounterChangeByIdAsync(id);
-                if (result == null)
-                {
-                    return NotFound($"Kein Zählerwechsel mit Id={id} vorhanden!");
-                }
-                return Ok(_mapper.Map<WaterCounterChangeReadDto>(result));
-            }
-            catch (System.Exception)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Fehler beim Lesen der Daten aus der Datenbank");
-            }
-        }
+            var change = await repo.GetCounterChangeByIdAsync(id, cancellationToken);
 
+            if (change is null)
+            {
+                return NotFound(new ProblemDetails
+                {
+                    Title = "Zählerwechsel nicht gefunden",
+                    Detail = $"Kein Zählerwechsel mit der Id {id} vorhanden.",
+                    Status = StatusCodes.Status404NotFound
+                });
+            }
+
+            return Ok(mapper.Map<WaterCounterChangeReadDto>(change));
+        }
+        #endregion
+
+        #region [HttpGet("zaehlerwechsel/anbieter/{id:int:min(1)}")]
         /// <summary>
         /// Get: Abfrage Zaehlerwechsel nach Anbieter-Id
         /// Route: /api/wasser/zaehlerwechsel/anbieter/1 (ein Anbieter kann mehrere Zählerwechsel haben)
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        [HttpGet("zaehlerwechsel/anbieter/{id}", Name = "GetWaterCounterChangesBySupplier")]
-        public async Task<ActionResult<IEnumerable<WaterCounterChangeReadDto>>> GetWaterCounterChangesBySupplier(int id)
+        [HttpGet("zaehlerwechsel/anbieter/{id:int:min(1)}")]
+        [ProducesResponseType(typeof(IEnumerable<WaterCounterChangeReadDto>), StatusCodes.Status200OK)]
+        public async Task<ActionResult<IEnumerable<WaterCounterChangeReadDto>>> GetWaterCounterChangesBySupplier(int id, CancellationToken cancellationToken)
         {
-            try
-            {
-                var result = await _repo.GetCounterChangesBySupplierAsync(id);
-                if (result == null || !result.Any())
-                {
-                    return NotFound($"Keine Zaehlerwechsel vom Anbieter mit Id={id} vorhanden!");
-                }
-                return Ok(_mapper.Map<IEnumerable<WaterCounterChangeReadDto>>(result));
-            }
-            catch (System.Exception)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Fehler beim Lesen der Daten aus der Datenbank");
-            }
-        }
+            var changes = await repo.GetCounterChangesBySupplierAsync(id, cancellationToken);
 
+            if (changes is null || !changes.Any())
+            {
+                return Ok(Enumerable.Empty<WaterCounterChangeReadDto>());
+            }
+
+            return Ok(mapper.Map<IEnumerable<WaterCounterChangeReadDto>>(changes));
+        }
+        #endregion
+
+        #region [HttpGet("kosten")]
         /// <summary>
         /// Get: Abfrage aller Kosten (alle Anbieter)
         /// Route: /api/wasser/kosten
         /// </summary>
         /// <returns></returns>
         [HttpGet("kosten")]
-        public async Task<ActionResult<IEnumerable<WaterCostReadDto>>> GetWaterCosts()
+        [ProducesResponseType(typeof(IEnumerable<WaterCostReadDto>), StatusCodes.Status200OK)]
+        public async Task<ActionResult<IEnumerable<WaterCostReadDto>>> GetWaterCosts(CancellationToken cancellationToken)
         {
-            try
+            var costs = await repo.GetCostsAsync(cancellationToken);
+
+            if (costs is null || !costs.Any())
             {
-                var result = await _repo.GetCostsAsync();
-                if (result == null || !result.Any())
-                {
-                    return NotFound($"Keine Kosten vorhanden!");
-                }
-                return Ok(_mapper.Map<IEnumerable<WaterCostReadDto>>(result));
+                return Ok(Enumerable.Empty<WaterCostReadDto>());
             }
-            catch (System.Exception)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Fehler beim Lesen der Daten aus der Datenbank");
-            }
+
+            return Ok(mapper.Map<IEnumerable<WaterCostReadDto>>(costs));
         }
+        #endregion
         #endregion
 
         #region POST
+        #region [HttpPost("zaehlerstand")]
         /// <summary>
         /// Post: neuen Zählerstand schreiben
         /// Route: /api/wasser/zaehlerstand
@@ -352,31 +382,47 @@ namespace GWS_Api.Controllers
         /// <param name="waterCounterCreateDto"></param>
         /// <returns></returns>
         [HttpPost("zaehlerstand")]
-        public async Task<ActionResult<WaterCounterReadDto>> AddCounter(WaterCounterCreateDto waterCounterCreateDto)
+        [ProducesResponseType(typeof(WaterCounterReadDto), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+        public async Task<ActionResult<WaterCounterReadDto>> AddCounter(WaterCounterCreateDto waterCounterCreateDto, CancellationToken cancellationToken)
         {
-            if (waterCounterCreateDto.Ablesetag == null)
+            if (waterCounterCreateDto.Ablesetag is not DateTime day)
             {
-                return BadRequest($"Kein gültiges Datum vorhanden! (Ablesetag={waterCounterCreateDto.Ablesetag})");
+                return BadRequest(new ProblemDetails
+                {
+                    Title = "Ungültiges Datum",
+                    Detail = "Es wurde kein gültiges Ablesedatum angegeben.",
+                    Status = StatusCodes.Status400BadRequest
+                });
             }
 
-            DateTime day = (DateTime)waterCounterCreateDto.Ablesetag;
-            var result = await _repo.GetCounterByDateAsync(day);
-            if (result != null)
+            var existingCounter = await repo.GetCounterByDateAsync(day, cancellationToken);
+            if (existingCounter is not null)
             {
-                return BadRequest($"Zählerstand schon vorhanden! (Ablesetag={result!.Ablesetag:dd.MM.yyyy})");
+                return Conflict(new ProblemDetails
+                {
+                    Title = "Zählerstand bereits vorhanden",
+                    Detail = $"Für den Ablesetag {existingCounter.Ablesetag:dd.MM.yyyy} existiert bereits ein Zählerstand.",
+                    Status = StatusCodes.Status409Conflict
+                });
             }
 
-            var counterModel = _mapper.Map<WaterCounter>(waterCounterCreateDto);
-            if (counterModel == null)
-            {
-                return BadRequest($"Kein gültiger Zählerstand oder Zählerstand schon vorhanden! (Ablesetag={result!.Ablesetag:dd.MM.yyyy})");
-            }
-            await _repo.AddCounterAsync(counterModel);
-            await _repo.SaveChangesAsync();
-            var counterReadDto = _mapper.Map<WaterCounterReadDto>(counterModel);
-            return CreatedAtRoute(nameof(GetWaterCounterByDay), new { day = counterReadDto.ID_Tag }, counterReadDto);
+            var counterModel = mapper.Map<WaterCounter>(waterCounterCreateDto);
+
+            await repo.AddCounterAsync(counterModel, cancellationToken);
+            await repo.SaveChangesAsync(cancellationToken);
+
+            var counterReadDto = mapper.Map<WaterCounterReadDto>(counterModel);
+
+            return CreatedAtAction(
+                nameof(GetWaterCounterById),
+                new { id = counterReadDto.ID_Tag },
+                counterReadDto);
         }
+        #endregion
 
+        #region [HttpPost("anbieter")]
         /// <summary>
         /// Post: neuen Anbieter schreiben
         /// Route: /api/wasser/anbieter
@@ -384,19 +430,25 @@ namespace GWS_Api.Controllers
         /// <param name="waterTarifCreateDto"></param>
         /// <returns></returns>
         [HttpPost("anbieter")]
-        public async Task<ActionResult<WaterTarifReadDto>> AddSupplier(WaterTarifCreateDto waterTarifCreateDto)
+        [ProducesResponseType(typeof(WaterTarifReadDto), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<WaterTarifReadDto>> AddSupplier(WaterTarifCreateDto waterTarifCreateDto, CancellationToken cancellationToken)
         {
-            var tarifModel = _mapper.Map<WaterTarif>(waterTarifCreateDto);
-            if (tarifModel == null)
-            {
-                return BadRequest("Kein gültiger Anbieter!");
-            }
-            await _repo.AddSupplierAsync(tarifModel);
-            await _repo.SaveChangesAsync();
-            var tarifReadDto = _mapper.Map<WaterTarifReadDto>(tarifModel);
-            return CreatedAtRoute(nameof(GetSupplierById), new { Id = tarifReadDto.Id }, tarifReadDto);
-        }
+            var tarifModel = mapper.Map<WaterTarif>(waterTarifCreateDto);
 
+            await repo.AddSupplierAsync(tarifModel, cancellationToken);
+            await repo.SaveChangesAsync(cancellationToken);
+
+            var tarifReadDto = mapper.Map<WaterTarifReadDto>(tarifModel);
+
+            return CreatedAtAction(
+                nameof(GetSupplierById),
+                new { id = tarifReadDto.Id },
+                tarifReadDto);
+        }
+        #endregion
+
+        #region [HttpPost("zahlung")]
         /// <summary>
         /// Post: neue Zahlung schreiben
         /// Route: /api/wasser/zahlung
@@ -404,19 +456,25 @@ namespace GWS_Api.Controllers
         /// <param name="waterPaymentCreateDto"></param>
         /// <returns></returns>
         [HttpPost("zahlung")]
-        public async Task<ActionResult<WaterPaymentReadDto>> AddGasPayment(WaterPaymentCreateDto waterPaymentCreateDto)
+        [ProducesResponseType(typeof(WaterPaymentReadDto), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<WaterPaymentReadDto>> AddWaterPayment(WaterPaymentCreateDto waterPaymentCreateDto, CancellationToken cancellationToken)
         {
-            var paymentModel = _mapper.Map<WaterPayment>(waterPaymentCreateDto);
-            if (paymentModel == null)
-            {
-                return BadRequest("Keine gültige Zahlung!");
-            }
-            await _repo.AddPaymentAsync(paymentModel);
-            await _repo.SaveChangesAsync();
-            var paymentReadDto = _mapper.Map<WaterPaymentReadDto>(paymentModel);
-            return CreatedAtRoute(nameof(GetWaterPaymentsBySupplier), new { Id = paymentReadDto.ID_Zahlung }, paymentReadDto);
-        }
+            var paymentModel = mapper.Map<WaterPayment>(waterPaymentCreateDto);
 
+            await repo.AddPaymentAsync(paymentModel, cancellationToken);
+            await repo.SaveChangesAsync(cancellationToken);
+
+            var paymentReadDto = mapper.Map<WaterPaymentReadDto>(paymentModel);
+
+            return CreatedAtAction(
+                nameof(GetWaterPaymentById),
+                new { id = paymentReadDto.ID_Zahlung },
+                paymentReadDto);
+        }
+        #endregion
+
+        #region [HttpPost("kosten")]
         /// <summary>
         /// Post: neue Kosten schreiben
         /// Route: /api/wasser/kosten
@@ -424,19 +482,25 @@ namespace GWS_Api.Controllers
         /// <param name="waterCostsCreateDto"></param>
         /// <returns></returns>
         [HttpPost("kosten")]
-        public async Task<ActionResult<WaterCostReadDto>> AddWaterCosts(WaterCostCreateDto waterCostsCreateDto)
+        [ProducesResponseType(typeof(WaterCostReadDto), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<WaterCostReadDto>> AddWaterCosts(WaterCostCreateDto waterCostCreateDto, CancellationToken cancellationToken)
         {
-            var costsModel = _mapper.Map<WaterCost>(waterCostsCreateDto);
-            if (costsModel == null)
-            {
-                return BadRequest("Keinen gültigen Kosten vorhanden!");
-            }
-            await _repo.AddCostAsync(costsModel);
-            await _repo.SaveChangesAsync();
-            var costsReadDto = _mapper.Map<WaterCostReadDto>(costsModel);
-            return CreatedAtRoute(nameof(GetWaterCostsBySupplier), new { costsReadDto.Id }, costsReadDto);
-        }
+            var costModel = mapper.Map<WaterCost>(waterCostCreateDto);
 
+            await repo.AddCostAsync(costModel, cancellationToken);
+            await repo.SaveChangesAsync(cancellationToken);
+
+            var costReadDto = mapper.Map<WaterCostReadDto>(costModel);
+
+            return CreatedAtAction(
+                nameof(GetWaterCostsBySupplier),
+                new { id = costReadDto.Id_Anbieter }, // Wichtig: Hier muss die Anbieter-ID übergeben werden!
+                costReadDto);
+        }
+        #endregion
+
+        #region [HttpPost("zaehlerwechsel")]
         /// <summary>
         /// Post: neuen Zaehlerwechsel schreiben
         /// Route: /api/wasser/zaehlerwechsel
@@ -444,143 +508,211 @@ namespace GWS_Api.Controllers
         /// <param name="waterCounterChangeCreateDto"></param>
         /// <returns></returns>
         [HttpPost("zaehlerwechsel")]
-        public async Task<ActionResult<WaterCounterChangeReadDto>> AddWaterCounterChange(WaterCounterChangeCreateDto waterCounterChangeCreateDto)
+        [ProducesResponseType(typeof(WaterCounterChangeReadDto), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<WaterCounterChangeReadDto>> AddWaterCounterChange(WaterCounterChangeCreateDto waterCounterChangeCreateDto, CancellationToken cancellationToken)
         {
-            var counterChangeModel = _mapper.Map<WaterCounterChange>(waterCounterChangeCreateDto);
-            if (counterChangeModel == null)
-            {
-                return BadRequest("Keinen gültigen Zaehlerwechsel!");
-            }
-            await _repo.AddCounterChangeAsync(counterChangeModel);
-            await _repo.SaveChangesAsync();
-            var counterChangeReadDto = _mapper.Map<WaterCounterChangeReadDto>(counterChangeModel);
-            return CreatedAtRoute(nameof(GetWaterCounterChangesBySupplier), new { counterChangeReadDto.Id }, counterChangeReadDto);
+            var counterChangeModel = mapper.Map<WaterCounterChange>(waterCounterChangeCreateDto);
+
+            await repo.AddCounterChangeAsync(counterChangeModel, cancellationToken);
+            await repo.SaveChangesAsync(cancellationToken);
+
+            var counterChangeReadDto = mapper.Map<WaterCounterChangeReadDto>(counterChangeModel);
+
+            return CreatedAtAction(
+                nameof(GetWaterCounterChangeById),
+                new { id = counterChangeReadDto.Id },
+                counterChangeReadDto);
         }
+        #endregion
         #endregion
 
         #region DELETE
+        #region [HttpDelete("anbieter/{id:int:min(1)}")]
         /// <summary>
-        /// Delete: Löschen eines Anbieter
-        /// Route: /api/wasser/anbieter/id
+        /// Löscht einen Wasseranbieter anhand seiner ID.
+        /// Route: DELETE /api/wasser/anbieter/{id}
         /// </summary>
-        /// <param name="id"></param>
-        /// <returns></returns>
-        [HttpDelete("anbieter/{id:int}")]
-        public async Task<ActionResult> DeleteSupplier(int id)
+        /// <param name="id">Die eindeutige ID des zu löschenden Anbieters.</param>
+        /// <param name="cancellationToken">Token zum Abbrechen der Anfrage.</param>
+        /// <returns>Der gelöschte Anbieter als DTO.</returns>
+        /// <response code="200">Anbieter wurde erfolgreich gelöscht und als DTO zurückgegeben.</response>
+        /// <response code="404">Anbieter mit der angegebenen ID wurde nicht gefunden.</response>
+        /// <response code="409">Anbieter kann nicht gelöscht werden, da er noch mit anderen Daten verknüpft ist.</response>
+        [HttpDelete("anbieter/{id:int:min(1)}")]
+        [ProducesResponseType(typeof(WaterTarifReadDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+        public async Task<ActionResult<WaterTarifReadDto>> DeleteSupplier(
+            int id,
+            CancellationToken cancellationToken)
         {
-            //var tarifModelFromRepo = await _repo.GetSupplierByIdAsync(id);
-
-            //if (tarifModelFromRepo == null)
-            //{
-            //    return NotFound($"Anbieter mit Id= {id} nicht gefunden");
-            //}
-            //await _repo.DeleteSupplierAsync(tarifModelFromRepo);
-            //await _repo.SaveChangesAsync();
-            //return Ok(tarifModelFromRepo);
-
-            // 1. Existenzprüfung im Repository
-            var supplierFromRepo = await _repo.GetSupplierByIdAsync(id);
-
-            if (supplierFromRepo == null)
+            var supplier = await repo.GetSupplierByIdAsync(id, cancellationToken);
+            if (supplier is null)
             {
-                // Gibt 404 mit dem Text aus, den Blazor in 'MyResponseString' anzeigt
-                return NotFound($"Anbieter mit Id = {id} nicht gefunden");
+                return NotFound(new ProblemDetails
+                {
+                    Title = "Anbieter nicht gefunden",
+                    Detail = $"Kein Anbieter mit der Id {id} vorhanden.",
+                    Status = StatusCodes.Status404NotFound
+                });
             }
+
+            // Mappt vor dem Löschen das DTO für die Rückgabe an Blazor
+            var deletedDto = mapper.Map<WaterTarifReadDto>(supplier);
 
             try
             {
-                // 2. Löschen und Speichern
-                await _repo.DeleteSupplierAsync(supplierFromRepo);
-                await _repo.SaveChangesAsync();
+                await repo.DeleteSupplierAsync(supplier, cancellationToken);
+                await repo.SaveChangesAsync(cancellationToken);
 
-                // 3. REST-Konvention: Entweder 204 NoContent oder 200 Ok mit dem gelöschten Objekt
-                return Ok(supplierFromRepo);
+                return Ok(deletedDto);
             }
-            catch (Exception)
+            catch (DbUpdateException)
             {
-                // Schützt die API vor unhandled 500-Exceptions (z.B. wegen DB-Datenintegrität/Foreign Keys)
-                return StatusCode(StatusCodes.Status500InternalServerError, "Fehler beim Löschen des Datensatzes in der Datenbank.");
+                // Gezieltes Abfangen von Foreign-Key-Konflikten für HTTP 409
+                return Conflict(new ProblemDetails
+                {
+                    Title = "Löschen nicht möglich",
+                    Detail = "Der Anbieter kann nicht gelöscht werden, da er noch mit anderen Datensätzen verknüpft ist.",
+                    Status = StatusCodes.Status409Conflict
+                });
             }
-        }
-
-        /// <summary>
-        /// Delete: Löschen eines Zählerstandes
-        /// Route: /api/wasser/zaehlerstand/day
-        /// </summary>
-        /// <param name="day"></param>
-        /// <returns></returns>
-        [HttpDelete("zaehlerstand/{day}")]
-        public async Task<ActionResult> DeleteCounter(DateTime day)
-        {
-            var counterModelFromRepo = await _repo.GetCounterByDateAsync(day);
-            if (counterModelFromRepo == null)
-            {
-                return NotFound($"Zähler-Ablesetag mit Datum= {day} nicht gefunden");
-            }
-            await _repo.DeleteCounterAsync(counterModelFromRepo);
-            await _repo.SaveChangesAsync();
-            return Ok(counterModelFromRepo);
-        }
-
-        /// <summary>
-        /// Delete: Löschen einer Zahlung
-        /// Route: /api/wasser/zahlung/id
-        /// </summary>
-        /// <param></param>
-        /// <returns></returns>
-        [HttpDelete("zahlung/{id:int}")]
-        public async Task<ActionResult> DeletePayment(int id)
-        {
-            var paymentModelFromRepo = await _repo.GetPaymentByIdAsync(id);
-            if (paymentModelFromRepo == null)
-            {
-                return NotFound($"Zahlung mit Id= {id} nicht gefunden");
-            }
-            await _repo.DeletePaymentAsync(paymentModelFromRepo);
-            await _repo.SaveChangesAsync();
-            return Ok(paymentModelFromRepo);
-        }
-
-        /// <summary>
-        /// Delete: Löschen eines Kostensatzes
-        /// Route: /api/wasser/kosten/id
-        /// </summary>
-        /// <param></param>
-        /// <returns></returns>
-        [HttpDelete("kosten/{id:int}")]
-        public async Task<ActionResult> DeleteCost(int id)
-        {
-            var costsModelFromRepo = await _repo.GetCostByIdAsync(id);
-            if (costsModelFromRepo == null)
-            {
-                return NotFound($"Kosten mit Id= {id} nicht gefunden");
-            }
-            await _repo.DeleteCostAsync(costsModelFromRepo);
-            await _repo.SaveChangesAsync();
-            return Ok(costsModelFromRepo);
-        }
-
-        /// <summary>
-        /// Delete: Löschen eines Zaehlerwechsels
-        /// Route: /api/wasser/zaehlerwechsel/id
-        /// </summary>
-        /// <param></param>
-        /// <returns></returns>
-        [HttpDelete("zaehlerwechsel/{id:int}")]
-        public async Task<ActionResult> DeleteCounterChange(int id)
-        {
-            var counterChangeModelFromRepo = await _repo.GetCounterChangeByIdAsync(id);
-            if (counterChangeModelFromRepo == null)
-            {
-                return NotFound($"Zaehlerwechsel mit Id= {id} nicht gefunden");
-            }
-            await _repo.DeleteCounterChangeAsync(counterChangeModelFromRepo);
-            await _repo.SaveChangesAsync();
-            return Ok(counterChangeModelFromRepo);
         }
         #endregion
 
+        #region [HttpDelete("zaehlerstand/{id:int:min(1)}")]
+        /// <summary>
+        /// Löscht einen Zählerstand anhand seiner ID
+        /// </summary>
+        /// <param name="id">Die eindeutige ID des Zählerstandes.</param>
+        /// <returns>Der gelöschte Zählerstand oder ein NotFound-Ergebnis.</returns>
+        /// <response code="200">Erfolgreich gelöscht. Gibt das gelöschte Objekt zurück.</response>
+        /// <response code="404">Wenn kein Zählerstand mit der ID existiert.</response>
+        [HttpDelete("zaehlerstand/{id:int:min(1)}")]
+        [ProducesResponseType(typeof(WaterCounterReadDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<WaterCounterReadDto>> DeleteCounter(int id, CancellationToken cancellationToken)
+        {
+            var counter = await repo.GetCounterByIdAsync(id, cancellationToken);
+            if (counter is null)
+            {
+                return NotFound(new ProblemDetails
+                {
+                    Title = "Zählerstand nicht gefunden",
+                    Detail = $"Kein Zählerstand mit der Id {id} vorhanden.",
+                    Status = StatusCodes.Status404NotFound
+                });
+            }
+
+            var deletedDto = mapper.Map<WaterCounterReadDto>(counter);
+
+            await repo.DeleteCounterAsync(counter, cancellationToken);
+            await repo.SaveChangesAsync(cancellationToken);
+
+            return Ok(deletedDto);
+        }
+        #endregion
+
+        #region [HttpDelete("zahlung/{id:int:min(1)}")]
+        ///// <summary>
+        ///// Delete: Löschen einer Zahlung anhand der Id
+        ///// Route: /api/wasser/zahlung/id
+        ///// </summary>
+        ///// <param></param>
+        ///// <returns></returns>
+        [HttpDelete("zahlung/{id:int:min(1)}")]
+        [ProducesResponseType(typeof(WaterPaymentReadDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<WaterPaymentReadDto>> DeletePayment(int id, CancellationToken cancellationToken)
+        {
+            var payment = await repo.GetPaymentByIdAsync(id, cancellationToken);
+            if (payment is null)
+            {
+                return NotFound(new ProblemDetails
+                {
+                    Title = "Zahlung nicht gefunden",
+                    Detail = $"Keine Zahlung mit der Id {id} vorhanden.",
+                    Status = StatusCodes.Status404NotFound
+                });
+            }
+
+            var deletedDto = mapper.Map<WaterPaymentReadDto>(payment);
+
+            await repo.DeletePaymentAsync(payment, cancellationToken);
+            await repo.SaveChangesAsync(cancellationToken);
+
+            return Ok(deletedDto);
+        }
+        #endregion
+
+        #region [HttpDelete("kosten/{id:int:min(1)}")]
+        ///// <summary>
+        ///// Delete: Löschen eines Kostensatzes
+        ///// Route: /api/wasser/kosten/id
+        ///// </summary>
+        ///// <param></param>
+        ///// <returns></returns>
+        [HttpDelete("kosten/{id:int:min(1)}")]
+        [ProducesResponseType(typeof(WaterCostReadDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<WaterCostReadDto>> DeleteCost(int id, CancellationToken cancellationToken)
+        {
+            var cost = await repo.GetCostByIdAsync(id, cancellationToken);
+            if (cost is null)
+            {
+                return NotFound(new ProblemDetails
+                {
+                    Title = "Kosten nicht gefunden",
+                    Detail = $"Keine Kosten mit der Id {id} vorhanden.",
+                    Status = StatusCodes.Status404NotFound
+                });
+            }
+
+            var deletedDto = mapper.Map<WaterCostReadDto>(cost);
+
+            await repo.DeleteCostAsync(cost, cancellationToken);
+            await repo.SaveChangesAsync(cancellationToken);
+
+            return Ok(deletedDto);
+        }
+        #endregion
+
+        #region [HttpDelete("zaehlerwechsel/{id:int:min(1)}")]
+        ///// <summary>
+        ///// Delete: Löschen eines Zaehlerwechsels
+        ///// Route: /api/wasser/zaehlerwechsel/id
+        ///// </summary>
+        ///// <param></param>
+        ///// <returns></returns>
+        [HttpDelete("zaehlerwechsel/{id:int:min(1)}")]
+        [ProducesResponseType(typeof(WaterCounterChangeReadDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<WaterCounterChangeReadDto>> DeleteCounterChange(int id, CancellationToken cancellationToken)
+        {
+            var counterChange = await repo.GetCounterChangeByIdAsync(id, cancellationToken);
+            if (counterChange is null)
+            {
+                return NotFound(new ProblemDetails
+                {
+                    Title = "Zählerwechsel nicht gefunden",
+                    Detail = $"Kein Zählerwechsel mit der Id {id} vorhanden.",
+                    Status = StatusCodes.Status404NotFound
+                });
+            }
+
+            var deletedDto = mapper.Map<WaterCounterChangeReadDto>(counterChange);
+
+            await repo.DeleteCounterChangeAsync(counterChange, cancellationToken);
+            await repo.SaveChangesAsync(cancellationToken);
+
+            return Ok(deletedDto);
+        }
+        #endregion
+        #endregion
+
         #region UPDATE
+        #region [HttpPut("anbieter/{id:int:min(1)}")]
         /// <summary>
         /// Put: Update eines Anbieters
         /// Route: /api/wasser/anbieter/id
@@ -588,80 +720,132 @@ namespace GWS_Api.Controllers
         /// <param name="id"></param>
         /// <param name="waterTarifUpdateDto"></param>
         /// <returns></returns>
-        [HttpPut("anbieter/{id:int}")]
-        public async Task<ActionResult> UpdateSupplier(int id, WaterTarifUpdateDto waterTarifUpdateDto)
+        [HttpPut("anbieter/{id:int:min(1)}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> UpdateSupplier(int id, WaterTarifUpdateDto waterTarifUpdateDto, CancellationToken cancellationToken)
         {
-            var tarifModelFromRepo = await _repo.GetSupplierByIdAsync(id);
-            if (tarifModelFromRepo == null)
+            var supplier = await repo.GetSupplierByIdAsync(id, cancellationToken);
+            if (supplier is null)
             {
-                return NotFound($"Anbieter mit Id= {id} nicht gefunden");
+                return NotFound(new ProblemDetails
+                {
+                    Title = "Anbieter nicht gefunden",
+                    Detail = $"Kein Anbieter mit der Id {id} vorhanden.",
+                    Status = StatusCodes.Status404NotFound
+                });
             }
-            _mapper.Map(waterTarifUpdateDto, tarifModelFromRepo);
-            await _repo.UpdateSupplierAsync(tarifModelFromRepo);
-            await _repo.SaveChangesAsync();
+
+            mapper.Map(waterTarifUpdateDto, supplier);
+
+            await repo.UpdateSupplierAsync(supplier, cancellationToken);
+            await repo.SaveChangesAsync(cancellationToken);
+
             return NoContent();
         }
+        #endregion
 
+        #region [HttpPut("zaehlerstand/{day:datetime}")]
         /// <summary>
         /// Put: Update eines Zählerstandes nach Datum
         /// </summary>
         /// <param name="day"></param>
         /// <param name="waterCounterUpdateDto"></param>
         /// <returns></returns>
-        [HttpPut("zaehlerstand/{day}")]
-        public async Task<ActionResult> UpdateWaterCounter(DateTime day, WaterCounterUpdateDto waterCounterUpdateDto)
+        [HttpPut("zaehlerstand/{day:datetime}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> UpdateWaterCounter(DateTime day, WaterCounterUpdateDto waterCounterUpdateDto, CancellationToken cancellationToken)
         {
-            var counterModelFromRepo = await _repo.GetCounterByDateAsync(day);
-            if (counterModelFromRepo == null)
+            var counter = await repo.GetCounterByDateAsync(day, cancellationToken);
+            if (counter is null)
             {
-                return NotFound($"Zaehlerstand mit Datum= {day:dd.MM.yyyy} nicht gefunden");
+                return NotFound(new ProblemDetails
+                {
+                    Title = "Zählerstand nicht gefunden",
+                    Detail = $"Kein Zählerstand für das Datum {day:yyyy-MM-dd} vorhanden.",
+                    Status = StatusCodes.Status404NotFound
+                });
             }
-            _mapper.Map(waterCounterUpdateDto, counterModelFromRepo);
-            await _repo.UpdateCounterAsync(counterModelFromRepo);
-            await _repo.SaveChangesAsync();
+
+            mapper.Map(waterCounterUpdateDto, counter);
+
+            await repo.UpdateCounterAsync(counter, cancellationToken);
+            await repo.SaveChangesAsync(cancellationToken);
+
             return NoContent();
         }
+        #endregion
 
+        #region [HttpPut("zaehlerstand/id/{id:int:min(1)}")]
         /// <summary>
         /// Put: Update eines Zählerstandes nach Id
         /// </summary>
-        /// <param name="day"></param>
+        /// <param name="id"></param>
         /// <param name="waterCounterUpdateDto"></param>
         /// <returns></returns>
-        [HttpPut("zaehlerstand/id/{id:int}")]
-        public async Task<ActionResult> UpdateWaterCounter(int id, WaterCounterUpdateDto waterCounterUpdateDto)
+        [HttpPut("zaehlerstand/id/{id:int:min(1)}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> UpdateWaterCounterById(int id, WaterCounterUpdateDto waterCounterUpdateDto, CancellationToken cancellationToken)
         {
-            var counterModelFromRepo = await _repo.GetCounterByIdAsync(id);
-            if (counterModelFromRepo == null)
+            var counter = await repo.GetCounterByIdAsync(id, cancellationToken);
+            if (counter is null)
             {
-                return NotFound($"Zaehlerstand mit Id= {id} nicht gefunden");
+                return NotFound(new ProblemDetails
+                {
+                    Title = "Zählerstand nicht gefunden",
+                    Detail = $"Kein Zählerstand mit der Id {id} vorhanden.",
+                    Status = StatusCodes.Status404NotFound
+                });
             }
-            _mapper.Map(waterCounterUpdateDto, counterModelFromRepo);
-            await _repo.UpdateCounterAsync(counterModelFromRepo);
-            await _repo.SaveChangesAsync();
+
+            mapper.Map(waterCounterUpdateDto, counter);
+
+            await repo.UpdateCounterAsync(counter, cancellationToken);
+            await repo.SaveChangesAsync(cancellationToken);
+
             return NoContent();
         }
+        #endregion
 
+        #region [HttpPut("zahlung/{id:int:min(1)}")]
         /// <summary>
         /// Put: Update einer Zahlung
         /// </summary>
         /// <param></param>
         /// <param name="waterPaymentUpdateDto"></param>
         /// <returns></returns>
-        [HttpPut("zahlung/{id}")]
-        public async Task<ActionResult> UpdateWaterPayment(int id, WaterPaymentUpdateDto waterPaymentUpdateDto)
+        [HttpPut("zahlung/{id:int:min(1)}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> UpdateWaterPayment(int id, WaterPaymentUpdateDto waterPaymentUpdateDto, CancellationToken cancellationToken)
         {
-            var paymentModelFromRepo = await _repo.GetPaymentByIdAsync(id);
-            if (paymentModelFromRepo == null)
+            var payment = await repo.GetPaymentByIdAsync(id, cancellationToken);
+            if (payment is null)
             {
-                return NotFound($"Zahlung mit Id= {id} nicht gefunden");
+                return NotFound(new ProblemDetails
+                {
+                    Title = "Zahlung nicht gefunden",
+                    Detail = $"Keine Zahlung mit der Id {id} vorhanden.",
+                    Status = StatusCodes.Status404NotFound
+                });
             }
-            _mapper.Map(waterPaymentUpdateDto, paymentModelFromRepo);
-            await _repo.UpdatePaymentAsync(paymentModelFromRepo);
-            await _repo.SaveChangesAsync();
+
+            mapper.Map(waterPaymentUpdateDto, payment);
+
+            await repo.UpdatePaymentAsync(payment, cancellationToken);
+            await repo.SaveChangesAsync(cancellationToken);
+
             return NoContent();
         }
+        #endregion
 
+        #region [HttpPut("kosten/{id:int:min(1)}")]
         /// <summary>
         /// Put: Update eines Kostensatzes
         /// Route: /api/wasser/kosten/id
@@ -669,20 +853,33 @@ namespace GWS_Api.Controllers
         /// <param></param>
         /// <param name="waterCostsUpdateDto"></param>
         /// <returns></returns>
-        [HttpPut("kosten/{id}")]
-        public async Task<ActionResult> UpdateWaterCosts(int id, WaterCostUpdateDto waterCostsUpdateDto)
+        [HttpPut("kosten/{id:int:min(1)}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> UpdateWaterCosts(int id, WaterCostUpdateDto waterCostUpdateDto, CancellationToken cancellationToken)
         {
-            var costsModelFromRepo = await _repo.GetCostByIdAsync(id);
-            if (costsModelFromRepo == null)
+            var cost = await repo.GetCostByIdAsync(id, cancellationToken);
+            if (cost is null)
             {
-                return NotFound($"Kosten mit Id= {id} nicht gefunden");
+                return NotFound(new ProblemDetails
+                {
+                    Title = "Kosten nicht gefunden",
+                    Detail = $"Keine Kosten mit der Id {id} vorhanden.",
+                    Status = StatusCodes.Status404NotFound
+                });
             }
-            _mapper.Map(waterCostsUpdateDto, costsModelFromRepo);
-            await _repo.UpdateCostAsync(costsModelFromRepo);
-            await _repo.SaveChangesAsync();
+
+            mapper.Map(waterCostUpdateDto, cost);
+
+            await repo.UpdateCostAsync(cost, cancellationToken);
+            await repo.SaveChangesAsync(cancellationToken);
+
             return NoContent();
         }
+        #endregion
 
+        #region [HttpPut("zaehlerwechsel/{id:int:min(1)}")]
         /// <summary>
         /// Put: Update eines Zaehlerwechsels
         /// Route: /api/wasser/zaehlerwechsel/id
@@ -690,22 +887,35 @@ namespace GWS_Api.Controllers
         /// <param name="id"></param>
         /// <param name="waterCounterChangeUpdateDto"></param>
         /// <returns></returns>
-        [HttpPut("zaehlerwechsel/{id:int}")]
-        public async Task<ActionResult> UpdateCounterChange(int id, WaterCounterChangeUpdateDto waterCounterChangeUpdateDto)
+        [HttpPut("zaehlerwechsel/{id:int:min(1)}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> UpdateCounterChange(int id, WaterCounterChangeUpdateDto waterCounterChangeUpdateDto, CancellationToken cancellationToken)
         {
-            var counterChangeModelFromRepo = await _repo.GetCounterChangeByIdAsync(id);
-            if (counterChangeModelFromRepo == null)
+            var counterChange = await repo.GetCounterChangeByIdAsync(id, cancellationToken);
+            if (counterChange is null)
             {
-                return NotFound($"Zaehlerwechsel mit Id= {id} nicht gefunden");
+                return NotFound(new ProblemDetails
+                {
+                    Title = "Zählerwechsel nicht gefunden",
+                    Detail = $"Kein Zählerwechsel mit der Id {id} vorhanden.",
+                    Status = StatusCodes.Status404NotFound
+                });
             }
-            _mapper.Map(waterCounterChangeUpdateDto, counterChangeModelFromRepo);
-            await _repo.UpdateCounterChangeAsync(counterChangeModelFromRepo);
-            await _repo.SaveChangesAsync();
+
+            mapper.Map(waterCounterChangeUpdateDto, counterChange);
+
+            await repo.UpdateCounterChangeAsync(counterChange, cancellationToken);
+            await repo.SaveChangesAsync(cancellationToken);
+
             return NoContent();
         }
         #endregion
+        #endregion
 
         #region PATCH
+        #region [HttpPatch("anbieter/{id:int:min(1)}")]
         /// <summary>
         /// Patch: Patch eines Anbieters
         /// Route: /api/water/anbieter/id
@@ -723,28 +933,42 @@ namespace GWS_Api.Controllers
 
        ]
        */
-        [HttpPatch("anbieter/{id:int}")]
-        public async Task<ActionResult> PartialSupplierUpdate(int id, JsonPatchDocument<WaterTarifUpdateDto> patchDoc)
+        [HttpPatch("anbieter/{id:int:min(1)}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> PartialSupplierUpdate(int id, JsonPatchDocument<WaterTarifUpdateDto> patchDoc, CancellationToken cancellationToken)
         {
-            var tarifModelFromRepo = await _repo.GetSupplierByIdAsync(id);
-            if (tarifModelFromRepo == null)
+            var supplier = await repo.GetSupplierByIdAsync(id, cancellationToken);
+            if (supplier is null)
             {
-                return NotFound($"Anbieter mit Id= {id} nicht gefunden");
+                return NotFound(new ProblemDetails
+                {
+                    Title = "Anbieter nicht gefunden",
+                    Detail = $"Kein Anbieter mit der Id {id} vorhanden.",
+                    Status = StatusCodes.Status404NotFound
+                });
             }
-            var tarifToPatch = _mapper.Map<WaterTarifUpdateDto>(tarifModelFromRepo);  //CreateMap<Wasser_tarif, WaterTarifUpdateDto>() wird hier benutzt
+
+            var tarifToPatch = mapper.Map<WaterTarifUpdateDto>(supplier);
+
             patchDoc.ApplyTo(tarifToPatch, ModelState);
 
             if (!TryValidateModel(tarifToPatch))
             {
                 return ValidationProblem(ModelState);
             }
-            _mapper.Map(tarifToPatch, tarifModelFromRepo);
 
-            await _repo.UpdateSupplierAsync(tarifModelFromRepo);
-            await _repo.SaveChangesAsync();
+            mapper.Map(tarifToPatch, supplier);
+
+            await repo.UpdateSupplierAsync(supplier, cancellationToken);
+            await repo.SaveChangesAsync(cancellationToken);
+
             return NoContent();
         }
+        #endregion
 
+        #region [HttpPatch("zaehlerstand/{day:datetime}")]
         /// <summary>
         /// Patch: Patch eines Zählerstandes
         /// Route: /api/wasser/zaehlerstand/day
@@ -762,28 +986,42 @@ namespace GWS_Api.Controllers
 
        ]
        */
-        [HttpPatch("zaehlerstand/{day}")]
-        public async Task<ActionResult> PartialCounterUpdate(DateTime day, JsonPatchDocument<WaterCounterUpdateDto> patchDoc)
+        [HttpPatch("zaehlerstand/{day:datetime}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> PartialCounterUpdate(DateTime day, JsonPatchDocument<WaterCounterUpdateDto> patchDoc, CancellationToken cancellationToken)
         {
-            var counterModelFromRepo = await _repo.GetCounterByDateAsync(day);
-            if (counterModelFromRepo == null)
+            var counter = await repo.GetCounterByDateAsync(day, cancellationToken);
+            if (counter is null)
             {
-                return NotFound($"Zahlerstand mit Datum= {day::dd.MM.yyyy} nicht gefunden");
+                return NotFound(new ProblemDetails
+                {
+                    Title = "Zählerstand nicht gefunden",
+                    Detail = $"Kein Zählerstand für das Datum {day:yyyy-MM-dd} vorhanden.",
+                    Status = StatusCodes.Status404NotFound
+                });
             }
-            var counterToPatch = _mapper.Map<WaterCounterUpdateDto>(counterModelFromRepo);  //CreateMap<Water_counter, WaterCounterUpdateDto>() wird hier benutzt
+
+            var counterToPatch = mapper.Map<WaterCounterUpdateDto>(counter);
+
             patchDoc.ApplyTo(counterToPatch, ModelState);
 
             if (!TryValidateModel(counterToPatch))
             {
                 return ValidationProblem(ModelState);
             }
-            _mapper.Map(counterToPatch, counterModelFromRepo);
 
-            await _repo.UpdateCounterAsync(counterModelFromRepo);
-            await _repo.SaveChangesAsync();
+            mapper.Map(counterToPatch, counter);
+
+            await repo.UpdateCounterAsync(counter, cancellationToken);
+            await repo.SaveChangesAsync(cancellationToken);
+
             return NoContent();
         }
+        #endregion
 
+        #region [HttpPatch("zahlung/{id:int:min(1)}")]
         /// <summary>
         /// Patch: Patch einer Zahlung
         /// Route: /api/wasser/zahlung/id
@@ -791,28 +1029,42 @@ namespace GWS_Api.Controllers
         /// <param name="id"></param>
         /// <param name="patchDoc"></param>
         /// <returns></returns>
-        [HttpPatch("zahlung/{id}")]
-        public async Task<ActionResult> PartialWaterPaymentsUpdate(int id, JsonPatchDocument<WaterPaymentUpdateDto> patchDoc)
+        [HttpPatch("zahlung/{id:int:min(1)}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> PartialWaterPaymentsUpdate(int id, JsonPatchDocument<WaterPaymentUpdateDto> patchDoc, CancellationToken cancellationToken)
         {
-            var paymentModelFromRepo = await _repo.GetPaymentByIdAsync(id);
-            if (paymentModelFromRepo == null)
+            var payment = await repo.GetPaymentByIdAsync(id, cancellationToken);
+            if (payment is null)
             {
-                return NotFound($"Zahlung mit Id= {id} nicht gefunden");
+                return NotFound(new ProblemDetails
+                {
+                    Title = "Zahlung nicht gefunden",
+                    Detail = $"Keine Zahlung mit der Id {id} vorhanden.",
+                    Status = StatusCodes.Status404NotFound
+                });
             }
-            var paymentToPatch = _mapper.Map<WaterPaymentUpdateDto>(paymentModelFromRepo); //CreateMap<Water_payment, WaterPaymentUpdateDto>() wird hier benutzt
+
+            var paymentToPatch = mapper.Map<WaterPaymentUpdateDto>(payment);
+
             patchDoc.ApplyTo(paymentToPatch, ModelState);
 
             if (!TryValidateModel(paymentToPatch))
             {
                 return ValidationProblem(ModelState);
             }
-            _mapper.Map(paymentToPatch, paymentModelFromRepo);
 
-            await _repo.UpdatePaymentAsync(paymentModelFromRepo);
-            await _repo.SaveChangesAsync();
+            mapper.Map(paymentToPatch, payment);
+
+            await repo.UpdatePaymentAsync(payment, cancellationToken);
+            await repo.SaveChangesAsync(cancellationToken);
+
             return NoContent();
         }
+        #endregion
 
+        #region [HttpPatch("kosten/{id:int:min(1)}")]
         /// <summary>
         /// Patch: Patch eines Kostensatzes
         /// Route: /api/wasser/kosten/id
@@ -820,28 +1072,42 @@ namespace GWS_Api.Controllers
         /// <param name="id"></param>
         /// <param name="patchDoc"></param>
         /// <returns></returns>
-        [HttpPatch("kosten/{id}")]
-        public async Task<ActionResult> PartialWaterCostsUpdate(int id, JsonPatchDocument<WaterCostUpdateDto> patchDoc)
+        [HttpPatch("kosten/{id:int:min(1)}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> PartialWaterCostsUpdate(int id, JsonPatchDocument<WaterCostUpdateDto> patchDoc, CancellationToken cancellationToken)
         {
-            var costsModelFromRepo = await _repo.GetCostByIdAsync(id);
-            if (costsModelFromRepo == null)
+            var cost = await repo.GetCostByIdAsync(id, cancellationToken);
+            if (cost is null)
             {
-                return NotFound($"Kosten mit Id= {id} nicht gefunden");
+                return NotFound(new ProblemDetails
+                {
+                    Title = "Kosten nicht gefunden",
+                    Detail = $"Keine Kosten mit der Id {id} vorhanden.",
+                    Status = StatusCodes.Status404NotFound
+                });
             }
-            var costsToPatch = _mapper.Map<WaterCostUpdateDto>(costsModelFromRepo); //CreateMap<Water_costs, WaterCostsUpdateDto>() wird hier benutzt
-            patchDoc.ApplyTo(costsToPatch, ModelState);
 
-            if (!TryValidateModel(costsToPatch))
+            var costToPatch = mapper.Map<WaterCostUpdateDto>(cost);
+
+            patchDoc.ApplyTo(costToPatch, ModelState);
+
+            if (!TryValidateModel(costToPatch))
             {
                 return ValidationProblem(ModelState);
             }
-            _mapper.Map(costsToPatch, costsModelFromRepo);
 
-            await _repo.UpdateCostAsync(costsModelFromRepo);
-            await _repo.SaveChangesAsync();
+            mapper.Map(costToPatch, cost);
+
+            await repo.UpdateCostAsync(cost, cancellationToken);
+            await repo.SaveChangesAsync(cancellationToken);
+
             return NoContent();
         }
+        #endregion
 
+        #region [HttpPatch("zaehlerwechsel/{id:int:min(1)}")]
         /// <summary>
         /// Patch eines Zaehlerwechsels
         /// Route: /api/wasser/zaehlerwechsel/id
@@ -849,27 +1115,40 @@ namespace GWS_Api.Controllers
         /// <param name="id"></param>
         /// <param name="patchDoc"></param>
         /// <returns></returns>
-        [HttpPatch("zaehlerwechsel/{id:int}")]
-        public async Task<ActionResult> PartialWaterCounterChangeUpdate(int id, JsonPatchDocument<WaterCounterChangeUpdateDto> patchDoc)
+        [HttpPatch("zaehlerwechsel/{id:int:min(1)}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> PartialWaterCounterChangeUpdate(int id, JsonPatchDocument<WaterCounterChangeUpdateDto> patchDoc, CancellationToken cancellationToken)
         {
-            var counterChangeModelFromRepo = await _repo.GetCounterChangeByIdAsync(id);
-            if (counterChangeModelFromRepo == null)
+            var counterChange = await repo.GetCounterChangeByIdAsync(id, cancellationToken);
+            if (counterChange is null)
             {
-                return NotFound($"Zaehlerwechsel mit Id= {id} nicht gefunden");
+                return NotFound(new ProblemDetails
+                {
+                    Title = "Zählerwechsel nicht gefunden",
+                    Detail = $"Kein Zählerwechsel mit der Id {id} vorhanden.",
+                    Status = StatusCodes.Status404NotFound
+                });
             }
-            var counterChangeToPatch = _mapper.Map<WaterCounterChangeUpdateDto>(counterChangeModelFromRepo);
+
+            var counterChangeToPatch = mapper.Map<WaterCounterChangeUpdateDto>(counterChange);
+
             patchDoc.ApplyTo(counterChangeToPatch, ModelState);
 
             if (!TryValidateModel(counterChangeToPatch))
             {
                 return ValidationProblem(ModelState);
             }
-            _mapper.Map(counterChangeToPatch, counterChangeModelFromRepo);
 
-            await _repo.UpdateCounterChangeAsync(counterChangeModelFromRepo);
-            await _repo.SaveChangesAsync();
+            mapper.Map(counterChangeToPatch, counterChange);
+
+            await repo.UpdateCounterChangeAsync(counterChange, cancellationToken);
+            await repo.SaveChangesAsync(cancellationToken);
+
             return NoContent();
         }
+        #endregion
         #endregion
     }
 }

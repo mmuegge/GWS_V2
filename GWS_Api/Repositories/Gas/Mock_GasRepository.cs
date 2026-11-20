@@ -6,14 +6,17 @@ namespace GWS_Api.Repositories.Gas
     public class Mock_GasRepository : IGasRepository
     {
         #region Variablendeklaration
-        int id_Tarif = 0;
-        int id_Counter = 0;
-        int id_Payment = 0;
-        int id_Cost = 0;
-        int id_BoilerData = 0;
-        int id_CounterChange = 0;
+        int id_Tarif = 100;
+        int id_Counter = 100;
+        int id_Payment = 100;
+        int id_Cost = 100;
+        int id_BoilerData = 100;
+        int id_CounterChange = 100;
+        int id_EnergieEff = 100;
 
-        private static readonly List<GasTarif> gasTarifList =
+        private readonly Lock _lock = new();
+
+        private readonly List<GasTarif> _gasTarifList =
         [
             new ()
             {
@@ -93,7 +96,7 @@ namespace GWS_Api.Repositories.Gas
             },
         ];
 
-        private static readonly List<GasCounter> gasCounterList =
+        private readonly List<GasCounter> _gasCounterList =
         [
             new ()
             {
@@ -127,7 +130,7 @@ namespace GWS_Api.Repositories.Gas
             },
         ];
 
-        private static readonly List<GasPayment> gasPaymentList =
+        private readonly List<GasPayment> _gasPaymentList =
         [
             new ()
             {
@@ -171,7 +174,7 @@ namespace GWS_Api.Repositories.Gas
             },
         ];
 
-        private static readonly List<PaymentMethod> paymentMethodList =
+        private readonly List<PaymentMethod> _paymentMethodList =
         [
             new ()
             {
@@ -195,7 +198,7 @@ namespace GWS_Api.Repositories.Gas
             },
         ];
 
-        private static readonly List<GasCost> gasCostsList =
+        private readonly List<GasCost> _gasCostsList =
         [
            new ()
             {
@@ -232,7 +235,7 @@ namespace GWS_Api.Repositories.Gas
              }
         ];
 
-        private static readonly List<GasBoiler> gasBoilerDataList =
+        private readonly List<GasBoiler> _gasBoilerDataList =
             [
             new ()
             {
@@ -266,7 +269,7 @@ namespace GWS_Api.Repositories.Gas
             }
             ];
 
-        private static readonly List<Efficiency> gasEnergieEffList =
+        private readonly List<Efficiency> _gasEnergieEffList =
            [
            new ()
             {
@@ -341,7 +344,7 @@ namespace GWS_Api.Repositories.Gas
                 Bemerkung="kWh/m2/a"
             },
            ];
-        private static readonly List<GasCounterChange> gasCounterChangeList =
+        private readonly List<GasCounterChange> _gasCounterChangeList =
     [
         new ()
             {
@@ -378,412 +381,918 @@ namespace GWS_Api.Repositories.Gas
         #endregion
         public Mock_GasRepository()
         {
-            id_Tarif = gasTarifList.Count;
-            id_Counter = gasCounterList.Count;
-            id_Payment = gasPaymentList.Count;
-            id_Cost = gasCostsList.Count;
-            id_BoilerData = gasBoilerDataList.Count;
-            id_CounterChange = gasCounterChangeList.Count;
+            id_Tarif = _gasTarifList.Count;
+            id_Counter = _gasCounterList.Count;
+            id_Payment = _gasPaymentList.Count;
+            id_Cost = _gasCostsList.Count;
+            id_BoilerData = _gasBoilerDataList.Count;
+            id_CounterChange = _gasCounterChangeList.Count;
         }
 
         #region ADD
-        public async Task<GasCounter?> AddCounterAsync(GasCounter counter)
+        #region AddCounterAsync
+        public Task<GasCounter?> AddCounterAsync(GasCounter counter, CancellationToken cancellationToken = default)
         {
-            counter.ID_Tag = ++id_Counter;
-            gasCounterList.Add(counter);
-            // Name des Anbieters[id]
-            var tarif = gasTarifList.Find(m => m.Id == counter.ID_Anbieter);
-            if (tarif != null)
+            ArgumentNullException.ThrowIfNull(counter);
+
+            if (cancellationToken.IsCancellationRequested)
             {
-                counter.Anbieter = tarif.Anbieter;
+                return Task.FromCanceled<GasCounter?>(cancellationToken);
             }
-            return await Task.FromResult(counter);
+
+            var ablesetagDate = counter.Ablesetag?.Date;
+            if (ablesetagDate is null || ablesetagDate > DateTime.Today)
+            {
+                return Task.FromResult<GasCounter?>(null);
+            }
+
+            lock (_lock)
+            {
+                bool exists = _gasCounterList.Exists(m =>
+                    m.Ablesetag?.Date == ablesetagDate && m.ID_Anbieter == counter.ID_Anbieter);
+
+                if (exists)
+                {
+                    return Task.FromResult<GasCounter?>(null);
+                }
+
+                var tarif = _gasTarifList.FindLast(m => m.Id == counter.ID_Anbieter);
+                if (tarif is not null)
+                {
+                    counter.Anbieter = tarif.Anbieter ?? string.Empty;
+                }
+
+                counter.ID_Tag = ++id_Counter;
+                counter.Ablesetag = ablesetagDate;
+
+                _gasCounterList.Add(counter);
+            }
+
+            return Task.FromResult<GasCounter?>(counter);
         }
-        public async Task<GasTarif?> AddSupplierAsync(GasTarif supplier)
+        #endregion
+
+        #region AddSupplierAsync
+        public Task<GasTarif> AddSupplierAsync(GasTarif supplier, CancellationToken cancellationToken = default)
         {
-            supplier.Id = ++id_Tarif;
-            gasTarifList.Add(supplier);
-            return await Task.FromResult(supplier);
+            ArgumentNullException.ThrowIfNull(supplier);
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<GasTarif>(cancellationToken);
+            }
+
+            lock (_lock)
+            {
+                supplier.Id = ++id_Tarif;
+                _gasTarifList.Add(supplier);
+            }
+
+            return Task.FromResult(supplier);
         }
-        public async Task<GasPayment?> AddPaymentAsync(GasPayment payment)
+        #endregion
+
+        #region AddPaymentAsync
+        public Task<GasPayment> AddPaymentAsync(GasPayment payment, CancellationToken cancellationToken = default)
         {
-            payment.ID_Zahlung = ++id_Payment;
-            gasPaymentList.Add(payment);
-            return await Task.FromResult(payment);
+            ArgumentNullException.ThrowIfNull(payment);
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<GasPayment>(cancellationToken);
+            }
+
+            lock (_lock)
+            {
+                payment.ID_Zahlung = ++id_Payment;
+                _gasPaymentList.Add(payment);
+            }
+
+            return Task.FromResult(payment);
         }
-        public async Task<GasCost?> AddCostAsync(GasCost costs)
+        #endregion
+
+        #region AddCostAsync
+        public Task<GasCost> AddCostAsync(GasCost cost, CancellationToken cancellationToken = default)
         {
-            costs.Id = ++id_Cost;
-            gasCostsList.Add(costs);
-            return await Task.FromResult(costs);
+            ArgumentNullException.ThrowIfNull(cost);
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<GasCost>(cancellationToken);
+            }
+
+            lock (_lock)
+            {
+                cost.Id = ++id_Cost;
+                _gasCostsList.Add(cost);
+            }
+
+            return Task.FromResult(cost);
         }
-        public async Task<GasBoiler?> AddBoilerDataAsync(GasBoiler boilerData)
+        #endregion
+
+        #region AddBoilerDataAsync
+        public Task<GasBoiler> AddBoilerDataAsync(GasBoiler boilerData, CancellationToken cancellationToken = default)
+        { 
+            ArgumentNullException.ThrowIfNull(boilerData);
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<GasBoiler>(cancellationToken);
+            }
+
+            lock (_lock)
+            {
+                boilerData.Id = ++id_BoilerData;
+                _gasBoilerDataList.Add(boilerData);
+            }
+
+            return Task.FromResult(boilerData);
+        }
+        #endregion
+
+        #region AddCounterChangeAsync
+        public Task<GasCounterChange> AddCounterChangeAsync(GasCounterChange counterChange, CancellationToken cancellationToken = default)
         {
-            boilerData.Id = ++id_BoilerData;
-            gasBoilerDataList.Add(boilerData);
-            return await Task.FromResult(boilerData);
+            ArgumentNullException.ThrowIfNull(counterChange);
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<GasCounterChange>(cancellationToken);
+            }
+
+            lock (_lock)
+            {
+                counterChange.Id = ++id_CounterChange;
+                _gasCounterChangeList.Add(counterChange);
+            }
+
+            return Task.FromResult(counterChange);
         }
-        public async Task<GasCounterChange?> AddCounterChangeAsync(GasCounterChange counterChange)
+        #endregion
+
+        #region AddEnergieEfficiencyAsync
+        public Task<Efficiency> AddEnergieEfficiencyAsync(Efficiency eff, CancellationToken cancellationToken = default)
         {
-            counterChange.Id = ++id_CounterChange;
-            gasCounterChangeList.Add(counterChange);
-            return await Task.FromResult(counterChange);
+            ArgumentNullException.ThrowIfNull(eff);
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<Efficiency>(cancellationToken);
+            }
+
+            lock (_lock)
+            {
+                eff.Id = ++id_EnergieEff;
+                _gasEnergieEffList.Add(eff);
+            }
+
+            return Task.FromResult(eff);
         }
-        //public async Task<Efficiency> AddEnergieEfficiencyAsync(Efficiency eff)
-        //{
-        //    eff.Id = ++id_EnergieEff;
-        //    energieEffList.Add(eff);
-        //    return await Task.FromResult(eff);
-        //}
+        #endregion
         #endregion
 
         #region DELETE
-        public Task DeleteCounterAsync(GasCounter counter)
+        #region DeleteCounterAsync
+        public Task DeleteCounterAsync(GasCounter counter, CancellationToken cancellationToken = default)
         {
-            var result = gasCounterList.Find(m => m.ID_Tag == counter.ID_Tag);
-            if (result != null)
+            ArgumentNullException.ThrowIfNull(counter);
+
+            if (cancellationToken.IsCancellationRequested)
             {
-                gasCounterList.Remove(result);
+                return Task.FromCanceled(cancellationToken);
             }
-            return Task.FromResult(result);
+
+            lock (_lock)
+            {
+                _gasCounterList.RemoveAll(m => m.ID_Tag == counter.ID_Tag);
+            }
+
+            return Task.CompletedTask;
         }
-        public Task DeleteSupplierAsync(GasTarif supplier)
+        #endregion
+
+        #region DeleteSupplierAsync
+        public Task DeleteSupplierAsync(GasTarif supplier, CancellationToken cancellationToken = default)
         {
-            var result = gasTarifList.Find(m => m.Id == supplier.Id);
-            if (result != null)
+            ArgumentNullException.ThrowIfNull(supplier);
+
+            if (cancellationToken.IsCancellationRequested)
             {
-                gasTarifList.Remove(result);
+                return Task.FromCanceled(cancellationToken);
             }
-            return Task.FromResult(result);
+
+            lock (_lock)
+            {
+                _gasCostsList.RemoveAll(m => m.Id == supplier.Id);
+            }
+
+            return Task.CompletedTask;
         }
-        public Task DeletePaymentAsync(GasPayment payment)
+        #endregion
+
+        #region DeletePaymentAsync
+        public Task DeletePaymentAsync(GasPayment payment, CancellationToken cancellationToken = default)
         {
-            var result = gasPaymentList.Find(m => m.ID_Zahlung == payment.ID_Zahlung);
-            if (result != null)
+            ArgumentNullException.ThrowIfNull(payment);
+
+            if (cancellationToken.IsCancellationRequested)
             {
-                gasPaymentList.Remove(result);
+                return Task.FromCanceled(cancellationToken);
             }
-            return Task.FromResult(result);
+
+            lock (_lock)
+            {
+                _gasCostsList.RemoveAll(m => m.Id == payment.ID_Zahlung);
+            }
+
+            return Task.CompletedTask;
         }
-        public Task DeleteCostAsync(GasCost costs)
+        #endregion
+
+        #region DeleteCostAsync
+        public Task DeleteCostAsync(GasCost cost, CancellationToken cancellationToken = default)
         {
-            var result = gasCostsList.Find(m => m.Id == costs.Id);
-            if (result != null)
+            ArgumentNullException.ThrowIfNull(cost);
+
+            if (cancellationToken.IsCancellationRequested)
             {
-                gasCostsList.Remove(result);
+                return Task.FromCanceled(cancellationToken);
             }
-            return Task.FromResult(result);
+
+            lock (_lock)
+            {
+                _gasCostsList.RemoveAll(m => m.Id == cost.Id);
+            }
+
+            return Task.CompletedTask;
         }
-        public Task DeleteBoilerDataAsync(GasBoiler boilerData)
+        #endregion
+
+        #region DeleteCounterChangeAsync
+        public Task DeleteCounterChangeAsync(GasCounterChange counterChange, CancellationToken cancellationToken = default)
         {
-            var result = gasBoilerDataList.Find(m => m.Id == boilerData.Id);
-            if (result != null)
+            ArgumentNullException.ThrowIfNull(counterChange);
+
+            if (cancellationToken.IsCancellationRequested)
             {
-                gasBoilerDataList.Remove(result);
+                return Task.FromCanceled(cancellationToken);
             }
-            return Task.FromResult(result);
+
+            lock (_lock)
+            {
+                _gasCounterChangeList.RemoveAll(m => m.Id == counterChange.Id);
+            }
+
+            return Task.CompletedTask;
         }
-        public Task DeleteCounterChangeAsync(GasCounterChange counterChange)
+        #endregion
+
+        #region DeleteBoilerDataAsync
+        public Task DeleteBoilerDataAsync(GasBoiler boilerData, CancellationToken cancellationToken = default)
         {
-            var result = gasCounterChangeList.Find(m => m.Id == counterChange.Id);
-            if (result != null)
+            ArgumentNullException.ThrowIfNull(boilerData);
+
+            if (cancellationToken.IsCancellationRequested)
             {
-                gasCounterChangeList.Remove(result);
+                return Task.FromCanceled(cancellationToken);
             }
-            return Task.FromResult(result);
+
+            lock (_lock)
+            {
+                _gasBoilerDataList.RemoveAll(m => m.Id == boilerData.Id);
+            }
+
+            return Task.CompletedTask;
         }
-        //public Task DeleteEnergieEfficiencyAsync(Efficiency eff)
-        //{
-        //    var result = energieEffList.Find(m => m.Id == eff.Id);
-        //    if (result != null)
-        //    {
-        //        energieEffList.Remove(result);
-        //    }
-        //    return Task.FromResult(result);
-        //}
+        #endregion
+
+        #region DeleteEnergieEfficiencyAsync
+        public Task DeleteEnergieEfficiencyAsync(Efficiency eff, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(eff);
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled(cancellationToken);
+            }
+
+            lock (_lock)
+            {
+                _gasEnergieEffList.RemoveAll(m => m.Id == eff.Id);
+            }
+
+            return Task.CompletedTask;
+        }
+        #endregion
         #endregion
 
         #region GET
-        public async Task<GasCounter?> GetCounterByDateAsync(DateTime date)
+        #region GetCounterByDateAsync
+        public Task<GasCounter?> GetCounterByDateAsync(DateTime date, CancellationToken cancellationToken = default)
         {
-            var counter = gasCounterList.Find(m => m.Ablesetag == date);
-            if (counter != null)
+            if (cancellationToken.IsCancellationRequested)
             {
-                var tarif = gasTarifList.FindLast(m => m.Id == counter.ID_Anbieter);
-                counter.Anbieter = tarif!.Anbieter;
+                return Task.FromCanceled<GasCounter?>(cancellationToken);
             }
-            return await Task.FromResult(counter);
-        }
-        public async Task<IEnumerable<GasCounter?>> GetCountersBySupplierAsync(int supplierId)
-        {
-            var result = gasCounterList.FindAll(m => m.ID_Anbieter == supplierId);
-            if (result.Count > 0)
+
+            lock (_lock)
             {
-                var supplier = gasTarifList.FindLast(m => m.Id == supplierId);
-                foreach (var counter in result)
+
+                var counter = _gasCounterList.Find(m => m.Ablesetag?.Date == date.Date);
+                if (counter is not null)
                 {
-                    counter.Anbieter = supplier!.Anbieter;
+                    var tarif = _gasTarifList.FindLast(m => m.Id == counter.ID_Anbieter);
+                    if (tarif is not null)
+                    {
+                        counter.Anbieter = tarif.Anbieter ?? string.Empty;
+                    }
                 }
+
+                return Task.FromResult(counter);
             }
-            return await Task.FromResult(result);
         }
-
-        public async Task<GasCounter?> GetCounterByIdAsync(int id)
-        {
-            var counter = gasCounterList.Find(m => m.ID_Tag == id);
-            if (counter != null)
-            {
-                var tarif = gasTarifList.FindLast(m => m.Id == counter.ID_Anbieter);
-                counter.Anbieter = tarif!.Anbieter;
-            }
-            return await Task.FromResult(counter!);
-        }
-
-        public async Task<IEnumerable<GasCounter?>> GetCountersAsync()
-        {
-            var counters = gasCounterList;
-            var tarifList = gasTarifList;
-
-            foreach (var counter in counters)
-            {
-                var tarif = tarifList.FindLast(m => m.Id == counter.ID_Anbieter);
-                counter.Anbieter = tarif!.Anbieter;
-            }
-
-            return await Task.FromResult(counters);
-        }
-        public async Task<GasTarif?> GetSupplierByIdAsync(int supplierId)
-        {
-            return await Task.FromResult(gasTarifList.Find(m => m.Id == supplierId));
-        }
-        public async Task<IEnumerable<GasTarif?>> GetSuppliersAsync()
-        {
-            return await Task.FromResult(gasTarifList);
-        }
-        public async Task<IEnumerable<GasPayment?>> GetPaymentsAsync()
-        {
-            return await Task.FromResult(gasPaymentList);
-        }
-        public async Task<IEnumerable<GasPayment?>> GetPaymentsBySupplierAsync(int supplierId)
-        {
-            var result = gasPaymentList.FindAll(m => m.ID_Anbieter == supplierId);
-            if (result.Count > 0)
-            {
-                var payments = gasPaymentList.FindLast(m => m.ID_Anbieter == supplierId);
-                foreach (var payment in result)
-                {
-                    payment.Anbieter = payments!.Anbieter;
-                }
-            }
-            return await Task.FromResult(result);
-        }
-        public async Task<GasPayment?> GetPaymentByIdAsync(int paymentId)
-        {
-            var payment = gasPaymentList.Find(m => m.ID_Zahlung == paymentId);
-
-            return await Task.FromResult(payment);
-        }
-        public async Task<IEnumerable<PaymentMethod?>> GetPaymentMethodsAsync()
-        {
-            return await Task.FromResult(paymentMethodList);
-        }
-        public async Task<IEnumerable<GasCost?>> GetCostsBySupplierIdAsync(int supplierId)
-        {
-            var result = gasCostsList.FindAll(m => m.Id_Anbieter == supplierId);
-            if (result.Count > 0)
-            {
-                var costs = gasPaymentList.FindLast(m => m.ID_Anbieter == supplierId);
-                foreach (var cost in result)
-                {
-                    cost.Anbieter = costs!.Anbieter;
-                }
-            }
-
-            return await Task.FromResult(result);
-        }
-        public async Task<IEnumerable<GasCost?>> GetCostsAsync()
-        {
-            return await Task.FromResult(gasCostsList);
-        }
-        public async Task<GasCost?> GetCostByIdAsync(int costId)
-        {
-            var cost = gasCostsList.Find(m => m.Id == costId);
-
-            return await Task.FromResult(cost);
-        }
-        public async Task<IEnumerable<GasBoiler?>> GetBoilerDataAsync()
-        {
-            return await Task.FromResult(gasBoilerDataList);
-        }
-        public async Task<GasBoiler?> GetBoilerDataByIdAsync(int id)
-        {
-            var boilerData = gasBoilerDataList.Find(m => m.Id == id);
-
-            return await Task.FromResult(boilerData);
-        }
-        public async Task<IEnumerable<GasCounterChange?>> GetCounterChangesAsync()
-        {
-            return await Task.FromResult(gasCounterChangeList);
-        }
-        public async Task<GasCounterChange?> GetCounterChangeByIdAsync(int counterChangeId)
-        {
-            var counterChange = gasCounterChangeList.Find(m => m.Id == counterChangeId);
-
-            return await Task.FromResult(counterChange);
-        }
-        public async Task<IEnumerable<GasCounterChange?>> GetCounterChangesBySupplierAsync(int supplierId)
-        {
-            var result = gasCounterChangeList.FindAll(m => m.Id_Anbieter == supplierId);
-            if (result.Count > 0)
-            {
-                var counterChanges = gasCounterChangeList.FindLast(m => m.Id_Anbieter == supplierId);
-                foreach (var counterChange in result)
-                {
-                    counterChange.Anbieter = counterChanges!.Anbieter;
-                }
-            }
-
-            return await Task.FromResult(result);
-        }
-        //public async Task<IEnumerable<Efficiency>> GetEnergieEfficiencyAsync()
-        //{
-        //    return await Task.FromResult(energieEffList);
-        //}
-        //public async Task<Efficiency> GetEnergieEfficiencyByIdAsync(int id)
-        //{
-        //    var eff = energieEffList.Find(m => m.Id == id);
-
-        //    return await Task.FromResult(eff);
-        //}
         #endregion
 
-        #region UPDATE
-        public async Task<GasCounter?> UpdateCounterAsync(GasCounter zaehlerstand)
+        #region GetCountersBySupplierAsync
+        public Task<IEnumerable<GasCounter>> GetCountersBySupplierAsync(int supplierId, CancellationToken cancellationToken = default)
         {
-            var result = gasCounterList.Find(m => m.ID_Tag == zaehlerstand.ID_Tag);
-            if (result != null)
+            if (cancellationToken.IsCancellationRequested)
             {
-                result.ID_Tag = zaehlerstand.ID_Tag;
-                result.ID_Anbieter = zaehlerstand.ID_Anbieter;
-                result.Ablesetag = zaehlerstand.Ablesetag;
-                result.Zaehlerstand = zaehlerstand.Zaehlerstand;
-                result.Temperatur_aussen = zaehlerstand.Temperatur_aussen;
-                result.Temperatur_innen = zaehlerstand.Temperatur_innen;
-                result.Bemerkungen = zaehlerstand.Bemerkungen;
-            }
-            return await Task.FromResult(result);
-        }
-        public async Task<GasTarif?> UpdateSupplierAsync(GasTarif supplier)
-        {
-            var result = gasTarifList.Find(m => m.Id == supplier.Id);
-            if (result != null)
-            {
-                result.Id = supplier.Id;
-                result.Anbieter = supplier.Anbieter;
-                result.Tarif = supplier.Tarif;
-                result.Zaehlernummer = supplier.Zaehlernummer;
-                result.Kuendigungsfrist = supplier.Kuendigungsfrist;
-                result.Zeitraum_Start = supplier.Zeitraum_Start;
-                result.Zeitraum_Ende = supplier.Zeitraum_Ende;
-                result.Start_Zaehlerstand = supplier.Start_Zaehlerstand;
-                result.Ende_Zaehlerstand = supplier.Ende_Zaehlerstand;
-                result.Arbeitspreis = supplier.Arbeitspreis;
-                result.Grundpreis = supplier.Grundpreis;
-                result.Brennwert = supplier.Brennwert;
-                result.Heizleistung = supplier.Heizleistung;
-                result.Zustandszahl = supplier.Zustandszahl;
-                result.Bemerkung = supplier.Bemerkung;
-            }
-            return await Task.FromResult(result);
-        }
-        public async Task<GasCost?> UpdateCostAsync(GasCost costs)
-        {
-            var result = gasCostsList.Find(m => m.Id == costs.Id);
-            if (result != null)
-            {
-                result.Id = costs.Id;
-                result.Id_Anbieter = costs.Id_Anbieter;
-                result.Anbieter = costs.Anbieter;
-                result.Grundpreis = costs.Grundpreis;
-                result.Arbeitspreis = costs.Arbeitspreis;
-                result.Zaehlermiete = costs.Zaehlermiete;
-                result.Bemerkung = costs.Bemerkung;
+                return Task.FromCanceled<IEnumerable<GasCounter>>(cancellationToken);
             }
 
-            return await Task.FromResult(result);
-        }
-        public async Task<GasPayment?> UpdatePaymentAsync(GasPayment payment) // not used
-        {
-            var result = gasPaymentList.Find(m => m.ID_Zahlung == payment.ID_Zahlung);
-            if (result != null)
+            lock (_lock)
             {
-                result.ID_Zahlung = payment.ID_Zahlung;
-                result.ID_Anbieter = payment.ID_Anbieter;
-                result.Anbieter = payment.Anbieter;
-                result.Datum = payment.Datum;
-                result.Zahlungsart = payment.Zahlungsart;
-                result.Bemerkungen = payment.Bemerkungen;
+                var result = _gasCounterList.FindAll(m => m.ID_Anbieter == supplierId);
+                if (result.Count > 0)
+                {
+                    var supplier = _gasTarifList.FindLast(m => m.Id == supplierId);
+                    if (supplier is not null)
+                    {
+                        foreach (var counter in result)
+                        {
+                            counter.Anbieter = supplier.Anbieter;
+                        }
+                    }
+                }
+
+                return Task.FromResult<IEnumerable<GasCounter>>(result);
+            }
+        }
+        #endregion
+
+        #region GetCounterByIdAsync
+        public Task<GasCounter?> GetCounterByIdAsync(int id, CancellationToken cancellationToken = default)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<GasCounter?>(cancellationToken);
             }
 
-            return await Task.FromResult(result);
-        }
-        public async Task<GasBoiler?> UpdateBoilerDataAsync(GasBoiler boilerData) // not used
-        {
-            var result = gasBoilerDataList.Find(m => m.Id == boilerData.Id);
-            if (result != null)
+            lock (_lock)
             {
-                result.Id = boilerData.Id;
-                result.Verbrauchsjahr = boilerData.Verbrauchsjahr;
-                result.Gesamt_Verbrauch = boilerData.Gesamt_Verbrauch;
-                result.Heizung_Verbrauch = boilerData.Heizung_Verbrauch;
-                result.Warmwasser_Verbrauch = boilerData.Warmwasser_Verbrauch;
-                result.Strom_Verbrauch = boilerData.Strom_Verbrauch;
-                result.Bemerkung = boilerData.Bemerkung;
+                var counter = _gasCounterList.Find(m => m.ID_Tag == id);
+                if (counter is not null)
+                {
+                    var tarif = _gasTarifList.FindLast(m => m.Id == counter.ID_Anbieter);
+                    if (tarif is not null)
+                    {
+                        counter.Anbieter = tarif.Anbieter;
+                    }
+                }
+
+                return Task.FromResult(counter);
+            }
+        }
+        #endregion
+
+        #region GetCountersAsync
+        public Task<IEnumerable<GasCounter>> GetCountersAsync(CancellationToken cancellationToken = default)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<IEnumerable<GasCounter>>(cancellationToken);
             }
 
-            return await Task.FromResult(result);
-        }
-        public async Task<GasCounterChange?> UpdateCounterChangeAsync(GasCounterChange counterChange)
-        {
-            var result = gasCounterChangeList.Find(m => m.Id == counterChange.Id);
-            if (result != null)
+            lock (_lock)
             {
-                result.Id = counterChange.Id;
-                result.Id_Anbieter = counterChange.Id_Anbieter;
-                result.Anbieter = counterChange.Anbieter;
-                result.Wechsel_Datum = counterChange.Wechsel_Datum;
-                result.Zaehlerstand_alt = counterChange.Zaehlerstand_alt;
-                result.Zaehlerstand_neu = counterChange.Zaehlerstand_neu;
-                result.Bemerkung = counterChange.Bemerkung;
+                var anbieterById = _gasTarifList
+                    .GroupBy(t => t.Id)
+                    .ToDictionary(g => g.Key, g => g.Last().Anbieter);
+
+                foreach (var counter in _gasCounterList)
+                {
+                    if (anbieterById.TryGetValue(counter.ID_Anbieter, out var anbieter))
+                    {
+                        counter.Anbieter = anbieter;
+                    }
+                }
+
+                return Task.FromResult<IEnumerable<GasCounter>>([.. _gasCounterList]);
+            }
+        }
+        #endregion
+
+        #region GetSupplierByIdAsync
+        public Task<GasTarif?> GetSupplierByIdAsync(int supplierId, CancellationToken cancellationToken = default)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<GasTarif?>(cancellationToken);
             }
 
-            return await Task.FromResult(result!);
+            lock (_lock)
+            {
+                var result = _gasTarifList.Find(m => m.Id == supplierId);
+                return Task.FromResult(result);
+            }
         }
-        //public async Task<Efficiency> UpdateEnergieEfficiencyAsync(Efficiency eff) // not used
-        //{
-        //    var result = energieEffList.Find(m => m.Id == eff.Id);
-        //    if (result != null)
-        //    {
-        //        result.Id = eff.Id;
-        //        result.Energieklasse = eff.Energieklasse;
-        //        result.Energiebedarf = eff.Energiebedarf;
-        //        result.Farbcode = eff.Farbcode;
-        //        result.Bemerkung = eff.Bemerkung;
-        //    }
+        #endregion
 
-        //    return await Task.FromResult(result);
-        //}
+        #region GetSuppliersAsync
+        public Task<IEnumerable<GasTarif>> GetSuppliersAsync(CancellationToken cancellationToken = default)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<IEnumerable<GasTarif>>(cancellationToken);
+            }
+
+            lock (_lock)
+            {
+                return Task.FromResult<IEnumerable<GasTarif>>([.. _gasTarifList]);
+            }
+        }
+        #endregion
+
+        #region GetPaymentsAsync
+        public Task<IEnumerable<GasPayment>> GetPaymentsAsync(CancellationToken cancellationToken = default)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<IEnumerable<GasPayment>>(cancellationToken);
+            }
+
+            lock (_lock)
+            {
+                return Task.FromResult<IEnumerable<GasPayment>>([.. _gasPaymentList]);
+            }
+        }
+        #endregion
+
+        #region GetPaymentsBySupplierAsync
+        public Task<IEnumerable<GasPayment>> GetPaymentsBySupplierAsync(int supplierId, CancellationToken cancellationToken = default)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<IEnumerable<GasPayment>>(cancellationToken);
+            }
+
+            lock (_lock)
+            {
+                var result = _gasPaymentList
+                    .Where(m => m.ID_Anbieter == supplierId)
+                    .ToList();
+
+                var anbieter = result.LastOrDefault(m => m.Anbieter is not null)?.Anbieter;
+
+                if (anbieter is not null)
+                {
+                    foreach (var payment in result)
+                    {
+                        payment.Anbieter = anbieter;
+                    }
+                }
+
+                return Task.FromResult<IEnumerable<GasPayment>>(result);
+            }
+        }
+        #endregion
+
+        #region GetPaymentByIdAsync
+        public Task<GasPayment?> GetPaymentByIdAsync(int paymentId, CancellationToken cancellationToken = default)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<GasPayment?>(cancellationToken);
+            }
+
+            lock (_lock)
+            {
+                var payment = _gasPaymentList.Find(m => m.ID_Zahlung == paymentId);
+                return Task.FromResult<GasPayment?>(payment);
+            }
+        }
+        #endregion
+
+        #region GetPaymentMethodsAsync
+        public Task<IEnumerable<PaymentMethod>> GetPaymentMethodsAsync(CancellationToken cancellationToken = default)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<IEnumerable<PaymentMethod>>(cancellationToken);
+            }
+
+            lock (_lock)
+            {
+                return Task.FromResult<IEnumerable<PaymentMethod>>([.. _paymentMethodList]);
+            }
+        }
+        #endregion
+
+        #region GetCostsBySupplierIdAsync
+        public Task<IEnumerable<GasCost>> GetCostsBySupplierIdAsync(int supplierId, CancellationToken cancellationToken = default)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<IEnumerable<GasCost>>(cancellationToken);
+            }
+
+            lock (_lock)
+            {
+                var result = _gasCostsList
+                    .Where(m => m.Id_Anbieter == supplierId)
+                    .ToList();
+
+                var anbieter = result.LastOrDefault(m => m.Anbieter is not null)?.Anbieter;
+
+                if (anbieter is not null)
+                {
+                    foreach (var cost in result)
+                    {
+                        cost.Anbieter = anbieter;
+                    }
+                }
+
+                return Task.FromResult<IEnumerable<GasCost>>(result);
+            }
+        }
+        #endregion
+
+        #region GetCostsAsync
+        public Task<IEnumerable<GasCost>> GetCostsAsync(CancellationToken cancellationToken = default)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<IEnumerable<GasCost>>(cancellationToken);
+            }
+
+            lock (_lock)
+            {
+                return Task.FromResult<IEnumerable<GasCost>>([.. _gasCostsList]);
+            }
+        }
+        #endregion
+
+        #region GetCostByIdAsync
+        public Task<GasCost?> GetCostByIdAsync(int costId, CancellationToken cancellationToken = default)
+        {
+            //var cost = _gasCostsList.Find(m => m.Id == costId);
+            //return await Task.FromResult(cost);
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<GasCost?>(cancellationToken);
+            }
+
+            var result = _gasCostsList.FirstOrDefault(m => m.Id == costId);
+            return Task.FromResult(result);
+        }
+        #endregion
+
+        #region GetCounterChangesAsync
+        public Task<IEnumerable<GasCounterChange>> GetCounterChangesAsync(CancellationToken cancellationToken = default)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<IEnumerable<GasCounterChange>>(cancellationToken);
+            }
+
+            lock (_lock)
+            {
+                return Task.FromResult<IEnumerable<GasCounterChange>>([.. _gasCounterChangeList]);
+            }
+        }
+        #endregion
+
+        #region GetCounterChangeByIdAsync
+        public Task<GasCounterChange?> GetCounterChangeByIdAsync(int counterChangeId, CancellationToken cancellationToken = default)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<GasCounterChange?>(cancellationToken);
+            }
+
+            lock (_lock)
+            {
+                var result = _gasCounterChangeList.FirstOrDefault(m => m.Id == counterChangeId);
+                return Task.FromResult(result);
+            }
+        }
+        #endregion
+
+        #region GetCounterChangesBySupplierAsync
+        public Task<IEnumerable<GasCounterChange>> GetCounterChangesBySupplierAsync(int supplierId, CancellationToken cancellationToken = default)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<IEnumerable<GasCounterChange>>(cancellationToken);
+            }
+
+            lock (_lock)
+            {
+                var result = _gasCounterChangeList
+                    .Where(m => m?.Id_Anbieter == supplierId)
+                    .ToList();
+
+                // Aktuellen Anbieternamen frisch aus der Tarifliste laden
+                var tarif = _gasTarifList.FindLast(m => m.Id == supplierId);
+
+                if (tarif is not null)
+                {
+                    var anbieter = tarif.Anbieter ?? string.Empty;
+                    foreach (var counterChange in result)
+                    {
+                        counterChange.Anbieter = anbieter;
+                    }
+                }
+
+                return Task.FromResult<IEnumerable<GasCounterChange>>(result);
+            }
+        }
+        #endregion
+
+        #region GetBoilerDataAsync
+        public Task<IEnumerable<GasBoiler>> GetBoilerDataAsync(CancellationToken cancellationToken = default)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<IEnumerable<GasBoiler>>(cancellationToken);
+            }
+
+            lock (_lock)
+            {
+                return Task.FromResult<IEnumerable<GasBoiler>>([.. _gasBoilerDataList]);
+            }
+        }
+        #endregion
+
+        #region GetBoilerDataByIdAsync
+        public Task<GasBoiler?> GetBoilerDataByIdAsync(int id, CancellationToken cancellationToken = default)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<GasBoiler?>(cancellationToken);
+            }
+
+            lock (_lock)
+            {
+                var result = _gasBoilerDataList.FirstOrDefault(m => m.Id == id);
+                return Task.FromResult(result);
+            }
+        }
+        #endregion
+
+        #region GetEnergieEfficiencyAsync
+        public Task<IEnumerable<Efficiency>> GetEnergieEfficiencyAsync(CancellationToken cancellationToken = default)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<IEnumerable<Efficiency>>(cancellationToken);
+            }
+
+            lock (_lock)
+            {
+                return Task.FromResult<IEnumerable<Efficiency>>([.. _gasEnergieEffList]);
+            }
+        }
+        #endregion
+
+        #region GetEnergieEfficiencyByIdAsync
+        public Task<Efficiency?> GetEnergieEfficiencyByIdAsync(int id, CancellationToken cancellationToken = default)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<Efficiency?>(cancellationToken);
+            }
+
+            lock (_lock)
+            {
+                var result = _gasEnergieEffList.FirstOrDefault(m => m.Id == id);
+                return Task.FromResult(result);
+            }
+        }
+        #endregion
+        #endregion
+
+        #region UPDATE (Put)
+        #region UpdateCounterAsync
+        public Task<GasCounter?> UpdateCounterAsync(GasCounter zaehlerstand, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(zaehlerstand);
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<GasCounter?>(cancellationToken);
+            }
+
+            // Optional: Lock verwenden, falls mehrere Threads gleichzeitig auf die Liste zugreifen können
+            lock (_lock)
+            {
+                var index = _gasCounterList.FindIndex(m => m.ID_Tag == zaehlerstand.ID_Tag);
+
+                if (index == -1)
+                {
+                    return Task.FromResult<GasCounter?>(null);
+                }
+
+                // Ersetzt das komplette Objekt auf einen Schlag
+                _gasCounterList[index] = zaehlerstand;
+
+                return Task.FromResult<GasCounter?>(zaehlerstand);
+            }
+        }
+        #endregion
+
+        #region UpdateSupplierAsync
+        public Task<GasTarif?> UpdateSupplierAsync(GasTarif supplier, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(supplier);
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<GasTarif?>(cancellationToken);
+            }
+
+            // Optional: Lock verwenden, falls mehrere Threads gleichzeitig auf die Liste zugreifen können
+            lock (_lock)
+            {
+                var index = _gasTarifList.FindIndex(m => m.Id == supplier.Id);
+
+                if (index == -1)
+                {
+                    return Task.FromResult<GasTarif?>(null);
+                }
+
+                // Ersetzt das komplette Objekt auf einen Schlag
+                _gasTarifList[index] = supplier;
+
+                return Task.FromResult<GasTarif?>(supplier);
+            }
+        }
+        #endregion
+
+        #region UpdatePaymentAsync
+        public Task<GasPayment?> UpdatePaymentAsync(GasPayment payment, CancellationToken cancellationToken = default) // not used
+        {
+            ArgumentNullException.ThrowIfNull(payment);
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<GasPayment?>(cancellationToken);
+            }
+
+            // Optional: Lock verwenden, falls mehrere Threads gleichzeitig auf die Liste zugreifen können
+            lock (_lock)
+            {
+                var index = _gasPaymentList.FindIndex(m => m.ID_Zahlung == payment.ID_Zahlung);
+
+                if (index == -1)
+                {
+                    return Task.FromResult<GasPayment?>(null);
+                }
+
+                // Ersetzt das komplette Objekt auf einen Schlag
+                _gasPaymentList[index] = payment;
+
+                return Task.FromResult<GasPayment?>(payment);
+            }
+        }
+        #endregion
+
+        #region UpdateCostAsync
+        public Task<GasCost?> UpdateCostAsync(GasCost cost, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(cost);
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<GasCost?>(cancellationToken);
+            }
+
+            // Optional: Lock verwenden, falls mehrere Threads gleichzeitig auf die Liste zugreifen können
+            lock (_lock)
+            {
+                var index = _gasCostsList.FindIndex(m => m.Id == cost.Id);
+
+                if (index == -1)
+                {
+                    return Task.FromResult<GasCost?>(null);
+                }
+
+                // Ersetzt das komplette Objekt auf einen Schlag
+                _gasCostsList[index] = cost;
+
+                return Task.FromResult<GasCost?>(cost);
+            }
+        }
+        #endregion
+
+
+        #region
+        public Task<GasBoiler?> UpdateBoilerDataAsync(GasBoiler boilerData, CancellationToken cancellationToken = default) // not used
+        {
+            ArgumentNullException.ThrowIfNull(boilerData);
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<GasBoiler?>(cancellationToken);
+            }
+
+            // Optional: Lock verwenden, falls mehrere Threads gleichzeitig auf die Liste zugreifen können
+            lock (_lock)
+            {
+                var index = _gasBoilerDataList.FindIndex(m => m.Id == boilerData.Id);
+
+                if (index == -1)
+                {
+                    return Task.FromResult<GasBoiler?>(null);
+                }
+
+                // Ersetzt das komplette Objekt auf einen Schlag
+                _gasBoilerDataList[index] = boilerData;
+
+                return Task.FromResult<GasBoiler?>(boilerData);
+            }
+        }
+        #endregion
+
+        #region UpdateCounterChangeAsync
+        public Task<GasCounterChange?> UpdateCounterChangeAsync(GasCounterChange counterChange, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(counterChange);
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<GasCounterChange?>(cancellationToken);
+            }
+
+            // Optional: Lock verwenden, falls mehrere Threads gleichzeitig auf die Liste zugreifen können
+            lock (_lock)
+            {
+                var index = _gasCounterChangeList.FindIndex(m => m.Id == counterChange.Id);
+
+                if (index == -1)
+                {
+                    return Task.FromResult<GasCounterChange?>(null);
+                }
+
+                // Ersetzt das komplette Objekt auf einen Schlag
+                _gasCounterChangeList[index] = counterChange;
+
+                return Task.FromResult<GasCounterChange?>(counterChange);
+            }
+        }
+        #endregion
+
+        #region
+        public Task<Efficiency> UpdateEnergieEfficiencyAsync(Efficiency eff, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(eff);
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<Efficiency>(cancellationToken);
+            }
+
+            // Optional: Lock verwenden, falls mehrere Threads gleichzeitig auf die Liste zugreifen können
+            lock (_lock)
+            {
+                var index = _gasEnergieEffList.FindIndex(m => m.Id == eff.Id);
+
+                if (index == -1)
+                {
+                    return Task.FromResult<Efficiency>(null);
+                }
+
+                // Ersetzt das komplette Objekt auf einen Schlag
+                _gasEnergieEffList[index] = eff;
+
+                return Task.FromResult<Efficiency>(eff);
+            }
+        }
+        #endregion
         #endregion
 
         #region SaveChangesAsync
-        /// <summary>
-        /// SaveChanges
-        /// </summary>
-        /// <returns></returns>
-        public Task<bool> SaveChangesAsync()
+        public Task<bool> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
-            var result = true;
-            return Task.FromResult(result);
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return Task.FromCanceled<bool>(cancellationToken);
+            }
+
+            return Task.FromResult(true);
         }
         #endregion
     }

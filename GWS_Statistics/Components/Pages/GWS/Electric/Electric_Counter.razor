@@ -59,26 +59,28 @@
 @* Grid *@
 @if (counterList != null && counterList.Count > 0)
 {
-    <div class="control-section" id="target" align="left">
+    <div class="control-section elevated-grid-container" id="target" align="left">
         <SfGrid ID="Grid" @ref="sfDataGrid" DataSource="@counterList"
-            AllowPaging="true"
-            AllowFiltering="true"
-            AllowReordering="true"
-            AllowResizing="true"
-            AllowExcelExport="true"
-            AllowPdfExport="true"
-            EnableHover="true"
-            AllowTextWrap="true"
-            AllowSelection="true"
-            AllowSorting="true"
-            Height="100%" Width="100%"
-            Toolbar=@toolbar
-            EnableStickyHeader="true">
+                AllowPaging="true"
+                AllowFiltering="true"
+                AllowReordering="true"
+                AllowResizing="true"
+                AllowExcelExport="true"
+                AllowPdfExport="true"
+                EnableHover="true"
+                AllowTextWrap="true"
+                AllowSelection="true"
+                AllowSorting="true"
+                Height="100%" 
+                Width="100%"
+                Toolbar=@toolbar
+                EnableStickyHeader="true">
 
-            <GridEditSettings AllowAdding="true"
+            <GridEditSettings 
+                AllowAdding="true"
                 AllowEditing="true"
                 AllowDeleting="true"
-                ShowDeleteConfirmDialog="true"
+                ShowDeleteConfirmDialog="false"
                 Mode="EditMode.Dialog"
                 Dialog="DialogParams">
 
@@ -92,8 +94,7 @@
 
             <GridEvents OnToolbarClick="ToolbarBtnClickHandler"
                 RowCreating="RowCreatingHandler"
-                RowEditing="RowEditingHandler"
-                OnActionComplete="ActionCompleteHandler"
+                OnActionBegin="ActionBeginHandler"
                 TValue="Electric_CounterModel">
             </GridEvents>
 
@@ -114,22 +115,36 @@
                 <GridColumn 
                     Field="@nameof(Electric_CounterModel.ID_Tag)"
                     IsPrimaryKey="true"
-                    Visible="false">
+                    Visible="false"
+                    Width="0"
+                    AllowSorting="false"
+                    AllowFiltering="false"
+                    AllowEditing="false">
                 </GridColumn>
 
-                <GridColumn Field=@nameof(Electric_CounterModel.Anbieter)
-                Width="200"
-                EditType="EditType.DropDownEdit"
-                HeaderText="Anbieter">
+                <GridColumn Field=@nameof(Electric_CounterModel.ID_Anbieter)
+                            Width="200"
+                            EditType="EditType.DropDownEdit"
+                            HeaderText="Anbieter">
+
+                    @* Zeigt im normalen Grid-Modus den Text statt der ID an --> *@
+                    <Template>
+                        @{
+                            var payment = (context as Electric_CounterModel);
+                            var supplierName = supplierList?.FirstOrDefault(s => s.Id == payment?.ID_Anbieter)?.Anbieter;
+                            <span>@supplierName</span>
+                        }
+                    </Template>
 
                     <EditTemplate>
-                        <SfDropDownList Placeholder="Anbieter"
-                            FloatLabelType="FloatLabelType.Always"
-                            TValue="int?"
-                            TItem="Electric_SupplierDataModel"
-                            DataSource="@supplierList"
-                            @bind-Value="@DropDownValueSupplier">
-
+                        <SfDropDownList Placeholder="Anbieter wählen"
+                                        FloatLabelType="FloatLabelType.Always"
+                                        ID="ID_Anbieter"
+                                        TItem="Electric_SupplierDataModel"
+                                        TValue="int"
+                                        @bind-Value="@((context as Electric_CounterModel)!.ID_Anbieter)"
+                                        DataSource="@supplierList">
+                            @* Value="Id" (int) wird in ID_Anbieter gespeichert, Text="Anbieter" (string) wird angezeigt *@
                             <DropDownListFieldSettings Value="Id" Text="Anbieter"></DropDownListFieldSettings>
                         </SfDropDownList>
                     </EditTemplate>
@@ -267,7 +282,7 @@
                             <SfNumericTextBox Placeholder="Temperatur aussen"
                             FloatLabelType="FloatLabelType.Always"
                             TValue="double?"
-                            @bind-Value="@temperatureOutside"
+                            @bind-Value="@((context as Electric_CounterModel)!.Temperatur_aussen)"
                             Format="0 °C">
                             </SfNumericTextBox>
                         </EditTemplate>
@@ -288,7 +303,7 @@
                             <SfNumericTextBox Placeholder="Temperatur innen"
                             FloatLabelType="FloatLabelType.Always"
                             TValue="double?"
-                            @bind-Value="@temperatureInside"
+                            @bind-Value="@((context as Electric_CounterModel)!.Temperatur_innen)"
                             Format="0 °C">
                             </SfNumericTextBox>
                         </EditTemplate>
@@ -363,21 +378,22 @@ else
 
 @* Dialog*@
 <div>
-    <SfDialog Target="#target"
-                      Width="@dialogWidth"
-                      Height="@dialogHeight"
-                      AllowDragging="true"
-                      ShowCloseIcon=" true"
-                      AllowPrerender="true"
-                      IsModal="true"
-                      CssClass="MyCss"
-                      @bind-Visible="@DialogVisible">
+    <SfDialog 
+        Target="body"
+        Width="@dialogWidth"
+        Height="@dialogHeight"
+        AllowDragging="true"
+        ShowCloseIcon=" true"
+        AllowPrerender="false"
+        IsModal="true"
+        CssClass="MyCss"
+        @bind-Visible="@DialogVisible">
 
         <DialogTemplates>
             <Header>@header</Header>
         </DialogTemplates>
 
-        <DialogPositionData X="@dialogXValue" Y="@dialogYValue"></DialogPositionData>
+        <DialogPositionData X="center" Y="center"></DialogPositionData>
 
         <DialogAnimationSettings Effect="@animationEffect"></DialogAnimationSettings>
 
@@ -482,8 +498,6 @@ else
     public bool DialogVisible { get; set; } = false;
     private bool showDialogButtons = false;
     private string DialogText { get; set; } = string.Empty;
-    private string dialogXValue = "center";
-    private string dialogYValue = "center";
     private string dialogHeight = "130px";
     private string dialogWidth = "380px";
 
@@ -491,8 +505,6 @@ else
     //private bool save = false;
     //private bool update = false;
     private bool success = false;
-
-    //private bool dayChanged = false; 
 
     readonly string urlSupplier = "strom/anbieter/";
     readonly string urlCounter = "strom/zaehlerstaende/anbieter/";
@@ -508,7 +520,7 @@ else
 
     private SfGrid<Electric_CounterModel> sfDataGrid = new();
 
-    private enum GridOperation { None, Add, Edit }
+    private enum GridOperation { None, Add, Edit, Delete }
     private GridOperation currentOperation = GridOperation.None;
 
     private List<Electric_CounterModel>? counterList = new();
@@ -530,8 +542,8 @@ else
     public DateTime? StartDate { get; set; } = new DateTime(2000, 1, 1);
     public DateTime? EndDate { get; set; } = new DateTime(2000, 1, 1);
 
-    private double? temperatureInside { get; set; }
-    public double? temperatureOutside { get; set; }
+    // private double? temperatureInside { get; set; }
+    // public double? temperatureOutside { get; set; }
 
     MyAppConfigModel? settings;
 
@@ -580,7 +592,7 @@ else
         {
             // 2. Konfiguration laden
             settings = await GetSetMyAppConfig.GetMyAppSettings.ReadSettingsAsync(myAppSettings);
-            
+
             // 3. Fehlervermeidung: Falls Settings null sind, direkt abbrechen
             if (settings?.GWSUri == null)
             {
@@ -789,59 +801,6 @@ else
     }
     #endregion
 
-    #region ActionCompleteHandler
-    /// <summary>
-    /// Action Complete Handler für das Grid. Behandelt das Speichern, Bearbeiten und Löschen von Datensätzen.
-    /// </summary>
-    /// <param name="args"></param>
-    public async Task ActionCompleteHandler(ActionEventArgs<Electric_CounterModel> args)
-    {
-        if (args?.Data is null) return;
-
-        switch (args.RequestType)
-        {
-            case Syncfusion.Blazor.Grids.Action.Save:
-                counterData = args.Data;
-
-                if (args.Action == "Add")
-                {
-                    currentOperation = GridOperation.Add;
-                    OpenDialog("Datensatz speichern ?", "130px", "220px", true);
-                }
-                else if (args.Action == "Edit")
-                {
-                    currentOperation = GridOperation.Edit;
-                    OpenDialog("Datensatz ändern ?", "130px", "220px", true);
-                }
-                break;
-
-            case Syncfusion.Blazor.Grids.Action.Delete:
-                if (args.Data.ID_Tag <= 0)
-                {
-                    if (gwsP is not null)
-                    {
-                        counterList = await gwsP.LoadDataAsync<Electric_CounterModel>(urlCounter);
-                    }
-                    ShowToast(false, "Datensatz nicht gelöscht!");
-                }
-                else
-                {
-                    if (gwsP is not null)
-                    {
-                        counterData = await gwsP.DeleteDataAsync<Electric_CounterModel>(urlCounter, args.Data.ID_Tag.ToString());
-                        ShowToast(true, "Datensatz gelöscht!");
-                    }
-                }
-
-                if (sfDataGrid is not null)
-                {
-                    await sfDataGrid.Refresh();
-                }
-                break;
-        }
-    }
-    #endregion
-
     #region CancelClick
     /// <summary>
     /// Abbrechen-Button im Dialog wurde geklickt, schließt den Dialog und setzt den aktuellen Operationstyp zurück.
@@ -875,7 +834,7 @@ else
 
     #region YesClick
     /// <summary>
-    /// YesClick
+    /// Yes-Button im Dialog wurde geklickt, führt die entsprechende Aktion (Add/Edit/Delete) aus und aktualisiert das Grid.
     /// </summary>
     private async Task YesClick()
     {
@@ -899,17 +858,47 @@ else
                     break;
 
                 case GridOperation.Edit:
+                    if (counterData.Uhrzeit.HasValue)
+                    {
+                        // Datum in der Uhrzeit auf den Ablesetag setzen, um sicherzustellen, dass nur die Zeit übernommen wird
+                        counterData.Uhrzeit = counterData.Ablesetag.Date.Add(counterData.Uhrzeit.Value.TimeOfDay);
+                    }
                     string url = $"{urlCounterDay.TrimEnd('/')}/id/{counterData.ID_Tag}";
                     apiResponse = await gwsP.UpdateDataAsync<Electric_CounterModel>(url, counterData);
                     isSuccess = apiResponse?.MyHttpStatusCode == HttpStatusCode.NoContent;
                     successMessage = "Datensatz erfolgreich aktualisiert!";
                     defaultErrorMessage = "Datensatz konnte nicht aktualisiert werden.";
                     break;
+
+                case GridOperation.Delete:
+                    string deleteUrl = urlCounter.EndsWith("/") ? urlCounter : urlCounter + "/";
+                    string idToDelete = counterData.ID_Tag.ToString();
+
+                    var deletedData = await gwsP.DeleteDataAsync<Electric_CounterModel>(deleteUrl, idToDelete);
+
+                    // Falls DeleteDataAsync intern doch die apiResponse befüllt,
+                    // wäre es ideal, diese hier zuzuweisen. Wenn nicht, reicht das:
+                    isSuccess = deletedData is not null;
+                    successMessage = "Datensatz erfolgreich gelöscht!";
+                    defaultErrorMessage = "Datensatz konnte nicht gelöscht werden.";
+                    break;
             }
 
             if (isSuccess)
             {
                 ShowToast(true, successMessage);
+
+                // Zwinge das Grid zum sofortigen UI-Update, indem du das Element lokal entfernst
+                if (counterList is not null)
+                {
+                    var itemToRemove = counterList.FirstOrDefault(x => x.ID_Tag == counterData.ID_Tag);
+                    if (itemToRemove is not null)
+                    {
+                        counterList.Remove(itemToRemove);
+                    }
+                }
+
+                // Erst danach im Hintergrund die Liste frisch vom Server holen
                 counterList = await gwsP.LoadDataAsync<Electric_CounterModel>($"{urlCounter}{supplierData!.Id}");
             }
             else
@@ -992,15 +981,30 @@ else
     /// <returns></returns>
     private async Task ReadLoxoneTemperatures(string user, string password)
     {
+        // 1. Validierung: Sofort abbrechen, wenn die Daten unvollständig sind
+        if (string.IsNullOrWhiteSpace(user) || string.IsNullOrWhiteSpace(password))
+        {
+            // Hier können Sie optional eine Fehlermeldung für den User setzen
+            return;
+        }
+
         this.spinnerVisibleProperty = true;
-        loxoneTemp = await LoxoneProcessor.LoadLoxoneTemp(user, password);    // Loxone-Api auf Temperaturen abfragen
-        this.spinnerVisibleProperty = false;
+        try
+        {
+            // Loxone-Api auf Temperaturen abfragen
+            loxoneTemp = await LoxoneProcessor.LoadLoxoneTemp(user, password);
+        }
+        finally
+        {
+            // Wird IMMER ausgeführt, egal ob die Abfrage klappt oder abstürzt
+            this.spinnerVisibleProperty = false;
+        }
     }
     #endregion
 
     #region GetTooltipContent
     /// <summary>
-    /// GetTooltipContent
+    /// Hole den Tooltip-Inhalt basierend auf dem HeaderText. Wenn keine Beschreibung vorhanden ist, wird eine Standardnachricht zurückgegeben.
     /// </summary>
     /// <param name="headerText"></param>
     /// <returns></returns>
@@ -1012,7 +1016,7 @@ else
 
     #region OpenDialog
     /// <summary>
-    /// OpenDialog
+    /// Dialog öffnen mit den angegebenen Parametern. Setzt die Sichtbarkeit des Dialogs auf true und erzwingt ein UI-Update.
     /// </summary>
     private void OpenDialog(string header, string height = "auto", string width = "500px", bool showButtons = true)
     {
@@ -1077,33 +1081,71 @@ else
 
             // Optimierung: Redundanten Null-Check (?) entfernt, da args.Data oben geprüft wurde.
             // Berücksichtigung Ihres Signalwerts (99) für den Fall, dass die letzte Temperatur NULL war:
-            temperatureOutside = args.Data.Temperatur_aussen ?? 99;
-            temperatureInside = args.Data.Temperatur_innen ?? 99;
+            // temperatureOutside = args.Data.Temperatur_aussen ?? 99;
+            // temperatureInside = args.Data.Temperatur_innen ?? 99;
         }
         else
         {
             // Falls die Liste komplett leer ist, Startwerte für die UI-Variablen setzen
-            temperatureOutside = 99;
-            temperatureInside = 99;
+            // temperatureOutside = 99;
+            // temperatureInside = 99;
+            args.Data.Zaehlerstand = 0;
+            args.Data.Zaehlerstand_280 = 0;
+            args.Data.Zaehlerstand_Enfluri = 0;
+            args.Data.Temperatur_aussen = 0;
+            args.Data.Temperatur_innen = 0;
+            args.Data.Bemerkungen = "keine letzten Daten";
         }
     }
     #endregion
 
-    #region RowEditingHandler
+    #region ActionBeginHandler
     /// <summary>
-    /// Datenzeile wird editiert
+    /// ActionBeginHandler: Wird aufgerufen, bevor eine Aktion (Add, Edit, Delete) im Grid ausgeführt wird.
     /// </summary>
     /// <param name="args"></param>
-    public void RowEditingHandler(RowEditingEventArgs<Electric_CounterModel> args)
+    /// <returns></returns>
+    public async Task ActionBeginHandler(ActionEventArgs<Electric_CounterModel> args)
     {
-        // Best Practice: Null-Check für die Argumente und Daten
         if (args?.Data is null) return;
 
-        // Daten aus Dropdown "Anbieter" auslesen und Anbieter-Feld in Grid vorbesetzen
-        DropDownValueSupplier = args.Data.ID_Anbieter;
+        switch (args.RequestType)
+        {
+            case Syncfusion.Blazor.Grids.Action.Save:
+                args.Cancel = true;
+                counterData = args.Data;
 
-        temperatureOutside = args.Data?.Temperatur_aussen ?? 99;
-        temperatureInside = args.Data?.Temperatur_innen ?? 99;
+                if (args.Action == "Add")
+                {
+                    currentOperation = GridOperation.Add;
+                    OpenDialog("Datensatz speichern ?", "130px", "220px", true);
+                }
+                else if (args.Action == "Edit")
+                {
+                    currentOperation = GridOperation.Edit;
+                    OpenDialog("Datensatz ändern ?", "130px", "220px", true);
+                }
+                break;
+
+            case Syncfusion.Blazor.Grids.Action.Delete:
+                // 1. Automatische Grid-Löschung stoppen, damit wir die Kontrolle behalten
+                args.Cancel = true;
+
+                // Sicherheitshalber prüfen, ob eine gültige ID vorliegt
+                if (args.Data.ID_Tag <= 0)
+                {
+                    ShowToast(false, "Ungültiger Datensatz. Löschen nicht möglich!");
+                    return;
+                }
+
+                // 2. Daten für die 'YesClick'-Methode zwischenspeichern
+                counterData = args.Data;
+                currentOperation = GridOperation.Delete;
+
+                // 3. Bestätigungsdialog für das Löschen öffnen
+                OpenDialog("Datensatz wirklich löschen ?", "130px", "300px", true);
+                break;
+        }
     }
     #endregion
 }

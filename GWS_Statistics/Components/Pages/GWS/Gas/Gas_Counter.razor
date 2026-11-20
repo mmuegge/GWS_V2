@@ -60,42 +60,102 @@
 @* Grid *@
 @if (counterList != null && counterList.Count > 0)
 {
-    <div class="control-section" id="target" align="left">
-        <SfGrid ID="Grid" @ref="sfDataGrid" DataSource="@counterList"
-        AllowPaging="true"
-        AllowFiltering="true"
-        AllowReordering="true"
-        AllowResizing="true"
-        AllowExcelExport="true"
-        AllowPdfExport="true"
-        EnableHover="true"
-        AllowTextWrap="true"
-        AllowSelection="true"
-        AllowSorting="true"
-        Height="100%" Width="100%"
-        Toolbar=@toolbar
-        EnableStickyHeader="true">
+    <div class="control-section elevated-grid-container" id="target" align="center">
+        <SfGrid ID="Grid" @ref="sfDataGrid" 
+                DataSource="@counterList"
+                AllowPaging="true"
+                AllowFiltering="true"
+                AllowReordering="true"
+                AllowResizing="true"
+                AllowExcelExport="true"
+                AllowPdfExport="true"
+                EnableHover="true"
+                AllowTextWrap="true"
+                AllowSelection="true"
+                AllowSorting="true"
+                Height="100%" 
+                Width="100%"
+                Toolbar=@toolbar
+                EnableStickyHeader="true">
 
-            <GridEditSettings AllowAdding="true"
-            AllowEditing="true"
-            AllowDeleting="true"
-            ShowDeleteConfirmDialog="true"
-            Mode="EditMode.Dialog"
-            Dialog="DialogParams">
+                <GridEditSettings 
+                    AllowAdding="true"
+                    AllowEditing="true"
+                    AllowDeleting="true"
+                    ShowDeleteConfirmDialog="false"
+                    Mode="EditMode.Dialog"
+                    Dialog="dialogParams">
 
-                <HeaderTemplate>
-                @{
+                    <HeaderTemplate>
+                    @{
                         var DialogHeader = GetDialogHeader((context as Gas_CounterModel));
                         <span>@DialogHeader</span>
                     }
-                </HeaderTemplate>
+                    </HeaderTemplate>
+
+                    <Template>
+                        @{
+                            var gasCounterData = (context as Gas_CounterModel)!;
+                        }
+
+                            <div style="padding: 10px;">
+                                <div class="form-row" style="margin-bottom: 15px;">
+                                    <SfDropDownList TValue="int"
+                                                    TItem="Gas_SupplierDataModel"
+                                                    @bind-Value="gasCounterData.ID_Anbieter"
+                                                    DataSource="@supplierList"
+                                                    FloatLabelType="FloatLabelType.Always"
+                                                    Placeholder="Anbieter">
+                                        <DropDownListFieldSettings Value="Id" Text="Anbieter"></DropDownListFieldSettings>
+                                    </SfDropDownList>
+                                </div>
+
+                                <div class="form-row" style="margin-bottom: 15px;">
+                                    <div class="form-groupcol-md-12">
+                                        <SfDatePicker TValue="DateTime" @bind-Value="gasCounterData.Ablesetag" FloatLabelType="FloatLabelType.Always" Placeholder="Ablesetag"></SfDatePicker>
+                                    </div>
+                                </div>
+
+                                <div class="form-row" style="margin-bottom: 15px;">
+                                    <div class="form-group" style="flex: 1;">
+                                        <SfTimePicker TValue="DateTime?" @bind-Value="gasCounterData.Uhrzeit" FloatLabelType="FloatLabelType.Always" Placeholder="Uhrzeit" Format="HH:mm"></SfTimePicker>
+                                    </div>
+                                </div>
+
+                                <div class="form-row" style="margin-bottom: 15px;">
+                                    <div class="form-group" style="flex: 1;">
+                                <SfNumericTextBox TValue="double?" @bind-Value="gasCounterData.Zaehlerstand" FloatLabelType="FloatLabelType.Always" Placeholder="Zählerstand" Format="###.000 m³"></SfNumericTextBox>
+                                    </div>
+                                </div>
+
+                                <div class="form-row" style="margin-bottom: 15px;">
+                                    <div class="form-group" style="flex: 1;">
+                                <SfNumericTextBox TValue="double?" @bind-Value="gasCounterData.Temperatur_aussen" FloatLabelType="FloatLabelType.Always" Placeholder="Temperatur Außen" Format="0 °C"></SfNumericTextBox>
+                                    </div>
+                                </div>
+
+                                <div class="form-row" style="margin-bottom: 15px;">
+                                    <div class="form-group" style="flex: 1;">
+                                <SfNumericTextBox TValue="double?" @bind-Value="gasCounterData.Temperatur_innen" FloatLabelType="FloatLabelType.Always" Placeholder="Temperatur Innen" Format="0 °C"></SfNumericTextBox>
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group col-md-12">
+                                        <SfTextBox @bind-Value="gasCounterData.Bemerkungen" FloatLabelType="FloatLabelType.Always" Placeholder="Bemerkung"></SfTextBox>
+                                    </div>
+                                </div>
+                            </div>
+                    </Template>
             </GridEditSettings>
 
-            <GridEvents OnToolbarClick="ToolbarBtnClickHandler"
-            RowCreating="RowCreatingHandler"
-            RowEditing="RowEditingHandler"
-            OnActionComplete="ActionCompleteHandler"
-            TValue="Gas_CounterModel">
+
+            <GridEvents 
+                OnToolbarClick="ToolbarBtnClickHandler"
+                RowCreating="RowCreatingHandler"
+                RowDeleting="RowDeletingHandler"
+                RowUpdating="RowUpdatingHandler"
+                TValue="Gas_CounterModel">
             </GridEvents>
 
             <GridPageSettings PageSize="20" PageSizes="true"></GridPageSettings>
@@ -115,22 +175,37 @@
                 <GridColumn  
                     Field="@nameof(Gas_CounterModel.ID_Tag)"
                     IsPrimaryKey="true"
-                    Visible="false">
+                    Visible="false"
+                    Width="0"
+                    AllowSorting="false"
+                    AllowFiltering="false"
+                    AllowEditing="false">
                 </GridColumn>
 
-                <GridColumn Field=@nameof(Gas_CounterModel.Anbieter)
-                Width="200"
-                EditType="EditType.DropDownEdit"
-                HeaderText="Anbieter">
+                <GridColumn 
+                    Field=@nameof(Gas_CounterModel.ID_Anbieter) 
+                    Width="200" 
+                    EditType="EditType.DropDownEdit" 
+                    HeaderText="Anbieter">
+
+                    @* Zeigt im normalen Grid-Modus den Text statt der ID an --> *@
+                    <Template>
+                        @{
+                            var supplier = (context as Gas_CounterModel);
+                            var supplierName = supplierList?.FirstOrDefault(s => s.Id == supplier?.ID_Anbieter)?.Anbieter;
+                            <span>@supplierName</span>
+                        }
+                    </Template>
 
                     <EditTemplate>
-                        <SfDropDownList Placeholder="Anbieter"
-                        FloatLabelType="FloatLabelType.Always"
-                        TValue="int?" 
-                        TItem="Gas_SupplierDataModel"
-                        DataSource="@supplierList" 
-                        @bind-Value="@DropDownValueSupplier">
-
+                        <SfDropDownList Placeholder="Anbieter wählen"
+                                        FloatLabelType="FloatLabelType.Always"
+                                        ID="ID_Anbieter"
+                                        TItem="Gas_SupplierDataModel"
+                                        TValue="int"
+                                        @bind-Value="@((context as Gas_CounterModel)!.ID_Anbieter)"
+                                        DataSource="@supplierList">
+                            @* Value="Id" (int) wird in ID_Anbieter gespeichert, Text="Anbieter" (string) wird angezeigt *@
                             <DropDownListFieldSettings Value="Id" Text="Anbieter"></DropDownListFieldSettings>
                         </SfDropDownList>
                     </EditTemplate>
@@ -143,12 +218,12 @@
                 </GridColumn>
 
                 <GridColumn Field=@nameof(Gas_CounterModel.Ablesetag)
-                EditType="EditType.DatePickerEdit"
-                Type="ColumnType.DateTime"
-                Width="110"
-                DefaultValue="DateTime.Now"
-                HeaderText="Datum"
-                Format="d">
+                    EditType="EditType.DatePickerEdit"
+                    Type="ColumnType.DateTime"
+                    Width="110"
+                    DefaultValue="DateTime.Now"
+                    HeaderText="Datum"
+                    Format="d">
 
                     <EditTemplate>
                         <SfDatePicker
@@ -169,12 +244,12 @@
                 </GridColumn>
 
                 <GridColumn Field=@nameof(Gas_CounterModel.Uhrzeit)
-                Format="HH:mm"
-                EditType="EditType.TimePickerEdit"
-                Type="Syncfusion.Blazor.Grids.ColumnType.DateTime"
-                Width="110"
-                DefaultValue="DateTime.Now"
-                HeaderText="Uhrzeit">
+                    Format="HH:mm"
+                    EditType="EditType.TimePickerEdit"
+                    Type="Syncfusion.Blazor.Grids.ColumnType.DateTime"
+                    Width="110"
+                    DefaultValue="DateTime.Now"
+                    HeaderText="Uhrzeit">
 
                     <HeaderTemplate>
                         <SfTooltip Content="@GetTooltipContent("Uhrzeit")" Position="Syncfusion.Blazor.Popups.Position.BottomCenter">
@@ -184,13 +259,13 @@
 
                     <EditTemplate>
                         <SfTimePicker Placeholder="Uhrzeit"
-                        FloatLabelType="FloatLabelType.Always"
-                        TValue="DateTime?"
-                        @bind-Value="@((context as Gas_CounterModel)!.Uhrzeit)"
-                        Format="HH:mm"
-                        CssClass="customdatecss"
-                        ShowClearButton="true">
-                        </SfTimePicker>
+                            FloatLabelType="FloatLabelType.Always"
+                            TValue="DateTime?"
+                            @bind-Value="@((context as Gas_CounterModel)!.Uhrzeit)"
+                            Format="HH:mm"
+                            CssClass="customdatecss"
+                            ShowClearButton="true">
+                            </SfTimePicker>
                     </EditTemplate>
                 </GridColumn>
 
@@ -216,16 +291,17 @@
                 </GridColumn>
 
                 <GridColumn Field=@nameof(Gas_CounterModel.Temperatur_aussen)
-                Format="0 °C"
-                Width="110"
-                HeaderText="Temperatur aussen">
+                    Format="0 °C"
+                    Width="110"
+                    HeaderText="Temperatur aussen">
 
                     <EditTemplate>
-                        <SfNumericTextBox Placeholder="Temperatur aussen"
-                        FloatLabelType="FloatLabelType.Always"
-                        TValue="double?"
-                        @bind-Value="@temperatureOutside"
-                        Format="0 °C">
+                        <SfNumericTextBox 
+                            Placeholder="Temperatur aussen"
+                            FloatLabelType="FloatLabelType.Always"
+                            TValue="double?"
+                            @bind-Value="@((context as Gas_CounterModel)!.Temperatur_aussen)"
+                            Format="0 °C">
                         </SfNumericTextBox>
                     </EditTemplate>
 
@@ -237,16 +313,17 @@
                 </GridColumn>
 
                 <GridColumn Field=@nameof(Gas_CounterModel.Temperatur_innen)
-                Format="0 °C"
-                Width="110"
-                HeaderText="Temperatur innen">
+                    Format="0 °C"
+                    Width="110"
+                    HeaderText="Temperatur innen">
 
                     <EditTemplate>
-                        <SfNumericTextBox Placeholder="Temperatur innen"
-                        FloatLabelType="FloatLabelType.Always"
-                        TValue="double?"
-                        @bind-Value="@temperatureInside"
-                        Format="0 °C">
+                        <SfNumericTextBox 
+                            Placeholder="Temperatur innen"
+                            FloatLabelType="FloatLabelType.Always"
+                            TValue="double?"
+                            @bind-Value="@((context as Gas_CounterModel)!.Temperatur_innen)"
+                            Format="0 °C">
                         </SfNumericTextBox>
                     </EditTemplate>
 
@@ -320,21 +397,21 @@ else
 
 @* Dialog*@
 <div>
-    <SfDialog Target="#target"
-                      Width="@dialogWidth"
-                      Height=@dialogHeight
-                      AllowDragging="true"
-                      ShowCloseIcon=" true"
-                      AllowPrerender="true"
-                      IsModal="true"
-                      CssClass="MyCss"
-                      @bind-Visible="@DialogVisible">
+    <SfDialog Target="body"
+              Width="@dialogWidth"
+              Height=@dialogHeight
+              AllowDragging="true"
+              ShowCloseIcon=" true"
+              AllowPrerender="false"
+              IsModal="true"
+              CssClass="MyCss"
+              @bind-Visible="@DialogVisible">
 
         <DialogTemplates>
             <Header>@header</Header>
         </DialogTemplates>
 
-        <DialogPositionData X="@dialogXValue" Y="@dialogYValue"></DialogPositionData>
+        <DialogPositionData X="center" Y="center"></DialogPositionData>
 
         <DialogAnimationSettings Effect="@animationEffect"></DialogAnimationSettings>
 
@@ -434,22 +511,17 @@ else
 
     bool spinnerVisibleProperty { get; set; } = false;
 
-    private DialogSettings DialogParams = new DialogSettings { MinHeight = "400px", Width = "400px" };
+    private DialogSettings dialogParams = new DialogSettings { MinHeight = "400px", Width = "400px" };
     public DialogEffect animationEffect = DialogEffect.Zoom;
     public bool DialogVisible { get; set; } = false;
     private bool showDialogButtons = false;
-    private string DialogText { get; set; } = string.Empty;
-    private string dialogXValue = "center";
-    private string dialogYValue = "center";
+    private string dialogText { get; set; } = string.Empty;
     private string dialogHeight = "130px";
     private string dialogWidth = "380px";
 
     public int? DropDownValueSupplier { get; set; } = 0;
-    private bool save = false;
-    private bool update = false;
-    private bool success = false;
 
-    private bool dayChanged = false;
+    private bool success = false;
 
     readonly string urlSupplier = "gas/anbieter/";
     readonly string urlCounter = "gas/zaehlerstaende/anbieter/";
@@ -465,7 +537,7 @@ else
 
     private SfGrid<Gas_CounterModel> sfDataGrid { get; set; } = new();
 
-    private enum GridOperation { None, Add, Edit }
+    private enum GridOperation { None, Add, Edit, Delete }
     private GridOperation currentOperation = GridOperation.None;
 
     private List<Gas_CounterModel>? counterList = new();
@@ -486,8 +558,8 @@ else
     public DateTime? StartDate { get; set; } = new DateTime(2000, 1, 1);
     public DateTime? EndDate { get; set; } = new DateTime(2000, 1, 1);
 
-    private double? temperatureInside { get; set; }
-    public double? temperatureOutside { get; set; }
+    // private double? temperatureInside { get; set; }
+    // public double? temperatureOutside { get; set; }
 
     MyAppConfigModel? settings;
 
@@ -600,7 +672,7 @@ else
 
     #region ValueSelectHandler
     /// <summary>
-    /// Ablesetage des ausgewählten Anbieters auslesen
+    /// Auswahl eines Anbieters aus der Dropdown-Liste. Lädt die entsprechenden Kosten und speichert die Auswahl in den Einstellungen.
     /// </summary>
     /// <param name="args"></param>
     private async Task ValueSelectHandler(SelectEventArgs<Gas_SupplierDataModel> args)
@@ -744,59 +816,6 @@ else
     }
     #endregion
 
-    #region ActionCompleteHandler
-    /// <summary>
-    /// Action Complete Handler für das Grid. Behandelt das Speichern, Bearbeiten und Löschen von Datensätzen.
-    /// </summary>
-    /// <param name="args"></param>
-    public async Task ActionCompleteHandler(ActionEventArgs<Gas_CounterModel> args)
-    {
-        if (args?.Data is null) return;
-
-        switch (args.RequestType)
-        {
-            case Syncfusion.Blazor.Grids.Action.Save:
-                counterData = args.Data;
-
-                if (args.Action == "Add")
-                {
-                    currentOperation = GridOperation.Add;
-                    OpenDialog("Datensatz speichern ?", "130px", "220px", true);
-                }
-                else if (args.Action == "Edit")
-                {
-                    currentOperation = GridOperation.Edit;
-                    OpenDialog("Datensatz ändern ?", "130px", "220px", true);
-                }
-                break;
-
-            case Syncfusion.Blazor.Grids.Action.Delete:
-                if (args.Data.ID_Tag <= 0)
-                {
-                    if (gwsP is not null)
-                    {
-                        counterList = await gwsP.LoadDataAsync<Gas_CounterModel>(urlCounter);
-                    }
-                    ShowToast(false, "Datensatz nicht gelöscht!");
-                }
-                else
-                {
-                    if (gwsP is not null)
-                    {
-                        counterData = await gwsP.DeleteDataAsync<Gas_CounterModel>(urlCounter, args.Data.ID_Tag.ToString());
-                        ShowToast(true, "Datensatz gelöscht!");
-                    }
-                }
-
-                if (sfDataGrid is not null)
-                {
-                    await sfDataGrid.Refresh();
-                }
-                break;
-        }
-    }
-    #endregion
-
     #region CancelClick
     /// <summary>
     /// Abbrechen-Button im Dialog wurde geklickt, schließt den Dialog und setzt den aktuellen Operationstyp zurück.
@@ -830,7 +849,7 @@ else
 
     #region YesClick
     /// <summary>
-    /// YesClick
+    /// Yes-Button im Dialog wurde geklickt, führt die entsprechende Aktion (Add, Edit, Delete) aus und aktualisiert das Grid.
     /// </summary>
     private async Task YesClick()
     {
@@ -854,45 +873,79 @@ else
                     break;
 
                 case GridOperation.Edit:
+                    if (counterData.Uhrzeit.HasValue)
+                    {
+                        // Datum in der Uhrzeit auf den Ablesetag setzen, um sicherzustellen, dass nur die Zeit übernommen wird
+                        counterData.Uhrzeit = counterData.Ablesetag.Date.Add(counterData.Uhrzeit.Value.TimeOfDay);
+                    }
                     string url = $"{urlCounterDay.TrimEnd('/')}/id/{counterData.ID_Tag}";
                     apiResponse = await gwsP.UpdateDataAsync<Gas_CounterModel>(url, counterData);
                     isSuccess = apiResponse?.MyHttpStatusCode == HttpStatusCode.NoContent;
                     successMessage = "Datensatz erfolgreich aktualisiert!";
                     defaultErrorMessage = "Datensatz konnte nicht aktualisiert werden.";
                     break;
+
+                case GridOperation.Delete:
+                    string deleteUrl = urlCounterDay.EndsWith("/") ? urlCounterDay : urlCounterDay + "/";
+                    string idToDelete = counterData.ID_Tag.ToString();
+
+                    var deletedData = await gwsP.DeleteDataAsync<Gas_CounterModel>(deleteUrl, idToDelete);
+
+                    // Falls DeleteDataAsync intern doch die apiResponse befüllt,
+                    // wäre es ideal, diese hier zuzuweisen. Wenn nicht, reicht das:
+                    isSuccess = deletedData is not null;
+                    successMessage = "Datensatz erfolgreich gelöscht!";
+                    defaultErrorMessage = "Datensatz konnte nicht gelöscht werden.";
+                    break;
             }
 
             if (isSuccess)
             {
                 ShowToast(true, successMessage);
-                counterList = await gwsP.LoadDataAsync<Gas_CounterModel>($"{urlCounter}{supplierData!.Id}");
+
+                if (supplierData != null)
+                {
+                    // 1. Dem Grid signalisieren, dass sich die Datenbasis grundlegend ändert
+                    // counterList = null;
+                    // StateHasChanged();
+
+                    // 2. Die neuen Daten gefiltert für den aktuellen Anbieter laden
+                    // counterList = await gwsP.LoadDataAsync<Gas_CounterModel>($"{urlCounter}{supplierData.Id}");
+                    await sfDataGrid.EndEditAsync();
+                }
+
+                await Task.Delay(50);
+
+                // 3. Dem Grid sagen, dass es sich jetzt komplett frisch aufbauen soll
+                if (sfDataGrid != null)
+                {
+                    counterList = await gwsP.LoadDataAsync<Gas_CounterModel>($"{urlCounter}{supplierData.Id}");
+                }
+
+                if (sfDataGrid != null)
+                {
+                    await sfDataGrid.Refresh();
+                }
             }
             else
             {
-                // Dynamische Fehlerursache aus MyResponseString ermitteln
+                // 1. Dynamische Fehlerursache aus MyResponseString ermitteln
                 string errorMessage = defaultErrorMessage;
 
                 if (apiResponse is not null && !string.IsNullOrWhiteSpace(apiResponse.MyResponseString))
                 {
-                    // Wenn die API direkt Text zurückgibt, nutzen wir ihn.
-                    // Falls es JSON ist (z.B. bei Validierungsfehlern), könnte man es hier parsen.
                     errorMessage = $"Fehler ({apiResponse.MyHttpStatusCode}): {apiResponse.MyResponseString}";
                 }
 
+                // 2. Fehler anzeigen
                 ShowToast(false, errorMessage);
-
-                // WICHTIG: Wenn das EDITIEREN fehlschlägt, müssen wir die manipulierten
-                // RAM-Objekte im Grid ebenfalls mit den alten Serverdaten überschreiben!
-                if (currentOperation == GridOperation.Edit)
-                {
-                    counterList = await gwsP.LoadDataAsync<Gas_CounterModel>($"{urlCounter}{supplierData!.Id}");
-                }
             }
 
             if (sfDataGrid is not null)
             {
                 await sfDataGrid.Refresh();
             }
+
         }
         catch (Exception ex)
         {
@@ -948,9 +1001,24 @@ else
     /// <returns></returns>
     private async Task ReadLoxoneTemperatures(string user, string password)
     {
+        // 1. Validierung: Sofort abbrechen, wenn die Daten unvollständig sind
+        if (string.IsNullOrWhiteSpace(user) || string.IsNullOrWhiteSpace(password))
+        {
+            // Hier können Sie optional eine Fehlermeldung für den User setzen
+            return; 
+        }
+
         this.spinnerVisibleProperty = true;
-        loxoneTemp = await LoxoneProcessor.LoadLoxoneTemp(user, password);    // Loxone-Api auf Temperaturen abfragen
-        this.spinnerVisibleProperty = false;
+        try
+        {
+            // Loxone-Api auf Temperaturen abfragen
+            loxoneTemp = await LoxoneProcessor.LoadLoxoneTemp(user, password);
+        }
+        finally
+        {
+            // Wird IMMER ausgeführt, egal ob die Abfrage klappt oder abstürzt
+            this.spinnerVisibleProperty = false;
+        }
     }
     #endregion
 
@@ -997,7 +1065,7 @@ else
 
     #region RowCreatingHandler
     /// <summary>
-    /// ein neuer Datebsatz wird angelegt
+    /// ein neuer Datensatz wird angelegt
     /// </summary>
     /// <param name="args"></param>
     public void RowCreatingHandler(RowCreatingEventArgs<Gas_CounterModel> args)
@@ -1031,33 +1099,169 @@ else
 
             // Optimierung: Redundanten Null-Check (?) entfernt, da args.Data oben geprüft wurde.
             // Berücksichtigung Ihres Signalwerts (99) für den Fall, dass die letzte Temperatur NULL war:
-            temperatureOutside = args.Data.Temperatur_aussen ?? 99;
-            temperatureInside = args.Data.Temperatur_innen ?? 99;
+            // temperatureOutside = args.Data.Temperatur_aussen ?? 99;
+            // temperatureInside = args.Data.Temperatur_innen ?? 99;
         }
         else
         {
             // Falls die Liste komplett leer ist, Startwerte für die UI-Variablen setzen
-            temperatureOutside = 99;
-            temperatureInside = 99;
+            args.Data.Zaehlerstand = 0;
+            args.Data.Temperatur_aussen = 0;
+            args.Data.Temperatur_innen = 0;
+            args.Data.Bemerkungen = "keine letzten Daten";
         }
     }
     #endregion
 
-    #region RowEditingHandler
+    #region RowUpdatingHandler
     /// <summary>
-    /// Datenzeile wird editiert
+    /// Datenzeile wird aktualisiert
     /// </summary>
     /// <param name="args"></param>
-    public void RowEditingHandler(RowEditingEventArgs<Gas_CounterModel> args)
+    public void RowUpdatingHandler(RowUpdatingEventArgs<Gas_CounterModel> args)
     {
-        // Best Practice: Null-Check für die Argumente und Daten
         if (args?.Data is null) return;
 
-        // Daten aus Dropdown "Anbieter" auslesen und Anbieter-Feld in Grid vorbesetzen
-        DropDownValueSupplier = args.Data.ID_Anbieter;
+        // args.Cancel = true; // Only available in RowUpdating, NOT RowUpdated
+        counterData = args.Data;
 
-        temperatureOutside = args.Data?.Temperatur_aussen ?? 99;
-        temperatureInside = args.Data?.Temperatur_innen ?? 99;
+        if (args.Action == SaveActionType.Added)
+        {
+            currentOperation = GridOperation.Add;
+            OpenDialog("Datensatz speichern ?", "130px", "220px", true);
+        }
+        else if (args.Action == SaveActionType.Edited)
+        {
+            currentOperation = GridOperation.Edit;
+            OpenDialog("Datensatz ändern ?", "130px", "220px", true);
+        }
     }
     #endregion
+
+    #region RowDeletingHandler
+    /// <summary>
+    /// Datenzeile wird gelöscht
+    /// </summary>
+    /// <param name="args"></param>
+    public void RowDeletingHandler(RowDeletingEventArgs<Gas_CounterModel> args)
+    {
+        if (args is null) return;
+
+        var selectedRecord = args.Datas?.FirstOrDefault();
+        if (selectedRecord is null) return;
+
+        // 1. Automatische Grid-Löschung stoppen, damit dein Dialog die Kontrolle behält
+        args.Cancel = true;
+
+        // Sicherheitshalber prüfen, ob eine gültige ID vorliegt
+        if (selectedRecord.ID_Tag <= 0)
+        {
+            ShowToast(false, "Ungültiger Datensatz. Löschen nicht möglich!");
+            return;
+        }
+
+        // 2. Daten für die 'YesClick'-Methode zwischenspeichern
+        counterData = selectedRecord;
+        currentOperation = GridOperation.Delete;
+
+        // 3. Bestätigungsdialog für das Löschen öffnen
+        OpenDialog("Datensatz wirklich löschen ?", "130px", "300px", true);
+    }
+    #endregion
+
+    // #region ActionBeginHandler
+    // /// <summary>
+    // /// ActionBeginHandler: Wird aufgerufen, bevor eine Aktion (Add, Edit, Delete) im Grid ausgeführt wird.
+    // /// </summary>
+    // /// <param name="args"></param>
+    // public async Task ActionBeginHandler(ActionEventArgs<Gas_CounterModel> args)
+    // {
+    //     if (args?.Data is null) return;
+
+    //     switch (args.RequestType)
+    //     {
+    //         // ====================================================================
+    //         // NEU: Verhindert, dass Syncfusion das Feld "Anbieter" im Dialog leert
+    //         // ====================================================================
+    //         case Syncfusion.Blazor.Grids.Action.Add:
+    //             if (supplierData != null)
+    //             {
+    //                 args.Data.ID_Anbieter = supplierData.Id;
+    //                 args.Data.Anbieter = supplierData.Anbieter ?? "unbekannt";
+    //             }
+    //             break;
+
+    //         // case Syncfusion.Blazor.Grids.Action.Save:
+    //         //     //args.Cancel = true;
+    //         //     counterData = args.Data;
+
+    //         //     if (args.Action == "Add")
+    //         //     {
+    //         //         currentOperation = GridOperation.Add;
+
+    //         //         OpenDialog("Datensatz speichern ?", "130px", "220px", true);
+    //         //     }
+    //         //     else if (args.Action == "Edit")
+    //         //     {
+    //         //         currentOperation = GridOperation.Edit;
+    //         //         OpenDialog("Datensatz ändern ?", "130px", "220px", true);
+    //         //     }
+    //         //     break;
+
+    //         // case Syncfusion.Blazor.Grids.Action.Delete:
+    //         //     // 1. Automatische Grid-Löschung stoppen, damit wir die Kontrolle behalten
+    //         //     args.Cancel = true;
+
+    //         //     // Sicherheitshalber prüfen, ob eine gültige ID vorliegt
+    //         //     if (args.Data.ID_Tag <= 0)
+    //         //     {
+    //         //         ShowToast(false, "Ungültiger Datensatz. Löschen nicht möglich!");
+    //         //         return;
+    //         //     }
+
+    //         //     // 2. Daten für die 'YesClick'-Methode zwischenspeichern
+    //         //     counterData = args.Data;
+    //         //     currentOperation = GridOperation.Delete;
+
+    //         //     // 3. Bestätigungsdialog für das Löschen öffnen
+    //         //     OpenDialog("Datensatz wirklich löschen ?", "130px", "300px", true);
+    //         //     break;
+    //     }
+    // }
+
+    // #endregion
+
+
+
+
+    // private async Task OnCustomSaveClicked()
+    // {
+    //     try
+    //     {
+    //         // 1. Schließt das Dialogfenster visuell und übergibt die Daten an das Grid
+    //         await sfDataGrid.EndEditAsync(); 
+
+    //         // 2. Falls Sie die rote Bestätigungsbox ("Datensatz speichern?") nutzen möchten,
+    //         // können Sie diese JETZT hier aufrufen, nachdem Syncfusion das Editieren sauber beendet hat:
+    //         // OpenDialog("Datensatz speichern ?", "130px", "220px", true);
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         Console.WriteLine($"Fehler beim Speichern: {ex.Message}");
+    //     }
+    // }
+
+    // private async Task OnCustomCancelClicked()
+    // {
+    //     try
+    //     {
+    //         // Schließt den Syncfusion-Edit-Dialog sauber im JavaScript-Kontext
+    //         await sfDataGrid.CloseEditAsync(); 
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         Console.WriteLine($"Fehler beim Abbrechen: {ex.Message}");
+    //     }
+    // }
+
 }
